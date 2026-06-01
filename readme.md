@@ -1,36 +1,34 @@
 # Health
 
+This app helps you see whether you're on track to stay healthy (lose weight + gain strength/stamina)
+by bringing together the two sides of the equation in one place: the energy you burn each day and
+the food you eat. It pulls your daily calorie expenditure automatically from your smartwatch and
+pairs it with quick food logging — designed so your regular meals take a single tap to record — then
+turns that into a clear picture of how your day, and your trend over time, is shaping up. An android
+homescreen widget gives you an at-a-glance read on whether you're on track plus a useful insight,
+while the full app shows the history and detail behind it. It works offline, so logging never has to
+wait for a connection.
+
 ## Stack
 
-This is a Kotlin Multiplatform project targeting Android and Server.
+Kotlin everywhere — Android app, shared DTOs, and backend server in one monorepo.
 
-* [/app/shared](./app/shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./app/shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [androidMain](./app/shared/src/androidMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./app/shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
-
-* [/core](./core/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./core/src/commonMain/kotlin). If preferred, you
-  can add code to the platform-specific folders here too.
-
-* [/server](./server/src/main/kotlin) is for the Ktor server application.
+* [`/app`](./app/src/main/kotlin) — Android app (Jetpack Compose)
+* [`/shared`](./shared/src/commonMain/kotlin) — KMP module: API DTOs shared between app and server
+* [`/server`](./server/src/main/kotlin) — Ktor server (JVM), backed by PostgreSQL
 
 ## Running the apps
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+Use the run configurations provided by the run widget in your IDE’s toolbar. You can also use these
+commands and options:
 
-- Android app: `./gradlew :app:androidApp:assembleDebug`
+- Android app: `./gradlew :app:assembleDebug`
 - Server: `./gradlew :server:run`
 
 ## Running tests
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+Use the run button in your IDE’s editor gutter, or run tests using Gradle tasks:
 
-- Android tests: `./gradlew :app:shared:testAndroidHostTest`
 - Server tests: `./gradlew :server:test`
 
 ## Setting up development environment
@@ -44,8 +42,7 @@ Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
   API: 34 "UpsideDownCake"; Android 14.0
   Services: Android Open Source
   ```
-- Add Mobile-MCP to Claude:  
+- Add [Mobile-MCP](https://github.com/mobile-next/mobile-mcp#readme) to Claude:  
   `claude mcp add mobile-mcp -- npx -y @mobilenext/mobile-mcp@latest`
-- Add Superpowers to Claude:  
+- Add [Superpowers](https://github.com/obra/superpowers#readme) to Claude:  
   `/plugin install superpowers@claude-plugins-official`
-lets re
