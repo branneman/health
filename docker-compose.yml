@@ -1,35 +1,52 @@
 services:
+  ktor:
+    image: ghcr.io/branvandemeer/health-server:latest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   postgres:
     image: postgres:17-alpine
-    container_name: ${PROJECT_NAME:-health}_postgres
+    container_name: health_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  postgres-mcp:
-    image: crystaldba/postgres-mcp
-    container_name: ${PROJECT_NAME:-health}_mcp
+  caddy:
+    image: caddy:2
     restart: unless-stopped
-    environment:
-      DATABASE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    command: [ "--access-mode=unrestricted", "--transport=sse", "--sse-port=8001" ]
-    ports:
-      - "127.0.0.1:8001:8001"
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
     depends_on:
-      postgres:
+      ktor:
         condition: service_healthy
 
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 60 --cleanup
+
 volumes:
-  pgdata:
+  pgdata: {}
+  caddy_data: {}

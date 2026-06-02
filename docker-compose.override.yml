@@ -1,0 +1,16 @@
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  postgres-mcp:
+    image: crystaldba/postgres-mcp
+    restart: unless-stopped
+    environment:
+      DATABASE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    command: ["--access-mode=unrestricted", "--transport=sse", "--sse-port=8001"]
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
