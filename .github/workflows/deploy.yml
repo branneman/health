@@ -31,5 +31,5 @@ jobs:
           file: server/Dockerfile
           push: true
           tags: |
-            ghcr.io/branvandemeer/health-server:latest
-            ghcr.io/branvandemeer/health-server:${{ github.sha }}
+            ghcr.io/${{ github.actor }}/health-server:latest
+            ghcr.io/${{ github.actor }}/health-server:${{ github.sha }}
