@@ -7,7 +7,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -24,7 +24,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +32,7 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
-    ports: ["80:80", "443:443", "443:443/udp"]
+    ports: [ "80:80", "443:443", "443:443/udp" ]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -48,5 +48,5 @@ services:
     command: --interval 60 --cleanup
 
 volumes:
-  pgdata: {}
-  caddy_data: {}
+  pgdata: { }
+  caddy_data: { }

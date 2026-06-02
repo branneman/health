@@ -7,6 +7,9 @@ build
 .env
 .env.example
 gradle.properties
+gradle/gradle-daemon-jvm.properties
+local.properties
+local-db-seed
 node_modules
 *.iml
 .DS_Store
