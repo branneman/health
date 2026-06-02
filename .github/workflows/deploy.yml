@@ -1,7 +1,7 @@
 name: deploy
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   build-push:
@@ -31,5 +31,5 @@ jobs:
           file: server/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.actor }}/health-server:latest
-            ghcr.io/${{ github.actor }}/health-server:${{ github.sha }}
+            ghcr.io/branneman/health-server:latest
+            ghcr.io/branneman/health-server:${{ github.sha }}

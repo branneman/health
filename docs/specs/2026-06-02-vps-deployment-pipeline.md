@@ -289,7 +289,7 @@ Replace the full contents of `docker-compose.yml`:
 ```yaml
 services:
   ktor:
-    image: ghcr.io/branvandemeer/health-server:latest
+    image: ghcr.io/branneman/health-server:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -497,8 +497,8 @@ jobs:
           file: server/Dockerfile
           push: true
           tags: |
-            ghcr.io/branvandemeer/health-server:latest
-            ghcr.io/branvandemeer/health-server:${{ github.sha }}
+            ghcr.io/branneman/health-server:latest
+            ghcr.io/branneman/health-server:${{ github.sha }}
 ```
 
 - [ ] **Step 2: Commit and push**

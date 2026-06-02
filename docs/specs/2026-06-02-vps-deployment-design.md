@@ -13,7 +13,7 @@ GitHub (repo — currently private, going public later)
   └─ push to main
        └─ GitHub Actions
             ├─ Multi-stage Docker build (Gradle installDist → slim JRE)
-            └─ Push → ghcr.io/branvandemeer/health-server:latest
+            └─ Push → ghcr.io/branneman/health-server:latest
                                                     :git-sha
 
 Hetzner CPX22 (Debian 12, EU)
@@ -66,7 +66,7 @@ plain JVM process, not Gradle. Docker's `restart: unless-stopped` handles crash 
 ```yaml
 services:
   ktor:
-    image: ghcr.io/branvandemeer/health-server:latest
+    image: ghcr.io/branneman/health-server:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -189,8 +189,8 @@ jobs:
           file: server/Dockerfile
           push: true
           tags: |
-            ghcr.io/branvandemeer/health-server:latest
-            ghcr.io/branvandemeer/health-server:${{ github.sha }}
+            ghcr.io/branneman/health-server:latest
+            ghcr.io/branneman/health-server:${{ github.sha }}
 ```
 
 `GITHUB_TOKEN` is auto-injected by GitHub — no PAT or stored secret needed.
