@@ -22,6 +22,8 @@ dependencies {
     implementation(libs.exposed.java.time)
     implementation(libs.postgresql)
     implementation(libs.hikari)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.postgres)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
 }
