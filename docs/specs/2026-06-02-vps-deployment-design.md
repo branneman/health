@@ -13,7 +13,7 @@ GitHub (repo — currently private, going public later)
   └─ push to main
        └─ GitHub Actions
             ├─ Multi-stage Docker build (Gradle installDist → slim JRE)
-            └─ Push → ghcr.io/branvandemeer/health-backend:latest
+            └─ Push → ghcr.io/branvandemeer/health-server:latest
                                                     :git-sha
 
 Hetzner CPX22 (Debian 12, EU)
@@ -66,7 +66,7 @@ plain JVM process, not Gradle. Docker's `restart: unless-stopped` handles crash 
 ```yaml
 services:
   ktor:
-    image: ghcr.io/branvandemeer/health-backend:latest
+    image: ghcr.io/branvandemeer/health-server:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -189,15 +189,15 @@ jobs:
           file: server/Dockerfile
           push: true
           tags: |
-            ghcr.io/branvandemeer/health-backend:latest
-            ghcr.io/branvandemeer/health-backend:${{ github.sha }}
+            ghcr.io/branvandemeer/health-server:latest
+            ghcr.io/branvandemeer/health-server:${{ github.sha }}
 ```
 
 `GITHUB_TOKEN` is auto-injected by GitHub — no PAT or stored secret needed.
 
 **Note on private repo:** GitHub Actions free tier includes 2,000 minutes/month for private
 repos (each run ~5 min → ~400 pushes/month headroom). After the first push, set the
-`health-backend` package to **public** in GitHub → Packages → Package settings. This lets
+`health-server` package to **public** in GitHub → Packages → Package settings. This lets
 Watchtower pull without credentials. If you want fully private images, add a PAT with
 `read:packages` to the VPS `.env` as `WATCHTOWER_REGISTRY_1_PASSWORD` and configure
 Watchtower accordingly — but public package is simpler and the image contains no secrets.
@@ -324,11 +324,10 @@ gunzip -c health_20260101_020000.sql.gz \
 
 ---
 
-## Server Bootstrap
+## Server Bootstrap (cloud-init)
 
 The file `cloud-config.yml` in the repo root is pasted into Hetzner's "User data" field when
-creating the VPS. It runs once on first boot via cloud-init and covers everything that would
-otherwise be a manual hardening step.
+creating the VPS. It runs once on first boot via cloud-init and covers OS-level hardening.
 
 What it does:
 
@@ -342,10 +341,198 @@ What it does:
 
 After the box is provisioned, connect as `deploy` — root login is disabled by cloud-init.
 
+**Note:** replace the placeholder SSH public key in `cloud-config.yml` with your real
+`~/.ssh/id_ed25519.pub` before use. The public key is safe to commit.
+
+---
+
+## Ansible — App Setup
+
+After cloud-init completes, Ansible handles all application-level setup from your local
+machine. One command configures a fresh server or re-applies config to an existing one
+(all tasks are idempotent). Moving to a new provider: run cloud-init on the new box, then
+run `ansible-playbook`.
+
+### File structure
+
+```
+ansible/
+├── playbook.yml         # all tasks
+├── inventory.yml        # VPS host + connection config
+├── requirements.yml     # ansible-galaxy collections
+├── templates/
+│   ├── env.j2           # .env file template
+│   └── backup.sh.j2     # backup script template
+└── vars/
+    └── vault.yml        # encrypted secrets — git-ignored, created locally
+```
+
+`vars/vault.yml` is encrypted with `ansible-vault` and listed in `.gitignore`. Never
+committed. Templates are committed — they contain only `{{ variable_name }}` placeholders.
+
+### `ansible/inventory.yml`
+
+```yaml
+all:
+  hosts:
+    health-vps:
+      ansible_host: api.health.bran.name
+      ansible_user: deploy
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+```
+
+### `ansible/requirements.yml`
+
+```yaml
+collections:
+  - name: community.docker
+    version: ">=3.0.0"
+  - name: community.crypto
+    version: ">=2.0.0"
+```
+
+### `ansible/playbook.yml`
+
+```yaml
+- hosts: all
+  vars_files:
+    - vars/vault.yml
+  tasks:
+    - name: Create app directory
+      file:
+        path: /home/deploy/health
+        state: directory
+        owner: deploy
+        group: deploy
+        mode: "0755"
+
+    - name: Copy docker-compose.yml
+      copy:
+        src: ../docker-compose.yml
+        dest: /home/deploy/health/docker-compose.yml
+        owner: deploy
+        group: deploy
+
+    - name: Copy Caddyfile
+      copy:
+        src: ../Caddyfile
+        dest: /home/deploy/health/Caddyfile
+        owner: deploy
+        group: deploy
+
+    - name: Template .env
+      template:
+        src: templates/env.j2
+        dest: /home/deploy/health/.env
+        owner: deploy
+        group: deploy
+        mode: "0600"
+
+    - name: Create backups directory
+      file:
+        path: /home/deploy/backups
+        state: directory
+        owner: deploy
+        group: deploy
+
+    - name: Generate Storage Box SSH key
+      community.crypto.openssh_keypair:
+        path: /home/deploy/.ssh/storagebox_key
+        type: ed25519
+        owner: deploy
+        group: deploy
+
+    - name: Read Storage Box public key
+      command: cat /home/deploy/.ssh/storagebox_key.pub
+      register: storagebox_pubkey
+      changed_when: false
+
+    - name: Show Storage Box public key (add this to Hetzner Robot panel)
+      debug:
+        msg: "{{ storagebox_pubkey.stdout }}"
+
+    - name: Template backup script
+      template:
+        src: templates/backup.sh.j2
+        dest: /home/deploy/backup.sh
+        owner: deploy
+        group: deploy
+        mode: "0755"
+
+    - name: Add nightly backup cron
+      cron:
+        name: nightly postgres backup
+        minute: "0"
+        hour: "2"
+        job: /home/deploy/backup.sh >> /var/log/health-backup.log 2>&1
+        user: deploy
+
+    - name: Start docker compose stack
+      community.docker.docker_compose_v2:
+        project_src: /home/deploy/health
+        state: present
+```
+
+### `ansible/templates/env.j2`
+
+```
+PROJECT_NAME=health
+
+API_USER=health
+API_PASSWORD={{ api_password }}
+
+POSTGRES_USER=health
+POSTGRES_PASSWORD={{ postgres_password }}
+POSTGRES_DB=health
+
+DATABASE_URL=jdbc:postgresql://postgres:5432/health
+
+API_DOMAIN=api.health.bran.name
+
+STORAGE_BOX_USER={{ storage_box_user }}
+STORAGE_BOX_HOST={{ storage_box_host }}
+```
+
+### `ansible/templates/backup.sh.j2`
+
+Identical content to the backup script in the Nightly Backups section — no Jinja2
+variables needed since the script sources `.env` at runtime.
+
+### `vars/vault.yml` (local only — never committed)
+
+Create with: `ansible-vault create ansible/vars/vault.yml`
+
+```yaml
+api_password: "strong-random-value"
+postgres_password: "strong-random-value"
+storage_box_user: "uXXXXXX"
+storage_box_host: "uXXXXXX.your-storagebox.de"
+```
+
+### Running
+
+Install collections once:
+```bash
+ansible-galaxy collection install -r ansible/requirements.yml
+```
+
+Deploy (prompts for vault password):
+```bash
+ansible-playbook ansible/playbook.yml -i ansible/inventory.yml --ask-vault-pass
+```
+
+### What remains manual
+
+- **DNS record** — add `api.health.bran.name → VPS IP` before running Ansible (Caddy needs
+  it to obtain a Let's Encrypt cert).
+- **Storage Box SSH key** — Ansible prints the public key; add it in Hetzner Robot →
+  Storage Box → SSH Keys. One-time step.
+- **ghcr.io package visibility** — set to public after the first GitHub Actions push.
+
 ---
 
 ## Out of scope
 
-- DNS record creation (`api.health.bran.name → VPS IP`) — manual step before first deploy
+- DNS record creation (`api.health.bran.name → VPS IP`) — manual step, provider-specific
 - Polar AccessLink integration — separate spec
 - Android app / Room sync — separate spec

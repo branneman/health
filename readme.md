@@ -35,7 +35,7 @@ Use the run button in your IDE’s editor gutter, or run tests using Gradle task
 
 - Install Docker + Docker Compose:  
   `brew install colima docker docker-compose && colima start`
-- Run PostgreSQL via Docker Compose: `docker compose up -d`
+- Run PostgreSQL via Docker Compose: `docker compose up -d postgres postgres-mcp`
 - Install Android Studio via JetBrains Toolbox.
 - Install the `Claude Code [Beta]` plugin in Android Studio.
 - Add `$HOME/Library/Android/sdk/platform-tools` to your path.
@@ -52,6 +52,24 @@ Use the run button in your IDE’s editor gutter, or run tests using Gradle task
 - Add [Superpowers](https://github.com/obra/superpowers#readme) to Claude:  
   `claude plugin install superpowers@claude-plugins-official`
 
-## Re-applying schema changes
+## Local database
 
-`docker compose down -v && docker compose up -d`
+Schema is managed by Flyway and applied automatically when the server starts.
+
+Start a fresh database:
+```
+docker compose up -d postgres postgres-mcp
+./gradlew :server:run   # Flyway creates all tables on first run
+```
+
+Load seed data (optional, after server has started):
+```
+psql $DATABASE_URL < local-db-seed/seed_data.sql
+```
+
+Reset and reload from scratch:
+```
+docker compose down -v && docker compose up -d postgres postgres-mcp
+./gradlew :server:run
+psql $DATABASE_URL < local-db-seed/seed_data.sql
+```

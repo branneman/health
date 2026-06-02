@@ -69,8 +69,10 @@ health/
 │
 ├── shared/                      # KMP: API models (DTOs), JVM + Android
 │
-├── server/                     # Ktor server (JVM)
-│   └── .../db/migrations/       # Flyway SQL → Postgres schema lives HERE
+├── server/                      # Ktor server (JVM)
+│   └── .../db/migration/        # Flyway SQL → Postgres schema lives HERE
+│
+├── local-db-seed/               # Local dev only — SQL seed data (never production)
 │
 ├── core-data/                   # Room DB + repositories (Android)
 ├── widget/                      # Glance widget
@@ -85,9 +87,15 @@ Key points:
 - **There is no shared DB schema.** Two databases with different jobs: Postgres on the
   server (system of record) and Room on the phone (offline cache + widget source).
   They do **not** share a schema.
-    - Postgres migrations (Flyway/Liquibase) live in `server`.
+    - Postgres migrations (Flyway) live in `server/src/main/resources/db/migration/`.
+      Naming convention: `V{n}__{description}.sql` (double underscore). Never edit a
+      migration after it has been applied — add a new `V{n+1}__` file instead.
     - Room entities + schema export live in `core-data`.
     - The `shared` DTOs are the bridge between them — not a shared schema.
+- **`local-db-seed/` is local dev only.** Contains SQL seed data to populate the DB
+  for development. Never run in production. Load manually after Flyway has created the
+  schema: `psql $DATABASE_URL < local-db-seed/seed_data.sql`. Do not use
+  `docker-entrypoint-initdb.d` for application schema — that is Flyway's job.
 - **`core-data` is split out from `app` because of the widget.** Both the Glance widget
   and the app UI need the same local data (Room + repositories). Putting that in `app`
   would make the widget depend on the whole UI layer. (For a personal project you *may*

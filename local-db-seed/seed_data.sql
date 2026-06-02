@@ -1,6 +1,14 @@
--- Local dev only. Not executed in production (no docker-entrypoint-initdb.d there).
+-- Local development seed data. Never run in production.
+--
+-- Load after starting the server (Flyway must have created the schema first):
+--   psql $DATABASE_URL < local-db-seed/seed_data.sql
+--
+-- Reset DB and reload:
+--   docker compose down -v && docker compose up -d postgres postgres-mcp
+--   ./gradlew :server:run   (applies Flyway migrations)
+--   psql $DATABASE_URL < local-db-seed/seed_data.sql
 
--- ~90 days of data with a realistic slow downward trend (~5 kg over 3 months) and day-to-day noise
+-- ~90 days of body weight with a realistic slow downward trend (~5 kg over 3 months)
 INSERT INTO body_weight (date, kg) VALUES
     ('2026-03-01', 87.20),
     ('2026-03-02', 87.05),
