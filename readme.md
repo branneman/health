@@ -21,9 +21,9 @@ Kotlin everywhere — Android app, shared DTOs, and backend server in one monore
 
 Use the run configurations provided by the run widget in your IDE’s toolbar. You can also use these
 commands and options:
-
+/mcp
 - Android app: `./gradlew :app:assembleDebug`
-- Server: `./gradlew :server:run`
+- Server: `./gradlew :server:run`docker
 
 ## Running tests
 
@@ -33,6 +33,9 @@ Use the run button in your IDE’s editor gutter, or run tests using Gradle task
 
 ## Setting up development environment
 
+- Install Docker + Docker Compose:  
+  `brew install colima docker docker-compose && colima start`
+- Run PostgreSQL via Docker Compose: `docker compose up -d`
 - Install Android Studio via JetBrains Toolbox.
 - Install the `Claude Code [Beta]` plugin in Android Studio.
 - Add `$HOME/Library/Android/sdk/platform-tools` to your path.
@@ -42,7 +45,10 @@ Use the run button in your IDE’s editor gutter, or run tests using Gradle task
   API: 34 "UpsideDownCake"; Android 14.0
   Services: Android Open Source
   ```
+- Connect Postgres MCP server to Claude:  
+  `claude mcp add --transport sse postgres http://localhost:8001/sse`
 - Add [Mobile-MCP](https://github.com/mobile-next/mobile-mcp#readme) to Claude:  
   `claude mcp add mobile-mcp -- npx -y @mobilenext/mobile-mcp@latest`
 - Add [Superpowers](https://github.com/obra/superpowers#readme) to Claude:  
-  `/plugin install superpowers@claude-plugins-official`
+  `claude plugin install superpowers@claude-plugins-official`
+

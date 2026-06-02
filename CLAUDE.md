@@ -4,6 +4,12 @@ Health is a personal health-tracking app. Single user (the owner). Goal: get hea
 and build AI skills/knowledge along the way. Friction is the enemy — if logging is too
 hard, it won't get used.
 
+## Engineering rules
+
+- **IDs are always UUIDs** — no auto-incrementing integers anywhere (database columns,
+  Kotlin data classes, DTOs, Room entities). Postgres: `UUID DEFAULT gen_random_uuid()`.
+  Kotlin: `java.util.UUID`. Never `Int`, `Long`, or `BIGSERIAL` for an identifier.
+
 ## Goals & constraints
 
 - **Scope:** personal use, one user, but built properly (clean, maintainable, a real
