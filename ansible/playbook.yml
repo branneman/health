@@ -1,0 +1,77 @@
+- hosts: all
+  vars_files:
+    - vars/vault.yml
+  tasks:
+    - name: Create app directory
+      file:
+        path: /home/deploy/health
+        state: directory
+        owner: deploy
+        group: deploy
+        mode: "0755"
+
+    - name: Copy docker-compose.yml
+      copy:
+        src: ../docker-compose.yml
+        dest: /home/deploy/health/docker-compose.yml
+        owner: deploy
+        group: deploy
+
+    - name: Copy Caddyfile
+      copy:
+        src: ../Caddyfile
+        dest: /home/deploy/health/Caddyfile
+        owner: deploy
+        group: deploy
+
+    - name: Template .env
+      template:
+        src: templates/env.j2
+        dest: /home/deploy/health/.env
+        owner: deploy
+        group: deploy
+        mode: "0600"
+
+    - name: Create backups directory
+      file:
+        path: /home/deploy/backups
+        state: directory
+        owner: deploy
+        group: deploy
+
+    - name: Generate Storage Box SSH key
+      community.crypto.openssh_keypair:
+        path: /home/deploy/.ssh/storagebox_key
+        type: ed25519
+        owner: deploy
+        group: deploy
+
+    - name: Read Storage Box public key
+      command: cat /home/deploy/.ssh/storagebox_key.pub
+      register: storagebox_pubkey
+      changed_when: false
+
+    - name: Show Storage Box public key (add this to Hetzner Robot panel)
+      debug:
+        msg: "{{ storagebox_pubkey.stdout }}"
+
+    - name: Template backup script
+      template:
+        src: templates/backup.sh.j2
+        dest: /home/deploy/backup.sh
+        owner: deploy
+        group: deploy
+        mode: "0755"
+
+    - name: Add nightly backup cron
+      cron:
+        name: nightly postgres backup
+        minute: "0"
+        hour: "2"
+        job: /home/deploy/backup.sh >> /var/log/health-backup.log 2>&1
+        user: deploy
+
+    - name: Start docker compose stack
+      community.docker.docker_compose_v2:
+        project_src: /home/deploy/health
+        state: present

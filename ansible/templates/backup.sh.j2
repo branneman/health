@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source /home/deploy/health/.env
+
+BACKUP_FILE="health_$(date +%Y%m%d_%H%M%S).sql.gz"
+BACKUP_DIR="/home/deploy/backups"
+RETENTION_DAYS=30
+SSH_OPTS="-p 23 -i /home/deploy/.ssh/storagebox_key"
+STORAGE_BOX="${STORAGE_BOX_USER}@${STORAGE_BOX_HOST}"
+
+mkdir -p "$BACKUP_DIR"
+
+docker exec health_postgres \
+    pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" \
+    | gzip > "$BACKUP_DIR/$BACKUP_FILE"
+
+rsync -e "ssh $SSH_OPTS" \
+    "$BACKUP_DIR/$BACKUP_FILE" \
+    "${STORAGE_BOX}:backups/"
+
+ssh $SSH_OPTS "$STORAGE_BOX" \
+    "find backups/ -name '*.sql.gz' -mtime +$RETENTION_DAYS -delete"
+
+find "$BACKUP_DIR" -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete
