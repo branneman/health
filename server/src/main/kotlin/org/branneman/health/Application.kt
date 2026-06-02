@@ -3,6 +3,7 @@ package org.branneman.health
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.serialization.kotlinx.json.*
+import org.flywaydb.core.Flyway
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.engine.*
@@ -32,6 +33,12 @@ fun Application.module() {
     val dbPassword = System.getenv("POSTGRES_PASSWORD") ?: error("POSTGRES_PASSWORD not set")
     val apiUser = System.getenv("API_USER") ?: error("API_USER not set")
     val apiPassword = System.getenv("API_PASSWORD") ?: error("API_PASSWORD not set")
+
+    Flyway.configure()
+        .dataSource(dbUrl, dbUser, dbPassword)
+        .baselineOnMigrate(true)
+        .load()
+        .migrate()
 
     Database.connect(HikariDataSource(HikariConfig().apply {
         jdbcUrl = dbUrl
