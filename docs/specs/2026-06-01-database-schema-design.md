@@ -21,6 +21,11 @@ spec covers only the Postgres side.
 
 ## File location
 
+**Current state (Flyway not yet wired):** schema lives in `init/01_schema.sql`, mounted via
+`docker-entrypoint-initdb.d` and applied once when the Docker container is first created.
+
+**Intended state (once Flyway is wired into Ktor):**
+
 ```
 server/src/main/resources/db/migration/V1__initial_schema.sql
 ```
@@ -28,8 +33,8 @@ server/src/main/resources/db/migration/V1__initial_schema.sql
 Flyway convention: `V{version}__{description}.sql` (double underscore). Never edit a migration after
 it has been applied — add `V2__...` for future changes.
 
-The `init/` directory (mounted as `docker-entrypoint-initdb.d`) is for one-time container bootstrap
-only (e.g. Postgres extensions). Application schema lives exclusively in Flyway migrations.
+The `init/` directory will then be reserved for one-time container bootstrap only (e.g. Postgres
+extensions). Application schema will live exclusively in Flyway migrations.
 
 ---
 
@@ -40,11 +45,24 @@ only (e.g. Postgres extensions). Application schema lives exclusively in Flyway 
 | Primary keys         | `UUID`         | Safe to generate on the client before insertion; `gen_random_uuid()` built-in since PG 13 |
 | Polar calorie totals | `INTEGER`      | Polar delivers whole-number kcal                                                          |
 | Per-100g nutrition   | `NUMERIC(7,2)` | Fractional precision matters for food data                                                |
+| Body weight          | `NUMERIC(5,2)` | Sub-gram precision (e.g. 83.40 kg); max 999.99 kg is plenty                              |
 | Timestamps           | `TIMESTAMPTZ`  | Always store with timezone                                                                |
 
 ---
 
 ## Tables
+
+### body weight
+
+```sql
+CREATE TABLE body_weight (
+    id   UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    date DATE          NOT NULL UNIQUE,
+    kg   NUMERIC(5, 2) NOT NULL
+);
+```
+
+One row per day. `UNIQUE` on `date` enforces the single morning-measurement rule.
 
 ### calories-out
 
@@ -161,4 +179,4 @@ CREATE INDEX ON workout    (date);      -- join to daily_energy by date
 
 - Flyway dependency and wiring in Ktor (`Application.kt`) — separate task
 - Room schema on Android — separate module (`core-data`)
-- DTOs in `shared` module — separate task
+- ~~DTOs in `shared` module — separate task~~ — done (`WeightEntryDto` added)

@@ -60,7 +60,7 @@ Breakfast and lunch are fairly fixed, so:
 ## Monorepo structure
 
 One repo, multiple **Gradle modules** (not multiple repos). The point of Kotlin
-everywhere is sharing data models between app and backend.
+everywhere is sharing data models between app and server.
 
 ```
 health/
@@ -69,7 +69,7 @@ health/
 │
 ├── shared/                      # KMP: API models (DTOs), JVM + Android
 │
-├── backend/                     # Ktor server (JVM)
+├── server/                     # Ktor server (JVM)
 │   └── .../db/migrations/       # Flyway SQL → Postgres schema lives HERE
 │
 ├── core-data/                   # Room DB + repositories (Android)
@@ -85,7 +85,7 @@ Key points:
 - **There is no shared DB schema.** Two databases with different jobs: Postgres on the
   server (system of record) and Room on the phone (offline cache + widget source).
   They do **not** share a schema.
-    - Postgres migrations (Flyway/Liquibase) live in `backend`.
+    - Postgres migrations (Flyway/Liquibase) live in `server`.
     - Room entities + schema export live in `core-data`.
     - The `shared` DTOs are the bridge between them — not a shared schema.
 - **`core-data` is split out from `app` because of the widget.** Both the Glance widget
@@ -94,7 +94,7 @@ Key points:
   collapse the widget into `app`; given "properly" + "strong widget" the split is
   justified.)
 - **`libs.versions.toml`** (version catalog) is the "properly" glue: one place for all
-  dependency versions so backend / shared / Android modules don't drift (e.g. on the
+  dependency versions so server / shared / Android modules don't drift (e.g. on the
   kotlinx-serialization version).
 
 ### Module dependency direction
@@ -104,10 +104,10 @@ Dependencies point **one way, downward, never back**. This prevents cycles.
 
 - **`shared` → nothing.** The leaf. Only external libs (kotlinx-serialization). Never
   imports another module. Everyone may point at `shared`; `shared` never points back.
-- **`backend` → `shared`.** Uses the DTOs for JSON (de)serialization. Touches no
+- **`server` → `shared`.** Uses the DTOs for JSON (de)serialization. Touches no
   Android module (can't — different compile target).
 - **`core-data` → `shared`.** Maps between DTOs (to/from server) and its own Room
-  entities. Imports no `app`, `widget`, or `backend`.
+  entities. Imports no `app`, `widget`, or `server`.
 - **`widget` → `core-data`, `shared`.** Reads local data via repositories from
   `core-data`. Deliberately does **not** depend on `app`.
 - **`app` → `core-data`, `widget`, `shared`.** Top of the stack. May import everything
@@ -115,7 +115,7 @@ Dependencies point **one way, downward, never back**. This prevents cycles.
 
 Two boundaries this enforces:
 
-1. **The JVM/Android wall.** `backend` and the Android modules never import each other;
+1. **The JVM/Android wall.** `server` and the Android modules never import each other;
    their only contact is `shared`. Change a DTO → server and app both see it, but no
    server code leaks into the app or vice versa.
 2. **Forced clean mapping.** Because `core-data` may import `shared` but not the other

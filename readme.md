@@ -21,9 +21,9 @@ Kotlin everywhere — Android app, shared DTOs, and backend server in one monore
 
 Use the run configurations provided by the run widget in your IDE’s toolbar. You can also use these
 commands and options:
-/mcp
+
 - Android app: `./gradlew :app:assembleDebug`
-- Server: `./gradlew :server:run`docker
+- Server: `set -a; source .env; set +a; ./gradlew :server:run`
 
 ## Running tests
 
@@ -52,3 +52,6 @@ Use the run button in your IDE’s editor gutter, or run tests using Gradle task
 - Add [Superpowers](https://github.com/obra/superpowers#readme) to Claude:  
   `claude plugin install superpowers@claude-plugins-official`
 
+## Re-applying schema changes
+
+`docker compose down -v && docker compose up -d`
