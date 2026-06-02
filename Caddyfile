@@ -1,0 +1,3 @@
+{env.API_DOMAIN} {
+    reverse_proxy ktor:8080
+}
