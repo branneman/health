@@ -36,7 +36,6 @@ fun Application.module() {
 
     Flyway.configure()
         .dataSource(dbUrl, dbUser, dbPassword)
-        .baselineOnMigrate(true)
         .load()
         .migrate()
 
