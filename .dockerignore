@@ -1,0 +1,16 @@
+.gradle
+.idea
+build
+*.log
+.git
+.gitignore
+.env
+.env.example
+gradle.properties
+node_modules
+*.iml
+.DS_Store
+.kotlin
+cloud-config.yml
+docs
+docker-compose.yml
