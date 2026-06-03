@@ -6,6 +6,7 @@ hard, it won't get used.
 
 ## Engineering rules
 
+- Never use `superpowers` in a folder name for docs, specs, designs, implementation plans, etc.
 - **IDs are always UUIDs** — no auto-incrementing integers anywhere (database columns,
   Kotlin data classes, DTOs, Room entities). Postgres: `UUID DEFAULT gen_random_uuid()`.
   Kotlin: `java.util.UUID`. Never `Int`, `Long`, or `BIGSERIAL` for an identifier.
