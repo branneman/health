@@ -214,11 +214,13 @@ user_health_password: "strong-random-value"
 ```yaml
 - name: Hash password for user 'health'
   command: >
-    python3 -c "from passlib.hash import bcrypt;
-    print(bcrypt.using(rounds=12).hash('{{ user_health_password }}'))"
+    python3 -c "import bcrypt;
+    h=bcrypt.hashpw('{{ user_health_password }}'.encode(), bcrypt.gensalt(12)).decode();
+    print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
   register: health_pw_hash
   changed_when: false
   no_log: true
+  delegate_to: localhost
 
 - name: Upsert user 'health'
   command: >
@@ -231,8 +233,8 @@ user_health_password: "strong-random-value"
 
 Idempotent: re-running the playbook updates the password if the vault value changes.
 
-**Python dependency:** `passlib[bcrypt]` must be available on the Ansible control machine
-(the developer's laptop). Install once: `pip3 install passlib bcrypt`.
+**Python dependency:** `bcrypt` must be available on the Ansible control machine
+(the developer's laptop). Install once: `pip3 install --break-system-packages bcrypt`.
 
 ---
 

@@ -815,7 +815,7 @@ set -a; source .env; set +a
 In a second terminal, insert a test user directly (the Ansible seeding doesn't exist yet):
 ```bash
 # Generate a BCrypt hash of "testpass" using Python
-HASH=$(python3 -c "from passlib.hash import bcrypt; print(bcrypt.using(rounds=12).hash('testpass'))")
+HASH=$(python3 -c "import bcrypt; h=bcrypt.hashpw(b'testpass', bcrypt.gensalt(12)).decode(); print(h[:2]+'a'+h[3:] if h[2]=='b' else h)")
 
 # Insert the user
 psql "postgresql://health:secret@localhost:5432/health" \
@@ -918,11 +918,13 @@ Add the following two tasks to `ansible/playbook.yml` after the `Start docker co
 ```yaml
     - name: Hash password for user 'health'
       command: >
-        python3 -c "from passlib.hash import bcrypt;
-        print(bcrypt.using(rounds=12).hash('{{ user_health_password }}'))"
+        python3 -c "import bcrypt;
+        h=bcrypt.hashpw('{{ user_health_password }}'.encode(), bcrypt.gensalt(12)).decode();
+        print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
       register: health_pw_hash
       changed_when: false
       no_log: true
+      delegate_to: localhost
 
     - name: Upsert user 'health'
       command: >
@@ -933,9 +935,9 @@ Add the following two tasks to `ansible/playbook.yml` after the `Start docker co
       no_log: true
 ```
 
-Note: `passlib[bcrypt]` must be installed on the Ansible control machine:
+Note: `bcrypt` must be installed on the Ansible control machine:
 ```bash
-pip3 install --break-system-packages passlib bcrypt
+pip3 install --break-system-packages bcrypt
 ```
 
 - [ ] **Step 4: Update vault variable name**

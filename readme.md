@@ -51,6 +51,15 @@ Use the run button in your IDE’s editor gutter, or run tests using Gradle task
   `claude mcp add mobile-mcp -- npx -y @mobilenext/mobile-mcp@latest`
 - Add [Superpowers](https://github.com/obra/superpowers#readme) to Claude:  
   `claude plugin install superpowers@claude-plugins-official`
+- Install Ansible
+- Install bcrypt (used by the Ansible playbook to BCrypt-hash passwords locally):  
+  `pip3 install --break-system-packages bcrypt`
+- Store the Ansible vault password in macOS Keychain:  
+  `security add-generic-password -a ansible-vault -s health -w 'your-vault-password'`
+- Create a retrieval script so Ansible reads it from Keychain automatically:  
+  `printf '#!/bin/bash\nsecurity find-generic-password -a ansible-vault -s health -w\n' > ~/.ansible-vault-pass.sh && chmod 700 ~/.ansible-vault-pass.sh`
+- Point Ansible at the script (add to `~/.bashrc`):  
+  `export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-pass.sh`
 
 ## Local database
 
@@ -72,4 +81,14 @@ Reset and reload from scratch:
 docker compose down -v && docker compose up -d postgres postgres-mcp
 ./gradlew :server:run
 psql $DATABASE_URL < local-db-seed/seed_data.sql
+```
+
+## Other useful stuff for deployment observability:
+
+```bash
+# github actions status - is my pipeline finished yet?
+watch -n 2 --color "GH_FORCE_TTY=true gh run list --limit 5"
+
+# watchtower logs - did my new image deploy yet?
+watch -n 2 "ssh deploy@api.health.bran.name docker logs health-watchtower-1 --tail 20"
 ```

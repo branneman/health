@@ -78,11 +78,13 @@
 
     - name: Hash password for user 'health'
       command: >
-        python3 -c "from passlib.hash import bcrypt;
-        print(bcrypt.using(rounds=12).hash('{{ user_health_password }}'))"
+        python3 -c "import bcrypt;
+        h=bcrypt.hashpw('{{ user_health_password }}'.encode(), bcrypt.gensalt(12)).decode();
+        print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
       register: health_pw_hash
       changed_when: false
       no_log: true
+      delegate_to: localhost
 
     - name: Upsert user 'health'
       command: >
