@@ -935,7 +935,7 @@ Add the following two tasks to `ansible/playbook.yml` after the `Start docker co
 
 Note: `passlib[bcrypt]` must be installed on the Ansible control machine:
 ```bash
-pip install passlib bcrypt
+pip3 install --break-system-packages passlib bcrypt
 ```
 
 - [ ] **Step 4: Update vault variable name**

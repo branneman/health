@@ -232,7 +232,7 @@ user_health_password: "strong-random-value"
 Idempotent: re-running the playbook updates the password if the vault value changes.
 
 **Python dependency:** `passlib[bcrypt]` must be available on the Ansible control machine
-(the developer's laptop). Install once: `pip install passlib bcrypt`.
+(the developer's laptop). Install once: `pip3 install passlib bcrypt`.
 
 ---
 
