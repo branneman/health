@@ -143,10 +143,10 @@ services:
 
 ### `Caddyfile`
 
-Domain read from env so the file is safe to commit:
+Domain read from env so the file is safe to commit. Note: Caddyfile uses `{$VAR}` syntax for env vars (`{env.VAR}` is JSON config syntax and won't work here):
 
 ```
-{env.API_DOMAIN} {
+{$API_DOMAIN} {
     reverse_proxy ktor:8080
 }
 ```
