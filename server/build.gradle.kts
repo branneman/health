@@ -24,6 +24,8 @@ dependencies {
     implementation(libs.hikari)
     implementation(libs.flyway.core)
     implementation(libs.flyway.postgres)
+    implementation(libs.jbcrypt)
+    implementation(libs.ktor.serverForwardedHeader)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
 }

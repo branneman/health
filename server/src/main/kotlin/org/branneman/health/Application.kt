@@ -2,15 +2,23 @@ package org.branneman.health
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import org.flywaydb.core.Flyway
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.forwardedheaders.*
+import io.ktor.server.plugins.origin
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.delay
+import org.branneman.health.auth.AuthService
+import org.branneman.health.auth.LoginResult
+import org.branneman.health.auth.RateLimiter
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.date
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -31,8 +39,6 @@ fun Application.module() {
     val dbUrl = System.getenv("DATABASE_URL") ?: error("DATABASE_URL not set")
     val dbUser = System.getenv("POSTGRES_USER") ?: error("POSTGRES_USER not set")
     val dbPassword = System.getenv("POSTGRES_PASSWORD") ?: error("POSTGRES_PASSWORD not set")
-    val apiUser = System.getenv("API_USER") ?: error("API_USER not set")
-    val apiPassword = System.getenv("API_PASSWORD") ?: error("API_PASSWORD not set")
 
     Flyway.configure()
         .dataSource(dbUrl, dbUser, dbPassword)
@@ -47,14 +53,18 @@ fun Application.module() {
         maximumPoolSize = 5
     }))
 
+    val authService = AuthService()
+    val ipRateLimiter = RateLimiter()
+    val usernameRateLimiter = RateLimiter()
+
+    install(XForwardedHeaders)
     install(ContentNegotiation) { json() }
 
     install(Authentication) {
-        basic("api") {
-            validate { creds ->
-                if (creds.name == apiUser && creds.password == apiPassword)
-                    UserIdPrincipal(creds.name)
-                else null
+        bearer("api") {
+            authenticate { credential ->
+                authService.lookupToken(credential.token)
+                    ?.let { UserIdPrincipal(it.toString()) }
             }
         }
     }
@@ -63,6 +73,48 @@ fun Application.module() {
         get("/") {
             call.respondText("OK")
         }
+
+        post("/token") {
+            val start = System.currentTimeMillis()
+            suspend fun applyFloor() {
+                val elapsed = System.currentTimeMillis() - start
+                if (elapsed < 500L) delay(500L - elapsed)
+            }
+
+            val ip = call.request.origin.remoteHost
+
+            ipRateLimiter.isLocked(ip)?.let { retryAfter ->
+                applyFloor()
+                call.response.headers.append("Retry-After", retryAfter.toString())
+                call.respond(HttpStatusCode.TooManyRequests)
+                return@post
+            }
+
+            val body = call.receive<TokenRequest>()
+
+            usernameRateLimiter.isLocked(body.username)?.let { retryAfter ->
+                applyFloor()
+                call.response.headers.append("Retry-After", retryAfter.toString())
+                call.respond(HttpStatusCode.TooManyRequests)
+                return@post
+            }
+
+            when (val result = authService.login(body.username, body.password)) {
+                is LoginResult.Failure -> {
+                    ipRateLimiter.recordFailure(ip)
+                    usernameRateLimiter.recordFailure(body.username)
+                    applyFloor()
+                    call.respond(HttpStatusCode.Unauthorized)
+                }
+                is LoginResult.Success -> {
+                    ipRateLimiter.reset(ip)
+                    usernameRateLimiter.reset(body.username)
+                    applyFloor()
+                    call.respond(TokenResponse(result.token, result.expiresAt.toString()))
+                }
+            }
+        }
+
         authenticate("api") {
             get("/weight") {
                 val entries = transaction {

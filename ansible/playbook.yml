@@ -32,6 +32,22 @@
         group: deploy
         mode: "0600"
 
+    - name: Hash password for user 'health'
+      command: >
+        python3 -c "from passlib.hash import bcrypt;
+        print(bcrypt.using(rounds=12).hash('{{ user_health_password }}'))"
+      register: health_pw_hash
+      changed_when: false
+      no_log: true
+
+    - name: Upsert user 'health'
+      command: >
+        docker exec health_postgres psql -U health -d health -c
+        "INSERT INTO users (username, password_hash)
+         VALUES ('health', '{{ health_pw_hash.stdout }}')
+         ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;"
+      no_log: true
+
     - name: Create backups directory
       file:
         path: /home/deploy/backups
