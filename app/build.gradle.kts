@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -18,12 +19,23 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.compose.uiToolingPreview)
+    implementation(libs.ktor.clientCore)
+    implementation(libs.ktor.clientAndroid)
     debugImplementation(libs.compose.uiTooling)
+    testImplementation(libs.ktor.clientMock)
+    testImplementation(libs.kotlin.testJunit)
+}
+
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
 }
 
 android {
     namespace = "org.branneman.health"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    buildFeatures { buildConfig = true }
 
     defaultConfig {
         applicationId = "org.branneman.health"
@@ -31,6 +43,10 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+        buildConfigField(
+            "String", "SERVER_BASE_URL",
+            "\"${localProps.getProperty("server.baseUrl", "https://api.health.bran.name")}\""
+        )
     }
     packaging {
         resources {

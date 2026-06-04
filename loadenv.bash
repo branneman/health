@@ -9,3 +9,8 @@ fi
 if [ -d "$HOME/Library/Android/sdk/platform-tools" ]; then
   export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
 fi
+
+# emulator
+if [ -d "$HOME/Library/Android/sdk/emulator" ]; then
+  export PATH="$HOME/Library/Android/sdk/emulator:$PATH"
+fi

@@ -45,6 +45,9 @@ Use the run button in your IDE’s editor gutter, or run tests using Gradle task
   API: 34 "UpsideDownCake"; Android 14.0
   Services: Android Open Source
   ```
+- Add to `local.properties` to point the app at the local server instead of production:  
+  `server.baseUrl=http://10.0.2.2:8080`  
+  (`10.0.2.2` is the emulator's alias for `localhost`; use your LAN IP for a real device.)
 - Connect Postgres MCP server to Claude:  
   `claude mcp add --transport sse postgres http://localhost:8001/sse`
 - Add [Mobile-MCP](https://github.com/mobile-next/mobile-mcp#readme) to Claude:  

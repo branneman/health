@@ -74,6 +74,10 @@ fun Application.module() {
             call.respondText("OK")
         }
 
+        get("/server-health") {
+            call.respondText("""{"status":"ok"}""", ContentType.Application.Json)
+        }
+
         post("/token") {
             val start = System.currentTimeMillis()
             suspend fun applyFloor() {
@@ -106,6 +110,7 @@ fun Application.module() {
                     applyFloor()
                     call.respond(HttpStatusCode.Unauthorized)
                 }
+
                 is LoginResult.Success -> {
                     ipRateLimiter.reset(ip)
                     usernameRateLimiter.reset(body.username)

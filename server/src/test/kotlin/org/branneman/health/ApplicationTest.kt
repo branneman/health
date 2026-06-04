@@ -54,4 +54,17 @@ class ApplicationTest {
         }
         assertEquals(HttpStatusCode.OK, response.status)
     }
+
+    @Test
+    fun `server-health returns status ok`() = testApplication {
+        routing {
+            get("/server-health") {
+                call.respondText("""{"status":"ok"}""", ContentType.Application.Json)
+            }
+        }
+        val response = client.get("/server-health")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("""{"status":"ok"}""", response.bodyAsText())
+        assertEquals("application/json", response.contentType()?.withoutParameters().toString())
+    }
 }
