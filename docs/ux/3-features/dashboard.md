@@ -105,8 +105,8 @@ The landing surface when the app opens. Top to bottom:
 
 ## Offline
 
-Both widget and dashboard render fully from Room. Server sync (Polar "out", any
-cross-device state) updates in the background; stale-but-present beats blank.
+Both widget and dashboard render fully from local storage. Server sync (Polar "out",
+any cross-device state) updates in the background; stale-but-present beats blank.
 
 ## Vacation / pause mode
 
@@ -119,6 +119,24 @@ When activated (S14), the app enters a neutral out-of-band state:
 - Pattern insights skip the paused period when computing trends.
 
 The toggle lives in the dashboard header — accessible but not prominent.
+
+## Maintenance mode
+
+When the target deficit is set to 0 (S16), the dashboard adapts:
+
+- **Budget label:** "X kcal remaining (balance)" instead of "X kcal remaining". No
+  deficit deducted — budget equals calories out.
+- **Weekly verdict:** measures stability, not loss rate. Three states:
+    - "Weight stable — on track." (change within ±0.2 kg/week — success state, green)
+    - "Weight creeping up — slight surplus this week." (amber)
+    - "Dropping below target — consider eating a bit more." (amber, reverse direction)
+- **Amber-fast guard:** still active. If weight drops faster than 0.5 kg/week in
+  maintenance, same protective message applies.
+- The app may surface a gentle suggestion banner when the smoothed weight trend is
+  consistently within ~1 kg of the target: "You're close to your goal — ready to
+  switch to maintenance?" User dismisses or taps to transition.
+- Maintenance mode must look like a success state, not a reduced mode. No "inactive"
+  styling, no prompts to resume weight loss.
 
 ## Open questions for implementation
 

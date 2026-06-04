@@ -39,6 +39,23 @@ dropping faster than ~0.5 kg/week, an amber warning surfaces: "Dropping quickly 
 sure you're eating enough to perform." The app must not silently celebrate an aggressive
 deficit. (See `0-context-private.md` for background.)
 
+## Two phases: loss and maintenance
+
+The app has two distinct operating modes, and the design must handle both:
+
+- **Loss phase** (default): target deficit > 0. The weekly verdict measures whether
+  the weight trend is consistent with the target loss rate. Most of the design
+  decisions in these specs assume this phase.
+- **Maintenance phase**: target deficit = 0. Goal achieved — now the job is avoiding
+  regress. The weekly verdict flips: it now measures *stability*, not loss rate.
+  "Stable" is success; "creeping up" is the amber signal; "dropping too fast" still
+  applies. The daily budget becomes "eat to balance" rather than "eat at a deficit."
+
+Transitioning to maintenance is an explicit user action (settings), not automatic.
+The app may surface a gentle suggestion when the weight trend is consistently within
+~1 kg of the target, but never switches mode silently. Maintenance should feel like
+a success state — the UI must not treat it as a degraded or inactive mode.
+
 ## Two sources of truth, two jobs
 
 - **Calorie in-vs-out = the daily steering signal.** Fast feedback so the user can
@@ -55,11 +72,11 @@ The user opens the app *deliberately* to log and review; they do not live in the
 widget. Therefore:
 
 - **The widget is mostly read-only status.** A glance: on-track verdict + the trend.
-  It must be instant and work offline (reads Room only).
-- **One carve-out: preset drink shortcuts.** These are allowed on the widget because
-  they require zero contextual input, write directly to Room (offline-safe), and the
-  moment of use (e.g. at a bar after climbing) makes opening the app a genuine friction
-  barrier. No other logging belongs on the widget.
+  It must be instant and work offline (reads local storage only).
+- **One carve-out: quick-log shortcuts.** These are allowed on the widget because
+  they require zero contextual input, write directly to local storage (offline-safe), and
+  the moment of use (e.g. at a bar after climbing) makes opening the app a genuine
+  friction barrier. No other logging belongs on the widget.
 - **The app is the workspace.** All food logging, history, and detail live here.
 
 ## Logging is "close out the meal", not a race
@@ -78,11 +95,15 @@ are uncertain, nowhere else.
 - **Late-night snack** (a recurring post-sport snack): **one tap** ("log usual late
   snack"). Surfacing it as a button also makes the pattern *visible*, which the user
   asked for.
-- **Alcohol:** clusters, variable calorie content → **configurable drink-shortcut
-  buttons** (one per drink type, each with a preset kcal). One tap per drink, from the
-  widget or log screen. No tally ambiguity — calorie accuracy requires knowing the type.
-- **Dinner:** variable but from a finite repertoire → **fuzzy templates** (define once
-  exact, reuse with a portion tweak). The one place that earns real UI.
+- **Configurable shortcuts** — one-tap buttons for any frequently-consumed
+  calorie-containing item (typically alcoholic drinks, but not restricted to them).
+  Each shortcut has a user-set **emoji icon + short label + kcal value**. The icon
+  makes the buttons scannable at small size. Available on the widget and the log screen.
+  No tally ambiguity — calorie accuracy requires knowing the specific item.
+- **Everything else** (dinner, a one-off snack, a glass of whole milk, a meal out,
+  anything not covered by the presets above) → a generic **Log** flow with three paths:
+  from a saved template, quick-add by calories (with an optional short label to remember
+  what it was), or build from ingredients.
 
 ## What to surface, what to leave alone
 
@@ -115,8 +136,8 @@ The user ranked "a tip/nudge right now" **last** of four things to see. So:
 
 ## Offline & performance
 
-Basic functionality works without internet; the app writes locally first (Room),
-syncs later. The widget reads only local data. Logging must succeed offline — it's
+Basic functionality works without internet; the app writes locally first, syncs to
+the server later. The widget reads only local data. Logging must succeed offline — it's
 the one thing that can't wait for a connection.
 
 ## Accessibility / locale

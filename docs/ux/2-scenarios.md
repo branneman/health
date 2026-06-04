@@ -1,8 +1,8 @@
 # UX Scenarios
 
-Bridges `1-principles.md` → `3-flows.md`. Each scenario describes a concrete
+Bridges `1-principles.md` → `4-flows.md`. Each scenario describes a concrete
 interaction from the user's perspective: the trigger, the steps, and the outcome.
-No screen layouts here — those belong in `ux-flow.md`.
+No screen layouts here — those belong in `4-flows.md`.
 
 The principles explain *why*; the scenarios explain *what happens*.
 
@@ -10,53 +10,69 @@ The principles explain *why*; the scenarios explain *what happens*.
 
 ## Index
 
-| ID  | Scenario                           | Context        |
-|-----|------------------------------------|----------------|
-| S01 | First launch — onboarding          | One-time       |
-| S02 | Morning weigh-in + budget glance   | Daily morning  |
-| S03 | Log breakfast                      | Daily morning  |
-| S04 | Log lunch                          | Daily midday   |
-| S05 | Set sport tonight                  | Morning/midday |
-| S06 | Log dinner — from template         | Evening        |
-| S07 | Log dinner — quick-add by calories | Evening        |
-| S08 | Log dinner — build from scratch    | Evening, rare  |
-| S09 | Log a drink                        | Evening/night  |
-| S10 | Log late-night snack               | Late night     |
-| S11 | End-of-day logging reminder        | Evening        |
-| S12 | Edit or delete a logged entry      | Anytime        |
-| S13 | Weekly review                      | Weekly         |
-| S14 | Activate / end vacation mode       | Anytime        |
-| S15 | Configure drink shortcuts          | Settings       |
+| ID  | Scenario                         | Context        |
+|-----|----------------------------------|----------------|
+| S01 | First launch — onboarding        | One-time       |
+| S02 | Morning weigh-in + budget glance | Daily morning  |
+| S03 | Log breakfast                    | Daily morning  |
+| S04 | Log lunch                        | Daily midday   |
+| S05 | Set sport tonight                | Morning/midday |
+| S06 | Log — from template              | Anytime        |
+| S07 | Log — quick-add by calories      | Anytime        |
+| S08 | Log — build from scratch         | Anytime, rare  |
+| S09 | Log a drink                      | Evening/night  |
+| S10 | Log late-night snack             | Late night     |
+| S11 | End-of-day logging reminder      | ~21:00         |
+| S12 | Edit or delete a logged entry    | Anytime        |
+| S13 | Weekly review                    | Weekly         |
+| S14 | Activate / end vacation mode     | Anytime        |
+| S15 | Configure shortcuts              | Settings       |
+| S16 | Switch to maintenance mode       | After goal met |
 
 ---
 
 ## S01 — First launch: onboarding
 
-**Trigger:** App opened for the first time; no data exists.
+**Trigger:** App opened for the first time; no local account data exists.
 
-**Goal:** Set up enough to show a meaningful daily budget.
+**Goal:** Log in, set up profile, connect Polar, and arrive at a working daily budget.
 
 **Steps:**
 
-1. App prompts for personal data: height, weight, age, biological sex.
-2. App computes a BMR estimate (Mifflin-St Jeor formula) and briefly explains it.
-3. User sets a target daily deficit. App suggests a sustainable range (250–400 kcal/day)
-   with a visible warning against aggressive deficits. User confirms or adjusts.
-4. App shows the resulting starting budget: "you'll aim to eat roughly X kcal/day."
-5. User lands on the dashboard. Polar connection and drink-shortcut configuration are
-   offered as "finish setting up" nudges — not blockers. Both can be done later.
+1. **Login.** User enters email and password. Token is stored locally. If the account
+   already has profile data saved server-side (e.g. reinstall on a new phone), steps 2
+   and 3 are pre-filled; user can confirm or adjust.
+2. **Biometrics.** Height, current weight, goal weight, age, biological sex. App
+   computes a BMR estimate (Mifflin-St Jeor formula). Goal weight ≤ current weight
+   (or equal, for maintenance from day one).
+3. **Target deficit.** User sets a target daily deficit (0–600 kcal/day). 0 = maintain
+   current weight. With goal weight known, the screen shows: "≈ 0.27 kg/week — goal
+   reached in ~8 months." Both figures update live as the slider moves. A warning
+   appears above 500 kcal/day.
+4. **Connect Polar.** The app explains: "Polar data makes calorie budgets accurate —
+   without it, everything is estimated." User taps "Connect Polar" → Polar OAuth flow
+   in browser → returns to app with token. Skippable with "Skip for now — I'll use
+   estimates", but that label communicates what's being traded away.
+5. User lands on the dashboard. Drink shortcut configuration is offered as a dismissible
+   banner (pre-populated with suggested defaults; can be customised in settings later).
 
 **Outcome:** Dashboard shows today's budget. User can start logging immediately.
 
-**Empty state / Polar not yet connected:** Dashboard shows "calories out: estimated
-(Polar not connected)" — budget uses BMR × activity-level multiplier. Once Polar is
-connected, actual daily expenditure replaces the estimate and the label disappears.
+**Pre-filled from account:** If the server account already holds a completed profile
+(returning user, reinstall), onboarding steps 2–3 show pre-filled values and can be
+confirmed in one tap per step. Drink shortcuts configured on a previous install are
+also restored automatically.
+
+**Polar not connected / skipped:** Dashboard shows "calories out: ~X kcal (estimated)".
+Budget uses BMR × activity-level multiplier. Once Polar is connected, actual daily
+expenditure replaces the estimate and the label disappears.
 
 **Notes:**
 
-- Onboarding must work fully offline — no network required for BMR calculation.
+- Login requires a network connection. Steps 2–4 work offline once logged in.
 - The starting budget is a first approximation. It will be refined over weeks as the
-  weight trend gives feedback (see `3-features/insights.md` — calorie-vs-weight calibration).
+  weight trend gives feedback (see `3-features/insights.md` — calorie-vs-weight
+  calibration).
 
 ---
 
@@ -152,75 +168,82 @@ real number at day's end.
 
 ---
 
-## S06 — Log dinner: from template
+## S06 — Log: from template
 
-**Trigger:** Just after dinner. User ate a familiar dish.
+**Trigger:** Just after any meal where a saved template matches (dinner most often, but
+also a meal out, a known snack, or any food logged before).
 
-**Goal:** Log dinner in 2–3 taps from a saved template.
+**Goal:** Log in 2–3 taps from a saved template.
 
 **Steps:**
 
-1. User taps `Log dinner` on the log screen.
-2. A list of dinner templates appears, ordered by most-recently-used / most-frequently-used.
+1. User taps `Log food` on the log screen.
+2. A list of food templates appears, sorted alphabetically. Pinned templates appear at
+   the top in configured order.
 3. User taps the matching template (e.g. "Chicken stir-fry").
 4. A portion adjuster appears: `Lighter` / `Normal` / `Heavier`. User picks or skips
    (defaults to Normal, which logs the template at 1×).
 5. Entry logs immediately. Confirmation visible in today's list.
 
-**Outcome:** Dinner logged in 2–3 taps, with accurate nutrition from the saved template.
+**Outcome:** Meal logged in 2–3 taps, with accurate nutrition from the saved template.
 
-**Edge case:** Template exists but portions were very different tonight — use the adjuster
-for `Lighter` or `Heavier`. If it was a completely different meal, fall through to S07 or S08.
+**Edge case:** Template exists but portions were very different — use the adjuster for
+`Lighter` or `Heavier`. If it was a completely different food, fall through to S07 or S08.
 
 ---
 
-## S07 — Log dinner: quick-add by calories
+## S07 — Log: quick-add by calories
 
-**Trigger:** Just after dinner. User knows roughly how many calories the meal was — from a
-recipe in RM5K, from memory, or from estimation.
+**Trigger:** Any time the user knows roughly how many calories something was — a meal, a
+snack, a glass of whole milk, a recipe looked up in RM5K — but doesn't want to log
+ingredients.
 
-**Goal:** Log dinner as a calorie estimate without specifying ingredients.
+**Goal:** Log anything as a calorie estimate with a number and an optional label.
 
 **Steps:**
 
-1. User taps `Log dinner` → `Quick-add`.
-2. A single number field: "How many kcal?" User types the number.
-3. Meal type is pre-set to "dinner". Timestamp defaults to now.
-4. User confirms. Entry appears in today's list as "Dinner — ~X kcal (estimate)".
+1. User taps `Log` → `Quick-add`.
+2. A kcal number field opens. User types the number.
+3. An optional label field below it: "What was it?" User can type a short note
+   (e.g. "Pasta at work", "Whole milk 250ml", "Dinner at Marco's") or skip it.
+4. User confirms. Entry appears in today's list as "Pasta at work — ~800 kcal (est.)"
+   or just "~800 kcal (est.)" if no label was given.
 5. One-tap undo available for a few seconds.
 
-**Outcome:** Dinner logged with one number. No template, no ingredients, no friction.
+**Outcome:** Entry logged with a number and an optional memory aid. No template, no
+ingredients, no friction.
 
 **Notes:**
 
-- "(estimate)" label is honest — this entry has no snapshotted nutrition detail.
+- "(est.)" label is always shown — this entry has no snapshotted nutrition detail.
   It contributes to the daily calorie total but not to macro breakdown.
-- This is the primary dinner path for any meal the user can roughly quantify. It is
+- This is the primary path for anything the user can roughly quantify. It is
   *not* a fallback — it is a first-class logging option.
 
 ---
 
-## S08 — Log dinner: build from scratch
+## S08 — Log: build from scratch
 
-**Trigger:** Just after dinner. New dish the user wants to log accurately and save for future reuse.
+**Trigger:** Any food the user wants to log accurately and save for future reuse — most
+commonly a new dinner dish, but applicable to any food with identifiable ingredients.
 
-**Goal:** Build a detailed entry and save it as a reusable template.
+**Goal:** Build a detailed entry from ingredients and optionally save it as a reusable template.
 
 **Steps:**
 
-1. User taps `Log dinner` → `New dish`.
+1. User taps `Log food` → `New dish`.
 2. For each ingredient: search Open Food Facts by name or scan a barcode. Set quantity
    in grams. Running kcal total updates live.
 3. At any point the user can bail: they're dropped to S07 (quick-add) with the partial
    kcal total pre-filled as a starting point. A rough log always beats no log.
-4. On save: "Save as a dinner template?" prompt. User names it (e.g. "Chicken stir-fry").
+4. On save: "Save as a template?" prompt. User names it (e.g. "Chicken stir-fry").
 5. Template is saved for future use (S06 path). Entry is logged immediately.
 
-**Outcome:** Detailed dinner entry logged. Template saved so future instances cost 2–3 taps.
+**Outcome:** Detailed entry logged. Template saved so future instances cost 2–3 taps.
 
 **Notes:**
 
-- This path is genuinely rare — only needed for new dishes worth precise tracking.
+- This path is genuinely rare — only needed for new foods worth precise tracking.
 - The bail-to-quick-add fallback is critical: never block a log on complete data.
 
 ---
@@ -234,19 +257,19 @@ on a Friday/Saturday night out. User has a drink.
 
 **Steps:**
 
-1. From the homescreen widget (medium size), user taps the relevant drink shortcut
-   (e.g. `Weizen 0.5L`, `Pils 330ml`, `Wine`, `Scotch`).
-2. Entry writes to Room instantly. No app-open required.
+1. From the homescreen widget (medium size), user taps the relevant shortcut button
+   (e.g. 🍺 Pils, 🍺 Weizen, 🍷 Wine, 🥃 Scotch).
+2. Entry writes to local storage instantly. No app-open required.
 3. Confirmation is visible the next time the app is opened (entry in today's list).
 4. Undo is available from the log screen (not the widget).
 
-**Outcome:** Drink logged in one tap from the homescreen.
+**Outcome:** Item logged in one tap from the homescreen.
 
 **Same shortcuts on log screen:** When the user is already in the app, the same buttons
 are available on the log screen — no need to go back to the homescreen.
 
-**Edge case:** Unknown drink (e.g. a cocktail) — use quick-add by calories from the
-log screen.
+**Edge case:** Unknown item (e.g. a cocktail, an unfamiliar drink) — use quick-add by
+calories from the log screen.
 
 ---
 
@@ -376,26 +399,71 @@ regression or a failure.
 
 ---
 
-## S15 — Configure drink shortcuts
+## S15 — Configure shortcuts
 
-**Trigger:** First-time setup, or when usual drinks change.
+**Trigger:** First-time setup, or when frequently-logged items change.
 
-**Goal:** Set the drink shortcut buttons shown on the widget and log screen.
+**Goal:** Set the shortcut buttons shown on the widget and log screen.
 
 **Steps:**
 
-1. Settings → `Drink shortcuts`.
-2. For each shortcut: label (e.g. "Weizen 0.5L") and kcal per unit (e.g. 220).
+1. Settings → `Shortcuts`.
+2. For each shortcut: emoji icon (e.g. 🍺), short label (e.g. "Pils"), and kcal per
+   unit (e.g. 140). All three fields are required.
 3. User can add, edit, reorder, or delete shortcuts.
 4. Shortcuts appear on the widget (medium size, in configured order) and on the log screen.
 
-**Outcome:** Widget and log screen show the right drink options for the user's actual habits.
+**Outcome:** Widget and log screen show the right one-tap buttons for the user's habits.
+
+**Notes:**
+
+- Shortcuts are not limited to alcoholic drinks — any frequently-consumed
+  calorie-containing item can be a shortcut (e.g. 🥛 Whole milk 250ml — 150 kcal).
+- The emoji provides the visual anchor for small-button readability; the short label
+  distinguishes similar-looking icons (two different beers would both be 🍺).
 
 **Suggested defaults on first run:**
 
-- Pils 330ml — 140 kcal
-- Weizen 0.5L — 220 kcal
-- Wine 150ml — 120 kcal
-- Scotch 30ml — 65 kcal
+- 🍺 Pils 330ml — 140 kcal
+- 🍺 Weizen 0.5L — 220 kcal
+- 🍷 Wine 150ml — 120 kcal
+- 🥃 Scotch 30ml — 65 kcal
 
-User can keep, edit, or replace these. No hardcoded drink types exist in the app.
+User can keep, edit, or replace these. No hardcoded items exist in the app.
+
+---
+
+## S16 — Switch to maintenance mode
+
+**Trigger:** User has reached (or is approaching) their target weight and wants to stop
+actively losing weight. Or they want to hold at current weight without a deficit goal.
+
+**Goal:** Transition the app from weight-loss mode to weight-maintenance mode without
+losing any history or logging capability.
+
+**Steps:**
+
+1. User goes to Settings → `Goal` (or the app surfaces a gentle suggestion banner on
+   the dashboard when the smoothed weight trend comes within ~1 kg of the target weight:
+   "You're close to your goal — ready to switch to maintenance?").
+2. User sets target deficit to 0, or taps "Switch to maintenance".
+3. The app confirms: "Maintenance mode — your budget will now aim to balance calories
+   in and out, rather than run a deficit." One-tap confirm.
+4. Dashboard updates: budget label changes from "X kcal remaining (deficit)" to
+   "X kcal remaining (balance)". Weekly verdict logic adapts (see below).
+
+**Outcome:** App is in maintenance mode. Logging, weight tracking, and Polar sync all
+continue unchanged. The verdict now measures weight stability, not loss rate.
+
+**Maintenance verdict states:**
+
+- "Weight stable — on track." (weight change within ±0.2 kg/week — success)
+- "Weight creeping up — slight surplus this week." (amber — gaining > 0.2 kg/week)
+- "Dropping below target — consider eating a bit more." (amber-low — losing > 0.2 kg/week)
+
+**Notes:**
+
+- Maintenance mode should feel like a success state, not a reduced mode. The UI must
+  not look degraded or inactive.
+- The user can switch back to loss mode at any time from settings — no data is lost.
+- Vacation mode (S14) and maintenance mode are independent: both can be active at once.
