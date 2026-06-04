@@ -4,6 +4,26 @@ Health is a personal health-tracking app. Single user (the owner). Goal: get hea
 and build AI skills/knowledge along the way. Friction is the enemy — if logging is too
 hard, it won't get used.
 
+## Development approach
+
+This project follows **continuous delivery with XP-style vertical slices**. The
+implication for every implementation session:
+
+- **`main` is always deployable.** Never commit broken code. If a story isn't
+  finished, leave the previous working state on `main` and work in a branch.
+  A half-built feature must not break what was working before.
+- **One story at a time, thin vertical slices.** Each story in the backlog
+  (`docs/specs/2026-06-04-feature-backlog.md`) delivers end-to-end value: server
+  endpoint + local DB / Room + app UI together. Don't build server-only or
+  UI-only layers speculatively. Ship the slice, then start the next one.
+- **No work beyond the current story.** Don't add infrastructure, abstractions, or
+  schema fields that aren't needed until a later story. YAGNI is strict here.
+- **The user installs and uses the app after every story.** Design each slice so
+  it's genuinely usable in isolation — graceful degradation beats "coming soon"
+  placeholders.
+- **Consult the backlog before starting.** Pick the next unstarted story in order.
+  If you want to reorder, discuss it first rather than skipping stories silently.
+
 ## Engineering rules
 
 - Never use `superpowers` in a folder name for docs, specs, designs, implementation plans, etc.
@@ -37,9 +57,11 @@ hard, it won't get used.
 - **Backend API:** Ktor (Kotlin) so the whole project is one language and data models
   can be shared between app and server.
 - **Database:** PostgreSQL on the VPS.
-- **Food/barcode data:** Open Food Facts (French non-profit, EU). Query per barcode
-  and cache locally what's actually eaten. No need to self-host the full dataset
-  unless this ever scales up.
+- **Food/barcode data:** Open Food Facts (French non-profit, EU). A weekly export
+  of the NL subset (EU as fallback) is imported into a `product` table on the
+  server and indexed for full-text search. The app never calls OFD directly —
+  it queries the server's `/food/search` and `/food/barcode` endpoints instead.
+  This avoids rate-limit exposure and gives fast autocomplete via Postgres.
 
 ### Why "out" is easy and "in" is hard
 
@@ -159,7 +181,14 @@ Postgres = source of truth; Room mirrors what's needed locally.
 
 ### calories-in (nested)
 
-- `food_item(id, barcode?, name, kcal/protein/carbs/fat per 100g, source)` — the catalog
+Two food tables with distinct jobs — do not conflate them:
+
+- `product(id, barcode?, name, kcal/protein/carbs/fat per 100g, source, …)` —
+  the OFD mirror. Large, server-only. Populated by the weekly NL+EU import.
+  Users never own rows here; it's a reference catalog to search against.
+- `food_item(id, barcode?, name, kcal/protein/carbs/fat per 100g, source)` —
+  the user's personal catalog. Items actually eaten: copied from `product` on
+  first use, or created manually. Small, synced to the device.
 - `meal_template(id, name)` + `meal_template_item(template_id, food_item_id, grams)`
   — the low-friction engine
 - `log_entry(id, datetime, meal_type)` +
