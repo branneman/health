@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -16,14 +17,19 @@ dependencies {
     implementation(projects.shared)
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.ktor.clientCore)
     implementation(libs.ktor.clientAndroid)
+    implementation(libs.ktor.clientContentNegotiation)
+    implementation(libs.ktor.clientSerializationJson)
+    implementation(libs.androidx.lifecycle.viewmodelCompose)
     debugImplementation(libs.compose.uiTooling)
     testImplementation(libs.ktor.clientMock)
     testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 val localProps = Properties().apply {
