@@ -31,7 +31,9 @@
 |--------|------------------|------|---------------------------|
 | `GET`  | `/`              | No   | API reference docs (HTML) |
 | `GET`  | `/server-health` | No   | Server health check       |
-| `POST` | `/token`         | No   | Issue bearer token        |
+| `POST` | `/auth/token`     | No  | Issue bearer token              |
+| `POST` | `/auth/refresh`   | Yes | Rotate token (30-day extension) |
+| `POST` | `/auth/logout`    | Yes | Revoke session                  |
 
 ### Body metrics
 
@@ -368,6 +370,5 @@ lost. `null` if fewer than 2 entries in the window.
 - Open Food Facts proxy — server may proxy OFFs on `GET /in/food-items?barcode=` cache miss;
   decision deferred to implementation
 - Food item `DELETE` — not exposed; snapshot semantics make it safe to correct without removal
-- Token refresh / logout — tokens expire naturally (see `2026-06-03-token-auth-design.md`)
 - Polar OAuth endpoints (`GET /polar/auth`, `GET /polar/callback`) — server-side only, not
   part of the Android-facing API

@@ -78,44 +78,65 @@ fun Application.module() {
             call.respondText("""{"status":"ok"}""", ContentType.Application.Json)
         }
 
-        post("/token") {
-            val start = System.currentTimeMillis()
-            suspend fun applyFloor() {
-                val elapsed = System.currentTimeMillis() - start
-                if (elapsed < 500L) delay(500L - elapsed)
-            }
-
-            val ip = call.request.origin.remoteHost
-
-            ipRateLimiter.isLocked(ip)?.let { retryAfter ->
-                applyFloor()
-                call.response.headers.append("Retry-After", retryAfter.toString())
-                call.respond(HttpStatusCode.TooManyRequests)
-                return@post
-            }
-
-            val body = call.receive<TokenRequest>()
-
-            usernameRateLimiter.isLocked(body.username)?.let { retryAfter ->
-                applyFloor()
-                call.response.headers.append("Retry-After", retryAfter.toString())
-                call.respond(HttpStatusCode.TooManyRequests)
-                return@post
-            }
-
-            when (val result = authService.login(body.username, body.password)) {
-                is LoginResult.Failure -> {
-                    ipRateLimiter.recordFailure(ip)
-                    usernameRateLimiter.recordFailure(body.username)
-                    applyFloor()
-                    call.respond(HttpStatusCode.Unauthorized)
+        route("/auth") {
+            post("/token") {
+                val start = System.currentTimeMillis()
+                suspend fun applyFloor() {
+                    val elapsed = System.currentTimeMillis() - start
+                    if (elapsed < 500L) delay(500L - elapsed)
                 }
 
-                is LoginResult.Success -> {
-                    ipRateLimiter.reset(ip)
-                    usernameRateLimiter.reset(body.username)
+                val ip = call.request.origin.remoteHost
+
+                ipRateLimiter.isLocked(ip)?.let { retryAfter ->
                     applyFloor()
-                    call.respond(TokenResponse(result.token, result.expiresAt.toString()))
+                    call.response.headers.append("Retry-After", retryAfter.toString())
+                    call.respond(HttpStatusCode.TooManyRequests)
+                    return@post
+                }
+
+                val body = call.receive<TokenRequest>()
+
+                usernameRateLimiter.isLocked(body.username)?.let { retryAfter ->
+                    applyFloor()
+                    call.response.headers.append("Retry-After", retryAfter.toString())
+                    call.respond(HttpStatusCode.TooManyRequests)
+                    return@post
+                }
+
+                when (val result = authService.login(body.username, body.password)) {
+                    is LoginResult.Failure -> {
+                        ipRateLimiter.recordFailure(ip)
+                        usernameRateLimiter.recordFailure(body.username)
+                        applyFloor()
+                        call.respond(HttpStatusCode.Unauthorized)
+                    }
+                    is LoginResult.Success -> {
+                        ipRateLimiter.reset(ip)
+                        usernameRateLimiter.reset(body.username)
+                        applyFloor()
+                        call.respond(TokenResponse(result.token, result.expiresAt.toString()))
+                    }
+                }
+            }
+
+            authenticate("api") {
+                post("/refresh") {
+                    val token = call.request.headers[HttpHeaders.Authorization]!!
+                        .removePrefix("Bearer ")
+                    when (val result = authService.refresh(token)) {
+                        is LoginResult.Failure -> call.respond(HttpStatusCode.Unauthorized)
+                        is LoginResult.Success -> call.respond(
+                            TokenResponse(result.token, result.expiresAt.toString())
+                        )
+                    }
+                }
+
+                post("/logout") {
+                    val token = call.request.headers[HttpHeaders.Authorization]!!
+                        .removePrefix("Bearer ")
+                    authService.logout(token)
+                    call.respond(HttpStatusCode.NoContent)
                 }
             }
         }

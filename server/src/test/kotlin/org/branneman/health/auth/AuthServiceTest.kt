@@ -1,14 +1,13 @@
 package org.branneman.health.auth
 
 import org.mindrot.jbcrypt.BCrypt
-import java.time.ZoneId
-import java.time.ZonedDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import kotlin.test.*
 
 class AuthServiceTest {
 
     private val service = AuthService()
-    private val amsterdam = ZoneId.of("Europe/Amsterdam")
 
     @Test
     fun `generateToken returns 64-char lowercase hex string`() {
@@ -24,39 +23,10 @@ class AuthServiceTest {
     }
 
     @Test
-    fun `computeExpiry returns same-day 2am when current time is before 2am`() {
-        val now = ZonedDateTime.of(2026, 6, 3, 1, 30, 0, 0, amsterdam)
-        val expiry = service.computeExpiry(now).atZoneSameInstant(amsterdam)
-        assertEquals(2026, expiry.year)
-        assertEquals(6, expiry.monthValue)
-        assertEquals(3, expiry.dayOfMonth)
-        assertEquals(2, expiry.hour)
-        assertEquals(0, expiry.minute)
-    }
-
-    @Test
-    fun `computeExpiry returns next-day 2am when current time is after 2am`() {
-        val now = ZonedDateTime.of(2026, 6, 3, 3, 0, 0, 0, amsterdam)
-        val expiry = service.computeExpiry(now).atZoneSameInstant(amsterdam)
-        assertEquals(4, expiry.dayOfMonth)
-        assertEquals(2, expiry.hour)
-        assertEquals(0, expiry.minute)
-    }
-
-    @Test
-    fun `computeExpiry returns next-day 2am when current time is exactly 2am`() {
-        val now = ZonedDateTime.of(2026, 6, 3, 2, 0, 0, 0, amsterdam)
-        val expiry = service.computeExpiry(now).atZoneSameInstant(amsterdam)
-        assertEquals(4, expiry.dayOfMonth)
-        assertEquals(2, expiry.hour)
-    }
-
-    @Test
-    fun `computeExpiry returns next-day 2am when current time is late at night`() {
-        val now = ZonedDateTime.of(2026, 6, 3, 22, 0, 0, 0, amsterdam)
-        val expiry = service.computeExpiry(now).atZoneSameInstant(amsterdam)
-        assertEquals(4, expiry.dayOfMonth)
-        assertEquals(2, expiry.hour)
+    fun `computeExpiry returns now plus 30 days`() {
+        val now = OffsetDateTime.of(2026, 6, 5, 14, 0, 0, 0, ZoneOffset.UTC)
+        val expiry = service.computeExpiry(now)
+        assertEquals(now.plusDays(30), expiry)
     }
 
     @Test
