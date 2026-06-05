@@ -200,12 +200,18 @@ No new env vars are introduced — credentials move entirely into the database.
 
 ## Ansible: Seeding Users
 
-**Vault variable naming convention:** `user_<username>_password`. Adding a second user
-in the future means adding `user_alice_password` to the vault and a new upsert task —
-no schema change needed.
+Users log in with their **email address** as the username. The `users.username` column
+stores the email. Ansible uses a short internal slug (e.g. `health`) to name vault
+variables — this is decoupled from the login credential so that email addresses
+(which contain `.` and `@`) remain valid variable names.
+
+**Vault variable naming convention:** `user_<slug>_email` + `user_<slug>_password`.
+Adding a second user means adding `user_alice_email` + `user_alice_password` and a new
+upsert task — no schema change needed.
 
 ```yaml
 # ansible/vars/vault.yml (local only, never committed)
+user_health_email: "you@example.com"
 user_health_password: "strong-random-value"
 ```
 
@@ -226,12 +232,16 @@ user_health_password: "strong-random-value"
   command: >
     docker exec health_postgres psql -U {{ postgres_user }} -d {{ postgres_db }} -c
     "INSERT INTO users (username, password_hash)
-     VALUES ('health', '{{ health_pw_hash.stdout }}')
+     VALUES ('{{ user_health_email }}', '{{ health_pw_hash.stdout }}')
      ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;"
   no_log: true
 ```
 
-Idempotent: re-running the playbook updates the password if the vault value changes.
+Idempotent: re-running the playbook updates the email or password if vault values change.
+
+**Removing a user from the vault does not delete them from the database.** Ansible only
+runs upsert tasks — it has no visibility into which rows should be removed. To revoke
+access, manually delete the row: `DELETE FROM users WHERE username = '<email>';`
 
 **Python dependency:** `bcrypt` must be available on the Ansible control machine
 (the developer's laptop). Install once: `pip3 install --break-system-packages bcrypt`.
