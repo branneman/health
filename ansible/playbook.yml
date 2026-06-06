@@ -90,6 +90,6 @@
       command: >
         docker exec health_postgres psql -U health -d health -c
         "INSERT INTO users (username, password_hash)
-         VALUES ('health', '{{ health_pw_hash.stdout }}')
+         VALUES ('{{ user_health_email }}', '{{ health_pw_hash.stdout }}')
          ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;"
       no_log: true
