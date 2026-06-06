@@ -32,10 +32,11 @@ the user something immediately usable, however thin. No waterfall gate.
 | 16 | **Calorie balance bars** — weekly in/out bars on dashboard                                                                                                  | Over/under pattern visible at a glance                        |
 | 17 | **Widget (small)** — verdict dot + budget remaining on homescreen                                                                                           | One-glance status without opening the app                     |
 | 18 | **Widget (medium)** — adds weight sparkline + drink shortcuts row to widget                                                                                 | One-tap drinks from homescreen                                |
-| 19 | **End-of-day notification** — gentle local reminder when dinner unlogged (~21:00)                                                                           | Forgetting-to-log caught without guilt                        |
-| 20 | **Insights** — late-snack frequency, drink clusters, missing-log coverage, calorie-vs-weight drift note                                                     | Behavioural patterns visible without moralising               |
-| 21 | **Vacation mode** — pause tracking, exclude period from verdicts and pattern calculations                                                                   | Holidays don't skew the trend                                 |
-| 22 | **Maintenance mode** — stability verdict after goal reached, budget switches to balance                                                                     | Success state has a proper mode                               |
+| 19 | **Auto update** — server serves version manifest + APK; app checks on launch, downloads via DownloadManager, installs via system sheet; deploy script       | Ship a new build and the app updates itself next launch       |
+| 20 | **End-of-day notification** — gentle local reminder when dinner unlogged (~21:00)                                                                           | Forgetting-to-log caught without guilt                        |
+| 21 | **Insights** — late-snack frequency, drink clusters, missing-log coverage, calorie-vs-weight drift note                                                     | Behavioural patterns visible without moralising               |
+| 22 | **Vacation mode** — pause tracking, exclude period from verdicts and pattern calculations                                                                   | Holidays don't skew the trend                                 |
+| 23 | **Maintenance mode** — stability verdict after goal reached, budget switches to balance                                                                     | Success state has a proper mode                               |
 
 ---
 
