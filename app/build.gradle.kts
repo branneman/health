@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.ktor.clientContentNegotiation)
     implementation(libs.ktor.clientSerializationJson)
     implementation(libs.androidx.lifecycle.viewmodelCompose)
+    implementation(libs.androidx.lifecycle.runtimeCompose)
     debugImplementation(libs.compose.uiTooling)
     testImplementation(libs.ktor.clientMock)
     testImplementation(libs.kotlin.testJunit)
