@@ -27,9 +27,8 @@ writes locally first and syncs in the background, invisibly to the user.
 ## Session model
 
 Multiple concurrent sessions are allowed per user — logging in on a new device does **not**
-invalidate the previous device's token. Tokens expire naturally (next 2 AM Amsterdam, per the
-existing token auth design). This is intentional: the user simply does not use two devices
-simultaneously, so there is no conflict to resolve.
+invalidate the previous device's token. Tokens expire after 30 days. This is intentional: the
+user simply does not use two devices simultaneously, so there is no conflict to resolve.
 
 A `401` on any authenticated endpoint (token expired or manually invalidated via logout) clears
 the token from DataStore and navigates to the login screen with the message "Your session has
@@ -182,10 +181,10 @@ from its perspective.
 DELETE and GET-by-id endpoints also assert `AND user_id = $sessionUserId` to prevent one user from
 touching another user's data even if a UUID is guessed.
 
-### `POST /logout`
+### `POST /auth/logout`
 
 ```
-POST /logout
+POST /auth/logout
 Authorization: Bearer <token>
 → 204 No Content
 ```
