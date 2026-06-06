@@ -95,3 +95,21 @@ watch -n 2 --color "GH_FORCE_TTY=true gh run list --limit 5"
 # watchtower logs - did my new image deploy yet?
 watch -n 2 "ssh deploy@api.health.bran.name docker logs health-watchtower-1 --tail 20"
 ```
+
+## Deploying to device via ADB over Wi-Fi
+
+A wireless alternative to manual APK transfers. Works on the same local network.
+
+### One-time setup
+
+1. On the phone: **Settings → Developer Options → Wireless debugging** → enable it
+2. Tap into the Wireless debugging screen and note the IP address and port shown
+3. Tap **Pair device with pairing code** and note the separate pairing port and 6-digit code
+4. On your Mac:
+  ```bash
+  # Pair (one-time per machine)
+  adb pair <ip>:<pairing-port>
+  # enter the 6-digit code shown on the phone when prompted
+  adb connect <ip>:<connect-port>
+  adb -s <ip>:<connect-port> install app/build/outputs/apk/debug/app-debug.apk
+  ```

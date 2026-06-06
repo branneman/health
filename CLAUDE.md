@@ -27,6 +27,8 @@ implication for every implementation session:
 ## Engineering rules
 
 - Never use `superpowers` in a folder name for docs, specs, designs, implementation plans, etc.
+- **Run `git` directly, never `git -C <path>`.** The working directory is always the repo root, 
+  so `git -C` is never needed and triggers unnecessary permission prompts.
 - **IDs are always UUIDs** — no auto-incrementing integers anywhere (database columns,
   Kotlin data classes, DTOs, Room entities). Postgres: `UUID DEFAULT gen_random_uuid()`.
   Kotlin: `java.util.UUID`. Never `Int`, `Long`, or `BIGSERIAL` for an identifier.
