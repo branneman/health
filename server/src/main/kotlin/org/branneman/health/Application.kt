@@ -16,6 +16,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
 import org.branneman.health.auth.AuthService
+import org.branneman.health.auth.DbLoginAttemptsStore
 import org.branneman.health.auth.LoginResult
 import org.branneman.health.auth.RateLimiter
 import org.flywaydb.core.Flyway
@@ -54,8 +55,8 @@ fun Application.module() {
     }))
 
     val authService = AuthService()
-    val ipRateLimiter = RateLimiter()
-    val usernameRateLimiter = RateLimiter()
+    val ipRateLimiter = RateLimiter(store = DbLoginAttemptsStore())
+    val usernameRateLimiter = RateLimiter(store = DbLoginAttemptsStore())
 
     install(XForwardedHeaders)
     install(ContentNegotiation) { json() }

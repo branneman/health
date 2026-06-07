@@ -5,6 +5,15 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.*
 
+private class FakeLoginAttemptsStore(
+    initial: Map<String, AttemptRecord> = emptyMap()
+) : LoginAttemptsStore {
+    val records = initial.toMutableMap()
+    override fun loadAll() = records.toMap()
+    override fun save(key: String, record: AttemptRecord) { records[key] = record }
+    override fun delete(key: String) { records.remove(key) }
+}
+
 class RateLimiterTest {
 
     private val baseTime = Instant.parse("2026-06-03T12:00:00Z")
@@ -74,5 +83,31 @@ class RateLimiterTest {
         assertNotNull(limiter.isLocked("key"))
         val laterLimiter = RateLimiter(Clock.fixed(baseTime.plusSeconds(61), ZoneOffset.UTC))
         assertNull(laterLimiter.isLocked("fresh_key"))
+    }
+
+    @Test
+    fun `loads lockout state from store on startup`() {
+        val lockedUntil = baseTime.plusSeconds(60)
+        val store = FakeLoginAttemptsStore(mapOf("key" to AttemptRecord(5, lockedUntil)))
+        val limiter = RateLimiter(Clock.fixed(baseTime, ZoneOffset.UTC), store)
+        assertEquals(60L, limiter.isLocked("key"))
+    }
+
+    @Test
+    fun `recordFailure persists to store`() {
+        val store = FakeLoginAttemptsStore()
+        val limiter = RateLimiter(Clock.fixed(baseTime, ZoneOffset.UTC), store)
+        repeat(5) { limiter.recordFailure("key") }
+        assertEquals(5, store.records["key"]?.attempts)
+        assertEquals(baseTime.plusSeconds(60), store.records["key"]?.lockedUntil)
+    }
+
+    @Test
+    fun `reset deletes from store`() {
+        val store = FakeLoginAttemptsStore()
+        val limiter = RateLimiter(Clock.fixed(baseTime, ZoneOffset.UTC), store)
+        repeat(5) { limiter.recordFailure("key") }
+        limiter.reset("key")
+        assertNull(store.records["key"])
     }
 }

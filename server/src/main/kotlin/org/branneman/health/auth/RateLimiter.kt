@@ -1,14 +1,18 @@
 package org.branneman.health.auth
 
 import java.time.Clock
-import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
-private data class FailureRecord(val attempts: Int, val lockedUntil: Instant?)
+class RateLimiter(
+    private val clock: Clock = Clock.systemUTC(),
+    private val store: LoginAttemptsStore? = null
+) {
 
-class RateLimiter(private val clock: Clock = Clock.systemUTC()) {
+    private val failures = ConcurrentHashMap<String, AttemptRecord>()
 
-    private val failures = ConcurrentHashMap<String, FailureRecord>()
+    init {
+        store?.loadAll()?.forEach { (key, record) -> failures[key] = record }
+    }
 
     /** Returns null if the key may proceed, or seconds remaining until retry if locked. */
     fun isLocked(key: String): Long? {
@@ -19,15 +23,18 @@ class RateLimiter(private val clock: Clock = Clock.systemUTC()) {
     }
 
     fun recordFailure(key: String) {
-        val current = failures[key] ?: FailureRecord(0, null)
+        val current = failures[key] ?: AttemptRecord(0, null)
         val attempts = current.attempts + 1
         val lockoutSeconds = lockoutSeconds(attempts)
         val lockedUntil = if (lockoutSeconds > 0) clock.instant().plusSeconds(lockoutSeconds) else null
-        failures[key] = FailureRecord(attempts, lockedUntil)
+        val record = AttemptRecord(attempts, lockedUntil)
+        failures[key] = record
+        store?.save(key, record)
     }
 
     fun reset(key: String) {
         failures.remove(key)
+        store?.delete(key)
     }
 
     private fun lockoutSeconds(attempts: Int): Long {
