@@ -99,9 +99,7 @@ health/
 │
 ├── local-db-seed/               # Local dev only — SQL seed data (never production)
 │
-├── core-data/                   # Room DB + repositories (Android)
-├── widget/                      # Glance widget
-└── app/                         # Compose UI, navigation, app entry
+└── app/                         # Compose UI, Room DB, sync, widget, app entry
 ```
 
 Key points:
@@ -110,22 +108,20 @@ Key points:
   the wire (`DailyEnergyDto`, `LogEntryDto`, …), as a KMP module compiling to both JVM
   and Android. No UI, no DB code here.
 - **There is no shared DB schema.** Two databases with different jobs: Postgres on the
-  server (system of record) and Room on the phone (offline cache + widget source).
+  server (system of record) and Room on the phone (offline cache).
   They do **not** share a schema.
     - Postgres migrations (Flyway) live in `server/src/main/resources/db/migration/`.
       Naming convention: `V{n}__{description}.sql` (double underscore). Never edit a
       migration after it has been applied — add a new `V{n+1}__` file instead.
-    - Room entities + schema export live in `core-data`.
+    - Room entities + DAOs live in `app`.
     - The `shared` DTOs are the bridge between them — not a shared schema.
 - **`local-db-seed/` is local dev only.** Contains SQL seed data to populate the DB
   for development. Never run in production. Load manually after Flyway has created the
   schema: `psql $DATABASE_URL < local-db-seed/seed_data.sql`. Do not use
   `docker-entrypoint-initdb.d` for application schema — that is Flyway's job.
-- **`core-data` is split out from `app` because of the widget.** Both the Glance widget
-  and the app UI need the same local data (Room + repositories). Putting that in `app`
-  would make the widget depend on the whole UI layer. (For a personal project you *may*
-  collapse the widget into `app`; given "properly" + "strong widget" the split is
-  justified.)
+- **Everything Android lives in `app`.** Room entities, DAOs, sync workers, the Glance
+  widget, and the Compose UI are all in `app`. If the widget grows complex enough to
+  justify extraction, split it out then — not speculatively.
 - **`libs.versions.toml`** (version catalog) is the "properly" glue: one place for all
   dependency versions so server / shared / Android modules don't drift (e.g. on the
   kotlinx-serialization version).
@@ -139,26 +135,14 @@ Dependencies point **one way, downward, never back**. This prevents cycles.
   imports another module. Everyone may point at `shared`; `shared` never points back.
 - **`server` → `shared`.** Uses the DTOs for JSON (de)serialization. Touches no
   Android module (can't — different compile target).
-- **`core-data` → `shared`.** Maps between DTOs (to/from server) and its own Room
-  entities. Imports no `app`, `widget`, or `server`.
-- **`widget` → `core-data`, `shared`.** Reads local data via repositories from
-  `core-data`. Deliberately does **not** depend on `app`.
-- **`app` → `core-data`, `widget`, `shared`.** Top of the stack. May import everything
-  below; nothing imports `app`.
+- **`app` → `shared`.** Top of the stack. Imports `shared` for DTOs; nothing imports
+  `app`. Maps Room entities ↔ DTOs explicitly inside `app`.
 
-Two boundaries this enforces:
+One boundary this enforces:
 
-1. **The JVM/Android wall.** `server` and the Android modules never import each other;
-   their only contact is `shared`. Change a DTO → server and app both see it, but no
-   server code leaks into the app or vice versa.
-2. **Forced clean mapping.** Because `core-data` may import `shared` but not the other
-   way around, you're forced to map Room entities ↔ DTOs explicitly in `core-data`.
-   That's where the "snapshot nutrition values" logic belongs — not in the UI, not in
-   the DTOs.
-
-Optional stricter variant: have `widget` import only `core-data` (not `shared`), so the
-widget talks purely to local data and knows nothing of the network contract. Left as-is
-for now — don't over-engineer.
+**The JVM/Android wall.** `server` and `app` never import each other; their only contact
+is `shared`. Change a DTO → server and app both see it, but no server code leaks into
+the app or vice versa.
 
 ## Calories: important reality check
 
