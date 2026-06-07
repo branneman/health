@@ -20,7 +20,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
-    implementation(libs.compose.uiToolingPreview)
+    debugImplementation(libs.compose.uiToolingPreview)
     implementation(libs.ktor.clientCore)
     implementation(libs.ktor.clientAndroid)
     implementation(libs.ktor.clientContentNegotiation)
@@ -52,7 +52,7 @@ android {
         versionName = "1.0"
         buildConfigField(
             "String", "SERVER_BASE_URL",
-            "\"${localProps.getProperty("server.baseUrl", "https://api.health.bran.name")}\""
+            "\"${localProps.getProperty("server.baseUrl") ?: error("server.baseUrl must be set in local.properties")}\""
         )
     }
     packaging {
