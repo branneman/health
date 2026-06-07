@@ -6,6 +6,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks: [backend]
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:8080/server-health" ]
       interval: 10s
@@ -23,6 +24,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks: [backend]
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
@@ -37,6 +39,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
+    networks: [backend]
     depends_on:
       ktor:
         condition: service_healthy
@@ -48,8 +51,15 @@ services:
       DOCKER_API_VERSION: "1.47"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks: [watchtower]
     command: --interval 60 --cleanup
 
 volumes:
   pgdata: { }
   caddy_data: { }
+
+networks:
+  backend:
+    driver: bridge
+  watchtower:
+    driver: bridge

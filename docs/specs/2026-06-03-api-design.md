@@ -31,6 +31,7 @@
 |--------|------------------|------|---------------------------|
 | `GET`  | `/`              | No   | API reference docs (HTML) |
 | `GET`  | `/server-health` | No   | Server health check       |
+| `GET`  | `/api/update`    | No   | Current version + APK URL |
 | `POST` | `/auth/token`     | No  | Issue bearer token              |
 | `POST` | `/auth/refresh`   | Yes | Rotate token (30-day extension) |
 | `POST` | `/auth/logout`    | Yes | Revoke session                  |
@@ -103,6 +104,24 @@ Timestamps: ISO 8601 with UTC offset. Dates: `YYYY-MM-DD`.
   "status": "ok"
 }
 ```
+
+---
+
+### `GET /api/update`
+
+```json
+{
+  "versionCode": 32,
+  "versionName": "32-2f765b5",
+  "apkUrl": "https://github.com/branneman/health/releases/download/32-2f765b5/app-release.apk",
+  "releaseNotes": "Fixed calorie widget not refreshing"
+}
+```
+
+`versionCode` is the git commit count; `versionName` is `{count}-{short-hash}`. Both are
+derived at build time — see `docs/specs/2026-06-05-auto-update.md` for the full versioning
+scheme. The app compares `versionCode` against `BuildConfig.VERSION_CODE` to decide whether
+to prompt for an update.
 
 ---
 

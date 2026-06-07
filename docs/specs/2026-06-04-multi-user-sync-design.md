@@ -39,7 +39,7 @@ for upload on the next login.
 
 ## Database changes
 
-### V3 — Per-user data scoping (`V3__multi_user.sql`)
+### V4 — Per-user data scoping (`V4__multi_user.sql`)
 
 Add `user_id` to every data table and re-scope uniqueness constraints.
 
@@ -115,7 +115,7 @@ CREATE INDEX ON meal_template (user_id);
 CREATE INDEX ON food_item     (user_id);
 ```
 
-### V4 — New tables (`V4__profile_shortcuts.sql`)
+### V5 — New tables (`V5__profile_shortcuts.sql`)
 
 Two tables that were missing from the schema entirely.
 

@@ -60,6 +60,14 @@ fun Application.module() {
     install(XForwardedHeaders)
     install(ContentNegotiation) { json() }
 
+    intercept(ApplicationCallPipeline.Plugins) {
+        val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+        if (length != null && length > 65_536L) {
+            call.respond(HttpStatusCode.PayloadTooLarge)
+            finish()
+        }
+    }
+
     install(Authentication) {
         bearer("api") {
             authenticate { credential ->

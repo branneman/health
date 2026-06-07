@@ -2,7 +2,10 @@
 
 users:
   - name: deploy
-    groups: [ sudo ]
+    # deploy is in the docker group for runtime Docker access.
+    # sudo is kept for operational tasks (apt, systemctl). For a more locked-down
+    # setup, restrict to: "deploy ALL=(ALL) NOPASSWD:/usr/bin/docker,/usr/bin/apt-get"
+    groups: [ sudo, docker ]
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh_authorized_keys:

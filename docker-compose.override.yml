@@ -11,6 +11,7 @@ services:
     command: [ "--access-mode=unrestricted", "--transport=sse", "--sse-port=8001" ]
     ports:
       - "127.0.0.1:8001:8001"
+    networks: [backend]
     depends_on:
       postgres:
         condition: service_healthy

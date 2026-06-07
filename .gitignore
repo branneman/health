@@ -1,4 +1,7 @@
 .env
+*.jks
+*.keystore
+keystore.properties
 *.iml
 .kotlin
 .gradle

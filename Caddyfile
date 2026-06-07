@@ -1,3 +1,7 @@
 {$API_DOMAIN} {
+    header {
+        X-Content-Type-Options nosniff
+        -Server
+    }
     reverse_proxy ktor:8080
 }
