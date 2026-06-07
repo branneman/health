@@ -13,7 +13,7 @@ implication for every implementation session:
   finished, leave the previous working state on `main` and work in a branch.
   A half-built feature must not break what was working before.
 - **One story at a time, thin vertical slices.** Each story in the backlog
-  (`docs/specs/2026-06-04-feature-backlog.md`) delivers end-to-end value: server
+  (`docs/specs/feature-backlog.md`) delivers end-to-end value: server
   endpoint + local DB / Room + app UI together. Don't build server-only or
   UI-only layers speculatively. Ship the slice, then start the next one.
 - **No work beyond the current story.** Don't add infrastructure, abstractions, or

@@ -209,7 +209,7 @@ and deploys the new image automatically.
 
 ### Auto-update story (story #19) — security requirements and risks
 
-The auto-update spec (`2026-06-05-auto-update.md`) is pending implementation and
+The auto-update spec (`auto-update.md`) is pending implementation and
 introduces several security-relevant concerns.
 
 **[CRITICAL] APK signing keystore must never be committed**  
@@ -295,7 +295,7 @@ relevance.
 
 ### Data isolation — every query must scope by user_id
 
-After the multi-user migration (V4, see `docs/specs/2026-06-04-multi-user-sync-design.md`), every user-data table has a `user_id` column.
+After the multi-user migration (V4, see `docs/specs/multi-user-sync-design.md`), every user-data table has a `user_id` column.
 This is the primary control against cross-user data leakage — not trust in the users,
 but enforcement at the data layer on every single query.
 
@@ -389,7 +389,7 @@ log.info("Token issued, expires: $expiresAt")
   fresh DB with `docker compose down -v && docker compose up -d postgres && ./gradlew :server:run`.
 - Multi-user migration (`V3__multi_user.sql`, story #5) must include backfill logic for
   existing rows before adding `NOT NULL` constraints. See the migration design in
-  `docs/specs/2026-06-04-multi-user-sync-design.md`.
+  `docs/specs/multi-user-sync-design.md`.
 
 ### Dependency hygiene
 

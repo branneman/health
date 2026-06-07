@@ -337,7 +337,7 @@ daytime budget useful before the session.
 
 ## 7. API spec gap
 
-The current `docs/specs/2026-06-03-api-design.md` `/summary/today` and
+The current `docs/specs/api-design.md` `/summary/today` and
 `/summary/week` endpoints do not yet expose the computed values this model produces:
 smoothed weight series, verdict state + message, budget remaining, and insight
 payloads. The API spec will need a revision pass once implementation begins to add

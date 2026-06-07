@@ -119,7 +119,7 @@ Timestamps: ISO 8601 with UTC offset. Dates: `YYYY-MM-DD`.
 ```
 
 `versionCode` is the git commit count; `versionName` is `{count}-{short-hash}`. Both are
-derived at build time — see `docs/specs/2026-06-05-auto-update.md` for the full versioning
+derived at build time — see `docs/specs/auto-update.md` for the full versioning
 scheme. The app compares `versionCode` against `BuildConfig.VERSION_CODE` to decide whether
 to prompt for an update.
 
