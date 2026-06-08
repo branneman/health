@@ -28,4 +28,5 @@ dependencies {
     implementation(libs.ktor.serverForwardedHeader)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.testcontainers.postgresql)
 }
