@@ -32,6 +32,7 @@ import org.branneman.health.data.Workout
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.UUID
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
@@ -153,18 +154,17 @@ fun Application.module() {
         }
 
         authenticate("api") {
-            get("/weight") {
-                val entries = transaction {
-                    BodyWeight.selectAll()
-                        .orderBy(BodyWeight.date, SortOrder.DESC)
-                        .map {
-                            WeightEntryDto(
-                                it[BodyWeight.date].toString(),
-                                it[BodyWeight.kg].toDouble()
-                            )
-                        }
+            route("/body") {
+                get("/weight") {
+                    val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                    val entries = transaction {
+                        BodyWeight.selectAll()
+                            .where { BodyWeight.userId eq userId }
+                            .orderBy(BodyWeight.date, SortOrder.DESC)
+                            .map { WeightEntryDto(it[BodyWeight.date].toString(), it[BodyWeight.kg].toDouble()) }
+                    }
+                    call.respond(entries)
                 }
-                call.respond(entries)
             }
         }
     }

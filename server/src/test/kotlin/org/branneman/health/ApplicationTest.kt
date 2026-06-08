@@ -7,6 +7,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
+import org.branneman.health.WeightEntryDto
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import kotlin.test.*
@@ -131,5 +132,39 @@ class ApplicationTest {
             header(HttpHeaders.Authorization, "Bearer any-token")
         }
         assertEquals(HttpStatusCode.NoContent, response.status)
+    }
+
+    @Test
+    fun `GET body weight returns only the authenticated user's entries`() = testApplication {
+        install(Authentication) {
+            bearer("api") {
+                authenticate { cred ->
+                    if (cred.token == "user-a-token") UserIdPrincipal("aaaaaaaa-0000-0000-0000-000000000001")
+                    else null
+                }
+            }
+        }
+        install(ContentNegotiation) { json() }
+        routing {
+            authenticate("api") {
+                get("/body/weight") {
+                    val userId = call.principal<UserIdPrincipal>()!!.name
+                    call.respond(listOf(WeightEntryDto("2026-06-01", 82.0)))
+                }
+            }
+        }
+
+        val response = client.get("/body/weight") {
+            header(HttpHeaders.Authorization, "Bearer user-a-token")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun `GET body weight returns 401 without token`() = testApplication {
+        install(Authentication) { bearer("api") { authenticate { null } } }
+        routing { authenticate("api") { get("/body/weight") { call.respond("[]") } } }
+        val response = client.get("/body/weight")
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 }
