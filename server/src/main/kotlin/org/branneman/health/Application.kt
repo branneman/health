@@ -19,17 +19,19 @@ import org.branneman.health.auth.AuthService
 import org.branneman.health.auth.DbLoginAttemptsStore
 import org.branneman.health.auth.LoginResult
 import org.branneman.health.auth.RateLimiter
+import org.branneman.health.data.BodyWeight
+import org.branneman.health.data.DailyEnergy
+import org.branneman.health.data.FoodItem
+import org.branneman.health.data.LogEntry
+import org.branneman.health.data.LogEntryItem
+import org.branneman.health.data.MealTemplate
+import org.branneman.health.data.MealTemplateItem
+import org.branneman.health.data.Shortcut
+import org.branneman.health.data.UserProfile
+import org.branneman.health.data.Workout
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.javatime.date
 import org.jetbrains.exposed.sql.transactions.transaction
-
-object BodyWeight : Table("body_weight") {
-    val id = uuid("id")
-    val date = date("date")
-    val kg = decimal("kg", 5, 2)
-    override val primaryKey = PrimaryKey(id)
-}
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
