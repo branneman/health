@@ -1,3 +1,9 @@
+# User provisioning: one vault variable per user.
+# Adding a user: add user_<username>_password and user_<username>_email to ansible/vars/vault.yml
+# Example:
+#   user_health_password: "strong-random-value"
+#   user_health_email: "bran.van.der.meer@protonmail.com"
+# Never commit vault.yml. Run: ansible-vault encrypt ansible/vars/vault.yml
 - hosts: all
   vars_files:
     - vars/vault.yml
@@ -76,20 +82,31 @@
         project_src: /home/deploy/health
         state: present
 
-    - name: Hash password for user 'health'
+    - name: Derive user list from vault
+      set_fact:
+        app_users: "{{ vars | dict2items
+                           | selectattr('key', 'match', '^user_.+_password$')
+                           | map(attribute='key')
+                           | map('regex_replace', '^user_(.+)_password$', '\\1')
+                           | list }}"
+
+    - name: Hash password for {{ item }}
       command: >
         python3 -c "import bcrypt;
-        h=bcrypt.hashpw('{{ user_health_password }}'.encode(), bcrypt.gensalt(12)).decode();
+        h=bcrypt.hashpw('{{ lookup('vars', 'user_' + item + '_password') }}'.encode(),
+        bcrypt.gensalt(12)).decode();
         print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
-      register: health_pw_hash
+      loop: "{{ app_users }}"
+      register: pw_hashes
       changed_when: false
       no_log: true
       delegate_to: localhost
 
-    - name: Upsert user 'health'
+    - name: Upsert user {{ item.item }}
       command: >
         docker exec health_postgres psql -U health -d health -c
         "INSERT INTO users (username, password_hash)
-         VALUES ('{{ user_health_email }}', '{{ health_pw_hash.stdout }}')
+         VALUES ('{{ lookup('vars', 'user_' + item.item + '_email') }}', '{{ item.stdout }}')
          ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;"
+      loop: "{{ pw_hashes.results }}"
       no_log: true
