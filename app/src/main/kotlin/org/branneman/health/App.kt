@@ -84,13 +84,13 @@ fun App() {
                 }
             )
 
-            AuthState.LoggedIn -> MainNav()
+            AuthState.LoggedIn -> MainNav(authViewModel)
         }
     }
 }
 
 @Composable
-private fun MainNav() {
+private fun MainNav(authViewModel: AuthViewModel) {
     var currentTab by remember { mutableStateOf(Tab.Dashboard) }
     Scaffold(
         bottomBar = {
@@ -110,7 +110,7 @@ private fun MainNav() {
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
                 Tab.Log -> LogScreen()
-                Tab.Settings -> SettingsScreen()
+                Tab.Settings -> SettingsScreen(onSignOut = { authViewModel.logout() })
             }
         }
     }
