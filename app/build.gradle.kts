@@ -37,6 +37,7 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.workmanager)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
 
@@ -76,6 +77,9 @@ android {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 }
 
