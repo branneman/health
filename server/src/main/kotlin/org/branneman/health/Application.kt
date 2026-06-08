@@ -58,13 +58,18 @@ fun Application.module() {
         .load()
         .migrate()
 
-    Database.connect(HikariDataSource(HikariConfig().apply {
+    val dataSource = HikariDataSource(HikariConfig().apply {
         jdbcUrl = dbUrl
         username = dbUser
         password = dbPassword
         driverClassName = "org.postgresql.Driver"
         maximumPoolSize = 5
-    }))
+    })
+    module(dataSource)
+}
+
+fun Application.module(dataSource: javax.sql.DataSource) {
+    Database.connect(dataSource)
 
     val authService = AuthService()
     val ipRateLimiter = RateLimiter(store = DbLoginAttemptsStore())
