@@ -13,7 +13,10 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.branneman.health.UserProfileDto
+import org.branneman.health.ShortcutDto
 import org.junit.Test
 
 class HealthApiClientTest {
@@ -101,5 +104,54 @@ class HealthApiClientTest {
         val client = mockClient { _ -> respond("", HttpStatusCode.NoContent) }
         HealthApiClient("http://test", client).logout("some-token")
         // no assertion needed — just must not throw
+    }
+
+    @Test
+    fun `getProfile returns UserProfileDto on 200`() = runBlocking {
+        val client = mockClient { _ ->
+            respond(
+                """{"heightCm":177,"birthYear":1986,"sex":"male","goalWeightKg":74.0,"activityLevel":"lightly_active","targetDeficit":300,"phase":"loss","vacationMode":false}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+        }
+        val result = HealthApiClient("http://test", client).getProfile("token")
+        assertEquals(177, result?.heightCm)
+    }
+
+    @Test
+    fun `getProfile returns null on 404`() = runBlocking {
+        val client = HttpClient(MockEngine { respond("", HttpStatusCode.NotFound) }) {
+            install(ContentNegotiation) { json() }
+        }
+        val result = HealthApiClient("http://test", client).getProfile("token")
+        assertNull(result)
+    }
+
+    @Test
+    fun `getShortcuts returns list on 200`() = runBlocking {
+        val client = mockClient { _ ->
+            respond(
+                """[{"id":"abc","emoji":"🍺","label":"Pils","kcal":140,"sortOrder":0}]""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+        }
+        val result = HealthApiClient("http://test", client).getShortcuts("token")
+        assertEquals(1, result.size)
+        assertEquals("🍺", result[0].emoji)
+    }
+
+    @Test
+    fun `getBodyWeight returns list on 200`() = runBlocking {
+        val client = mockClient { _ ->
+            respond(
+                """[{"date":"2026-06-01","kg":82.0}]""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+        }
+        val result = HealthApiClient("http://test", client).getBodyWeight("token")
+        assertEquals(1, result.size)
     }
 }
