@@ -32,6 +32,8 @@ import org.branneman.health.data.Workout
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.upsert
+import java.time.OffsetDateTime
 import java.util.UUID
 
 fun main() {
@@ -165,6 +167,88 @@ fun Application.module() {
                     }
                     call.respond(entries)
                 }
+            }
+
+            get("/profile") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val profile = transaction {
+                    UserProfile.selectAll()
+                        .where { UserProfile.userId eq userId }
+                        .singleOrNull()
+                        ?.let {
+                            UserProfileDto(
+                                heightCm      = it[UserProfile.heightCm],
+                                birthYear     = it[UserProfile.birthYear],
+                                sex           = it[UserProfile.sex],
+                                goalWeightKg  = it[UserProfile.goalWeightKg].toDouble(),
+                                activityLevel = it[UserProfile.activityLevel],
+                                targetDeficit = it[UserProfile.targetDeficit],
+                                phase         = it[UserProfile.phase],
+                                vacationMode  = it[UserProfile.vacationMode],
+                            )
+                        }
+                }
+                if (profile == null) call.respond(HttpStatusCode.NotFound)
+                else call.respond(profile)
+            }
+
+            put("/profile") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val dto = call.receive<UserProfileDto>()
+                transaction {
+                    UserProfile.upsert {
+                        it[UserProfile.userId]        = userId
+                        it[UserProfile.heightCm]      = dto.heightCm
+                        it[UserProfile.birthYear]     = dto.birthYear
+                        it[UserProfile.sex]           = dto.sex
+                        it[UserProfile.goalWeightKg]  = dto.goalWeightKg.toBigDecimal()
+                        it[UserProfile.activityLevel] = dto.activityLevel
+                        it[UserProfile.targetDeficit] = dto.targetDeficit
+                        it[UserProfile.phase]         = dto.phase
+                        it[UserProfile.vacationMode]  = dto.vacationMode
+                        it[UserProfile.updatedAt]     = OffsetDateTime.now()
+                    }
+                }
+                call.respond(HttpStatusCode.OK, dto)
+            }
+
+            get("/shortcuts") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val shortcuts = transaction {
+                    Shortcut.selectAll()
+                        .where { Shortcut.userId eq userId }
+                        .orderBy(Shortcut.sortOrder, SortOrder.ASC)
+                        .map {
+                            ShortcutDto(
+                                id        = it[Shortcut.id].toString(),
+                                emoji     = it[Shortcut.emoji],
+                                label     = it[Shortcut.label],
+                                kcal      = it[Shortcut.kcal],
+                                sortOrder = it[Shortcut.sortOrder],
+                            )
+                        }
+                }
+                call.respond(shortcuts)
+            }
+
+            put("/shortcuts") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val incoming = call.receive<List<ShortcutDto>>()
+                transaction {
+                    Shortcut.deleteWhere { Op.build { Shortcut.userId eq userId } }
+                    incoming.forEach { dto ->
+                        Shortcut.insert {
+                            it[Shortcut.id]        = UUID.randomUUID()
+                            it[Shortcut.userId]    = userId
+                            it[Shortcut.emoji]     = dto.emoji
+                            it[Shortcut.label]     = dto.label
+                            it[Shortcut.kcal]      = dto.kcal
+                            it[Shortcut.sortOrder] = dto.sortOrder
+                            it[Shortcut.updatedAt] = OffsetDateTime.now()
+                        }
+                    }
+                }
+                call.respond(HttpStatusCode.OK, incoming)
             }
         }
     }
