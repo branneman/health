@@ -23,6 +23,7 @@ ksp = "2.3.9"
 room = "2.7.1"
 workmanager = "2.10.1"
 robolectric = "4.13"
+desugar-jdk-libs = "2.1.5"
 kotlinx-coroutines = "1.10.2"
 ktor = "3.4.3"
 logback = "1.5.32"
@@ -75,6 +76,7 @@ room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 workmanager = { module = "androidx.work:work-runtime-ktx", version.ref = "workmanager" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

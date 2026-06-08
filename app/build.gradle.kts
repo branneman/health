@@ -37,6 +37,7 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.workmanager)
     testImplementation(libs.robolectric)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
 
 val localProps = Properties().apply {
@@ -72,6 +73,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
