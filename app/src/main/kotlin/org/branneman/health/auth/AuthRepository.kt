@@ -6,7 +6,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
+import org.branneman.health.db.HealthDatabase
 import org.branneman.health.network.HealthApiClient
+import org.branneman.health.sync.LoginSyncService
 import java.time.OffsetDateTime
 
 sealed class AuthState {
@@ -19,6 +21,8 @@ sealed class AuthState {
 class AuthRepository(
     private val tokenStore: TokenStore,
     private val apiClient: HealthApiClient,
+    private val loginSyncService: LoginSyncService? = null,
+    private val db: HealthDatabase? = null,
 ) {
     private val _expiredChannel = Channel<Unit>(Channel.CONFLATED)
 
@@ -61,14 +65,27 @@ class AuthRepository(
         _expiredChannel.trySend(Unit)
     }
 
-    suspend fun login(username: String, password: String): Result<Unit> = runCatching {
+    suspend fun login(username: String, password: String): Result<Boolean> = runCatching {
         val response = apiClient.login(username, password)
         tokenStore.save(response.token, response.expiresAt, response.userId)
+        loginSyncService?.sync(response.token, response.userId) ?: false
     }
 
     suspend fun logout() {
         val stored = tokenStore.tokenFlow.first()
         if (stored != null) runCatching { apiClient.logout(stored.token) }
+        stored?.userId?.let { userId ->
+            db?.bodyWeightDao()?.deleteAllForUser(userId)
+            db?.dailyEnergyDao()?.deleteAllForUser(userId)
+            db?.workoutDao()?.deleteAllForUser(userId)
+            db?.logEntryDao()?.deleteAllItemsForUser(userId)
+            db?.logEntryDao()?.deleteAllForUser(userId)
+            db?.mealTemplateDao()?.deleteAllItemsForUser(userId)
+            db?.mealTemplateDao()?.deleteAllForUser(userId)
+            db?.foodItemDao()?.deleteAllForUser(userId)
+            db?.shortcutDao()?.deleteAllForUser(userId)
+            db?.userProfileDao()?.deleteForUser(userId)
+        }
         tokenStore.clear()
     }
 }

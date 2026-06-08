@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.branneman.health.BuildConfig
+import org.branneman.health.HealthApplication
 import org.branneman.health.network.AuthPlugin
 import org.branneman.health.network.HealthApiClient
+import org.branneman.health.sync.LoginSyncService
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,7 +41,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     init {
-        authRepository = AuthRepository(tokenStore, apiClient)
+        val app = application as HealthApplication
+        authRepository = AuthRepository(
+            tokenStore = tokenStore,
+            apiClient = apiClient,
+            loginSyncService = LoginSyncService(api = apiClient, db = app.db),
+            db = app.db,
+        )
 
         viewModelScope.launch {
             authRepository.authState.collect { _authState.value = it }
