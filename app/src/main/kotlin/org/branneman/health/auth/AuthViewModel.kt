@@ -7,6 +7,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
+import androidx.work.WorkManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,7 @@ import org.branneman.health.HealthApplication
 import org.branneman.health.network.AuthPlugin
 import org.branneman.health.network.HealthApiClient
 import org.branneman.health.sync.LoginSyncService
+import org.branneman.health.sync.SyncWorker
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -60,13 +62,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun login(username: String, password: String, onError: (String) -> Unit) {
         viewModelScope.launch {
-            authRepository.login(username, password).onFailure {
-                onError(it.message ?: "Unknown error")
-            }
+            authRepository.login(username, password)
+                .onSuccess { SyncWorker.enqueue(getApplication()) }
+                .onFailure { onError(it.message ?: "Unknown error") }
         }
     }
 
     fun logout() {
-        viewModelScope.launch { authRepository.logout() }
+        viewModelScope.launch {
+            authRepository.logout()
+            WorkManager.getInstance(getApplication()).cancelUniqueWork(SyncWorker.WORK_NAME)
+        }
     }
 }
