@@ -3,7 +3,7 @@
 Shared design philosophy for the health app. The feature specs
 (`3-features/logging.md`, `3-features/dashboard.md`, `3-features/insights.md`) all build on
 this — read this first. Read `2-scenarios.md` next for concrete interaction scenarios.
-Single user (the owner). Android, Kotlin + Compose, Glance widget.
+Personal use (owner + invited users). Android, Kotlin + Compose, Glance widget.
 
 These are *interface principles*, derived from how the user actually behaves, not
 generic best practices. Where a principle exists to counter a specific habit or
