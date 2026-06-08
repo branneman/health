@@ -15,6 +15,13 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
+import org.branneman.health.DailyEnergyDto
+import org.branneman.health.FoodItemDto
+import org.branneman.health.LogEntryDto
+import org.branneman.health.LogEntryItemDto
+import org.branneman.health.MealTemplateDto
+import org.branneman.health.MealTemplateItemDto
+import org.branneman.health.WorkoutDto
 import org.branneman.health.auth.AuthService
 import org.branneman.health.auth.DbLoginAttemptsStore
 import org.branneman.health.auth.LoginResult
@@ -251,6 +258,125 @@ fun Application.module() {
                     }
                 }
                 call.respond(HttpStatusCode.OK, saved)
+            }
+
+            get("/out/energy") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val rows = transaction {
+                    DailyEnergy.selectAll()
+                        .where { DailyEnergy.userId eq userId }
+                        .orderBy(DailyEnergy.date, SortOrder.DESC)
+                        .map {
+                            DailyEnergyDto(
+                                date       = it[DailyEnergy.date].toString(),
+                                bmrKcal    = it[DailyEnergy.bmrKcal],
+                                activeKcal = it[DailyEnergy.activeKcal],
+                                totalKcal  = it[DailyEnergy.totalKcal],
+                                steps      = it[DailyEnergy.steps],
+                                source     = it[DailyEnergy.dataSource],
+                            )
+                        }
+                }
+                call.respond(rows)
+            }
+
+            get("/out/workouts") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val rows = transaction {
+                    Workout.selectAll()
+                        .where { Workout.userId eq userId }
+                        .orderBy(Workout.date, SortOrder.DESC)
+                        .map {
+                            WorkoutDto(
+                                id          = it[Workout.id].toString(),
+                                date        = it[Workout.date].toString(),
+                                type        = it[Workout.type],
+                                durationSecs = it[Workout.durationSecs],
+                                avgHr       = it[Workout.avgHr],
+                                kcal        = it[Workout.kcal],
+                            )
+                        }
+                }
+                call.respond(rows)
+            }
+
+            get("/in/food-items") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val rows = transaction {
+                    FoodItem.selectAll()
+                        .where { FoodItem.userId eq userId }
+                        .map {
+                            FoodItemDto(
+                                id             = it[FoodItem.id].toString(),
+                                barcode        = it[FoodItem.barcode],
+                                name           = it[FoodItem.name],
+                                kcalPer100g    = it[FoodItem.kcalPer100g].toDouble(),
+                                proteinPer100g = it[FoodItem.proteinPer100g]?.toDouble(),
+                                carbsPer100g   = it[FoodItem.carbsPer100g]?.toDouble(),
+                                fatPer100g     = it[FoodItem.fatPer100g]?.toDouble(),
+                                source         = it[FoodItem.dataSource],
+                            )
+                        }
+                }
+                call.respond(rows)
+            }
+
+            get("/in/templates") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val templates = transaction {
+                    val templateRows = MealTemplate.selectAll()
+                        .where { MealTemplate.userId eq userId }
+                        .toList()
+                    templateRows.map { tRow ->
+                        val items = MealTemplateItem.selectAll()
+                            .where { MealTemplateItem.templateId eq tRow[MealTemplate.id] }
+                            .map { iRow ->
+                                MealTemplateItemDto(
+                                    foodItemId = iRow[MealTemplateItem.foodItemId].toString(),
+                                    grams      = iRow[MealTemplateItem.grams].toDouble(),
+                                )
+                            }
+                        MealTemplateDto(
+                            id    = tRow[MealTemplate.id].toString(),
+                            name  = tRow[MealTemplate.name],
+                            items = items,
+                        )
+                    }
+                }
+                call.respond(templates)
+            }
+
+            get("/in/log") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val entries = transaction {
+                    val entryRows = LogEntry.selectAll()
+                        .where { LogEntry.userId eq userId }
+                        .orderBy(LogEntry.loggedAt, SortOrder.DESC)
+                        .toList()
+                    entryRows.map { eRow ->
+                        val items = LogEntryItem.selectAll()
+                            .where { LogEntryItem.logEntryId eq eRow[LogEntry.id] }
+                            .map { iRow ->
+                                LogEntryItemDto(
+                                    foodItemId     = iRow[LogEntryItem.foodItemId].toString(),
+                                    grams          = iRow[LogEntryItem.grams].toDouble(),
+                                    kcalPer100g    = iRow[LogEntryItem.kcalPer100g].toDouble(),
+                                    proteinPer100g = iRow[LogEntryItem.proteinPer100g]?.toDouble(),
+                                    carbsPer100g   = iRow[LogEntryItem.carbsPer100g]?.toDouble(),
+                                    fatPer100g     = iRow[LogEntryItem.fatPer100g]?.toDouble(),
+                                )
+                            }
+                        LogEntryDto(
+                            id           = eRow[LogEntry.id].toString(),
+                            loggedAt     = eRow[LogEntry.loggedAt].toString(),
+                            mealType     = eRow[LogEntry.mealType],
+                            quickAddKcal  = eRow[LogEntry.quickAddKcal],
+                            quickAddLabel = eRow[LogEntry.quickAddLabel],
+                            items        = items,
+                        )
+                    }
+                }
+                call.respond(entries)
             }
         }
     }
