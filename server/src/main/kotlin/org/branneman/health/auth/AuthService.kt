@@ -24,7 +24,7 @@ object Sessions : Table("sessions") {
 
 sealed class LoginResult {
     data object Failure : LoginResult()
-    data class Success(val token: String, val expiresAt: OffsetDateTime) : LoginResult()
+    data class Success(val token: String, val expiresAt: OffsetDateTime, val userId: UUID) : LoginResult()
 }
 
 class AuthService {
@@ -67,7 +67,7 @@ class AuthService {
             }
         }
 
-        return LoginResult.Success(token, expiresAt)
+        return LoginResult.Success(token, expiresAt, userId)
     }
 
     fun lookupToken(token: String): UUID? = transaction {
@@ -91,7 +91,7 @@ class AuthService {
                 it[Sessions.expiresAt] = expiresAt
             }
         }
-        return LoginResult.Success(newToken, expiresAt)
+        return LoginResult.Success(newToken, expiresAt, userId)
     }
 
     fun logout(token: String) {

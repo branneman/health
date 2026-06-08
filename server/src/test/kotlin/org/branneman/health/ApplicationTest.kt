@@ -94,7 +94,7 @@ class ApplicationTest {
         routing {
             authenticate("api") {
                 post("/auth/refresh") {
-                    call.respond(TokenResponse("new-token", "2026-07-05T14:00:00Z"))
+                    call.respond(TokenResponse("new-token", "2026-07-05T14:00:00Z", "00000000-0000-0000-0000-000000000001"))
                 }
             }
         }

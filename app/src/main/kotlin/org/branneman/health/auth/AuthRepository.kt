@@ -48,7 +48,7 @@ class AuthRepository(
         val stored = tokenStore.tokenFlow.first() ?: return null
         return runCatching {
             val response = apiClient.refresh(stored.token)
-            tokenStore.save(response.token, response.expiresAt)
+            tokenStore.save(response.token, response.expiresAt, stored.userId)
             response.token
         }.getOrElse {
             handleExpired()
@@ -63,7 +63,7 @@ class AuthRepository(
 
     suspend fun login(username: String, password: String): Result<Unit> = runCatching {
         val response = apiClient.login(username, password)
-        tokenStore.save(response.token, response.expiresAt)
+        tokenStore.save(response.token, response.expiresAt, response.userId)
     }
 
     suspend fun logout() {

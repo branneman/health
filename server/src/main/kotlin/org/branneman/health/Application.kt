@@ -136,7 +136,7 @@ fun Application.module() {
                         ipRateLimiter.reset(ip)
                         usernameRateLimiter.reset(body.username)
                         applyFloor()
-                        call.respond(TokenResponse(result.token, result.expiresAt.toString()))
+                        call.respond(TokenResponse(result.token, result.expiresAt.toString(), result.userId.toString()))
                     }
                 }
             }
@@ -148,7 +148,7 @@ fun Application.module() {
                     when (val result = authService.refresh(token)) {
                         is LoginResult.Failure -> call.respond(HttpStatusCode.Unauthorized)
                         is LoginResult.Success -> call.respond(
-                            TokenResponse(result.token, result.expiresAt.toString())
+                            TokenResponse(result.token, result.expiresAt.toString(), result.userId.toString())
                         )
                     }
                 }

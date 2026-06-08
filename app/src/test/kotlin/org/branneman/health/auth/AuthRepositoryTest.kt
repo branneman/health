@@ -52,7 +52,7 @@ class AuthRepositoryTest {
     @Test
     fun `expired token emits Expired`() = runTest {
         val store = testTokenStore()
-        store.save("old-token", "2020-01-01T00:00:00Z")
+        store.save("old-token", "2020-01-01T00:00:00Z", "00000000-0000-0000-0000-000000000001")
         val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) })
         assertEquals(AuthState.Expired, repo.authState.first())
     }
@@ -61,7 +61,7 @@ class AuthRepositoryTest {
     fun `valid token with more than 7 days remaining emits LoggedIn`() = runTest {
         val store = testTokenStore()
         val farFuture = java.time.OffsetDateTime.now().plusDays(30).toString()
-        store.save("valid-token", farFuture)
+        store.save("valid-token", farFuture, "00000000-0000-0000-0000-000000000001")
         val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) })
         assertEquals(AuthState.LoggedIn, repo.authState.first())
     }
@@ -71,11 +71,11 @@ class AuthRepositoryTest {
         val store = testTokenStore()
         val soonExpiry = java.time.OffsetDateTime.now().plusDays(3).toString()
         val newExpiry = java.time.OffsetDateTime.now().plusDays(30).toString()
-        store.save("soon-expiring-token", soonExpiry)
+        store.save("soon-expiring-token", soonExpiry, "00000000-0000-0000-0000-000000000001")
 
         val client = apiClient { _ ->
             respond(
-                """{"token":"refreshed-token","expiresAt":"$newExpiry"}""",
+                """{"token":"refreshed-token","expiresAt":"$newExpiry","userId":"00000000-0000-0000-0000-000000000001"}""",
                 HttpStatusCode.OK,
                 headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             )
@@ -91,7 +91,7 @@ class AuthRepositoryTest {
     fun `token expiring within 7 days emits Expired when refresh fails`() = runTest {
         val store = testTokenStore()
         val soonExpiry = java.time.OffsetDateTime.now().plusDays(3).toString()
-        store.save("soon-expiring-token", soonExpiry)
+        store.save("soon-expiring-token", soonExpiry, "00000000-0000-0000-0000-000000000001")
 
         val client = apiClient { respond("", HttpStatusCode.Unauthorized) }
         val repo = AuthRepository(store, client)

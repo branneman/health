@@ -58,7 +58,7 @@ class HealthApiClientTest {
     fun `login returns TokenResponse on 200`() = runBlocking {
         val client = mockClient { _ ->
             respond(
-                """{"token":"abc123","expiresAt":"2026-07-05T14:00:00Z"}""",
+                """{"token":"abc123","expiresAt":"2026-07-05T14:00:00Z","userId":"00000000-0000-0000-0000-000000000001"}""",
                 HttpStatusCode.OK,
                 headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             )
@@ -90,7 +90,7 @@ class HealthApiClientTest {
     fun `refresh returns new TokenResponse on 200`() = runBlocking {
         val client = mockClient { _ ->
             respond(
-                """{"token":"newtoken","expiresAt":"2026-08-05T14:00:00Z"}""",
+                """{"token":"newtoken","expiresAt":"2026-08-05T14:00:00Z","userId":"00000000-0000-0000-0000-000000000001"}""",
                 HttpStatusCode.OK,
                 headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             )
