@@ -234,11 +234,12 @@ fun Application.module() {
             put("/shortcuts") {
                 val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
                 val incoming = call.receive<List<ShortcutDto>>()
-                transaction {
+                val saved = transaction {
                     Shortcut.deleteWhere { Op.build { Shortcut.userId eq userId } }
-                    incoming.forEach { dto ->
+                    incoming.map { dto ->
+                        val newId = UUID.randomUUID()
                         Shortcut.insert {
-                            it[Shortcut.id]        = UUID.randomUUID()
+                            it[Shortcut.id]        = newId
                             it[Shortcut.userId]    = userId
                             it[Shortcut.emoji]     = dto.emoji
                             it[Shortcut.label]     = dto.label
@@ -246,9 +247,10 @@ fun Application.module() {
                             it[Shortcut.sortOrder] = dto.sortOrder
                             it[Shortcut.updatedAt] = OffsetDateTime.now()
                         }
+                        dto.copy(id = newId.toString())
                     }
                 }
-                call.respond(HttpStatusCode.OK, incoming)
+                call.respond(HttpStatusCode.OK, saved)
             }
         }
     }

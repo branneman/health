@@ -66,7 +66,7 @@ class MultiUserEndpointTest {
     }
 
     @Test
-    fun `PUT shortcuts returns 200`() = testApplication {
+    fun `PUT shortcuts returns 200 with server-assigned ids`() = testApplication {
         install(Authentication) {
             bearer("api") { authenticate { UserIdPrincipal("aaaaaaaa-0000-0000-0000-000000000001") } }
         }
@@ -74,7 +74,9 @@ class MultiUserEndpointTest {
         routing {
             authenticate("api") {
                 put("/shortcuts") {
-                    call.respond(HttpStatusCode.OK, call.receive<List<ShortcutDto>>())
+                    val list = call.receive<List<ShortcutDto>>()
+                    // simulate server assigning IDs
+                    call.respond(HttpStatusCode.OK, list.map { it.copy(id = "server-uuid") })
                 }
             }
         }
@@ -84,5 +86,6 @@ class MultiUserEndpointTest {
             setBody("""[{"id":"","emoji":"🍺","label":"Pils","kcal":140,"sortOrder":0}]""")
         }
         assertEquals(HttpStatusCode.OK, response.status)
+        assert(response.bodyAsText().contains("server-uuid"))
     }
 }
