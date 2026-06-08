@@ -56,8 +56,12 @@ android {
         applicationId = "org.branneman.health"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        val gitCount = providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
+            .standardOutput.asText.get().trim().toInt()
+        val gitHash = providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }
+            .standardOutput.asText.get().trim()
+        versionCode = gitCount
+        versionName = "$gitCount-$gitHash"
         buildConfigField(
             "String", "SERVER_BASE_URL",
             "\"${localProps.getProperty("server.baseUrl") ?: error("server.baseUrl must be set in local.properties")}\""

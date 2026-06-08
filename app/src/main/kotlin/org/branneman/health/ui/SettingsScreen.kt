@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.branneman.health.BuildConfig
 import org.branneman.health.network.HealthApiClient
 
 @Composable
@@ -47,6 +48,12 @@ fun SettingsScreen(onSignOut: () -> Unit) {
             }"
         )
         Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = "Version: ${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(
