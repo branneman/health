@@ -1502,8 +1502,8 @@ import org.branneman.health.db.entities.BodyWeightEntity
 
 @Dao
 interface BodyWeightDao {
-    @Query("SELECT * FROM body_weight WHERE userId = :userId ORDER BY date DESC")
-    fun observeAll(userId: String): Flow<List<BodyWeightEntity>>
+    @Query("SELECT * FROM body_weight ORDER BY date DESC")
+    fun observeAll(): Flow<List<BodyWeightEntity>>
 
     @Query("SELECT * FROM body_weight WHERE syncStatus = :status")
     suspend fun getByStatus(status: SyncStatus): List<BodyWeightEntity>
@@ -1536,8 +1536,8 @@ import org.branneman.health.db.entities.DailyEnergyEntity
 
 @Dao
 interface DailyEnergyDao {
-    @Query("SELECT * FROM daily_energy WHERE userId = :userId ORDER BY date DESC")
-    fun observeAll(userId: String): Flow<List<DailyEnergyEntity>>
+    @Query("SELECT * FROM daily_energy ORDER BY date DESC")
+    fun observeAll(): Flow<List<DailyEnergyEntity>>
 
     @Upsert
     suspend fun upsertAll(entities: List<DailyEnergyEntity>)
@@ -1558,8 +1558,8 @@ import org.branneman.health.db.entities.WorkoutEntity
 
 @Dao
 interface WorkoutDao {
-    @Query("SELECT * FROM workout WHERE userId = :userId ORDER BY date DESC")
-    fun observeAll(userId: String): Flow<List<WorkoutEntity>>
+    @Query("SELECT * FROM workout ORDER BY date DESC")
+    fun observeAll(): Flow<List<WorkoutEntity>>
 
     @Upsert
     suspend fun upsertAll(entities: List<WorkoutEntity>)
@@ -1582,8 +1582,8 @@ import org.branneman.health.db.entities.LogEntryItemEntity
 
 @Dao
 interface LogEntryDao {
-    @Query("SELECT * FROM log_entry WHERE userId = :userId AND syncStatus != 'PENDING_DELETE' ORDER BY loggedAt DESC")
-    fun observeAll(userId: String): Flow<List<LogEntryEntity>>
+    @Query("SELECT * FROM log_entry WHERE syncStatus != 'PENDING_DELETE' ORDER BY loggedAt DESC")
+    fun observeAll(): Flow<List<LogEntryEntity>>
 
     @Query("SELECT * FROM log_entry WHERE syncStatus = :status")
     suspend fun getByStatus(status: SyncStatus): List<LogEntryEntity>
@@ -1627,8 +1627,8 @@ import org.branneman.health.db.entities.MealTemplateItemEntity
 
 @Dao
 interface MealTemplateDao {
-    @Query("SELECT * FROM meal_template WHERE userId = :userId AND syncStatus != 'PENDING_DELETE'")
-    fun observeAll(userId: String): Flow<List<MealTemplateEntity>>
+    @Query("SELECT * FROM meal_template WHERE syncStatus != 'PENDING_DELETE'")
+    fun observeAll(): Flow<List<MealTemplateEntity>>
 
     @Query("SELECT * FROM meal_template WHERE syncStatus = :status")
     suspend fun getByStatus(status: SyncStatus): List<MealTemplateEntity>
@@ -1695,8 +1695,8 @@ import org.branneman.health.db.entities.ShortcutEntity
 
 @Dao
 interface ShortcutDao {
-    @Query("SELECT * FROM shortcut WHERE userId = :userId ORDER BY sortOrder ASC")
-    fun observeAll(userId: String): Flow<List<ShortcutEntity>>
+    @Query("SELECT * FROM shortcut ORDER BY sortOrder ASC")
+    fun observeAll(): Flow<List<ShortcutEntity>>
 
     @Upsert
     suspend fun upsertAll(entities: List<ShortcutEntity>)
@@ -1717,11 +1717,11 @@ import org.branneman.health.db.entities.UserProfileEntity
 
 @Dao
 interface UserProfileDao {
-    @Query("SELECT * FROM user_profile WHERE userId = :userId")
-    fun observe(userId: String): Flow<UserProfileEntity?>
+    @Query("SELECT * FROM user_profile")
+    fun observe(): Flow<UserProfileEntity?>
 
-    @Query("SELECT * FROM user_profile WHERE userId = :userId")
-    suspend fun get(userId: String): UserProfileEntity?
+    @Query("SELECT * FROM user_profile")
+    suspend fun get(): UserProfileEntity?
 
     @Upsert
     suspend fun upsert(entity: UserProfileEntity)
@@ -1893,21 +1893,12 @@ class BodyWeightDaoTest {
     }
 
     @Test
-    fun `upsert and observe entries for user`() = runTest {
+    fun `upsert and observe entries`() = runTest {
         val entry = BodyWeightEntity(id = "id-1", userId = userId, date = "2026-06-01", kg = 82.5)
         dao.upsert(entry)
-        val result = dao.observeAll(userId).first()
+        val result = dao.observeAll().first()
         assertEquals(1, result.size)
         assertEquals(82.5, result[0].kg)
-    }
-
-    @Test
-    fun `observeAll does not return other users entries`() = runTest {
-        dao.upsert(BodyWeightEntity(id = "id-1", userId = "user-a", date = "2026-06-01", kg = 80.0))
-        dao.upsert(BodyWeightEntity(id = "id-2", userId = "user-b", date = "2026-06-01", kg = 70.0))
-        val result = dao.observeAll("user-a").first()
-        assertEquals(1, result.size)
-        assertEquals(80.0, result[0].kg)
     }
 
     @Test
@@ -1930,12 +1921,11 @@ class BodyWeightDaoTest {
     }
 
     @Test
-    fun `deleteAllForUser removes only that user`() = runTest {
-        dao.upsert(BodyWeightEntity(id = "id-1", userId = "user-a", date = "2026-06-01", kg = 80.0))
-        dao.upsert(BodyWeightEntity(id = "id-2", userId = "user-b", date = "2026-06-01", kg = 70.0))
-        dao.deleteAllForUser("user-a")
-        assertTrue(dao.observeAll("user-a").first().isEmpty())
-        assertEquals(1, dao.observeAll("user-b").first().size)
+    fun `deleteAllForUser clears all entries`() = runTest {
+        dao.upsert(BodyWeightEntity(id = "id-1", userId = userId, date = "2026-06-01", kg = 80.0))
+        dao.upsert(BodyWeightEntity(id = "id-2", userId = userId, date = "2026-06-02", kg = 79.5))
+        dao.deleteAllForUser(userId)
+        assertTrue(dao.observeAll().first().isEmpty())
     }
 }
 ```
@@ -2188,7 +2178,7 @@ class LoginSyncServiceTest {
 
     private fun fakeBodyWeightDao() = object : BodyWeightDao {
         val inserted = mutableListOf<BodyWeightEntity>()
-        override fun observeAll(userId: String) = kotlinx.coroutines.flow.flowOf(emptyList())
+        override fun observeAll() = kotlinx.coroutines.flow.flowOf(emptyList())
         override suspend fun getByStatus(status: org.branneman.health.db.SyncStatus) =
             emptyList<BodyWeightEntity>()
         override suspend fun upsert(entity: BodyWeightEntity) {
