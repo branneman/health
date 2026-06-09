@@ -28,5 +28,17 @@ dependencies {
     implementation(libs.ktor.serverForwardedHeader)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
-    testImplementation(libs.testcontainers.postgresql)
+}
+
+tasks.test {
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()) {
+        envFile.readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") && it.contains("=") }
+            .forEach { line ->
+                val (key, raw) = line.split("=", limit = 2)
+                val value = raw.trim().removeSurrounding("\"").removeSurrounding("'")
+                environment(key.trim(), value)
+            }
+    }
 }

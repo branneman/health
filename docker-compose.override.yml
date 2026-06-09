@@ -1,4 +1,13 @@
 services:
+  ktor:
+    profiles: [production]
+
+  caddy:
+    profiles: [production]
+
+  watchtower:
+    profiles: [production]
+
   postgres:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

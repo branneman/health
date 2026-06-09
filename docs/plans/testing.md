@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the test suite described in `docs/specs/testing-manifesto.md` — replace fake server endpoint tests with real Testcontainers integration tests, add missing DAO and Compose UI tests, establish the API test suite, and write seed SQL for the two test accounts.
+**Goal:** Build the test suite described in `docs/specs/testing-manifesto.md` — replace fake server endpoint tests with real integration tests, add missing DAO and Compose UI tests, establish the API test suite, and write seed SQL for the two test accounts.
 
-**Architecture:** Server integration tests boot the real `Application.module()` against a Testcontainers Postgres; a minimal refactor makes the DataSource injectable. App component tests follow the Robolectric pattern already established in `BodyWeightDaoTest`. API tests live in a new `apiTest` source set in the `server` module, call the real VPS using `ktor-client`, and share DTOs from `shared`.
+**Architecture:** Server integration tests boot the real `Application.module()` against a local docker-compose Postgres (`health_test` database); a minimal refactor makes the DataSource injectable. App component tests follow the Robolectric pattern already established in `BodyWeightDaoTest`. API tests live in a new `apiTest` source set in the `server` module, call the real VPS using `ktor-client`, and share DTOs from `shared`.
 
-**Tech Stack:** Testcontainers (postgresql), Ktor `testApplication`, Robolectric, Compose UI Test (`ui-test-junit4`), `ktor-client` for API tests, BCrypt for test-user setup.
+**Tech Stack:** docker-compose + `health_test` DB, Ktor `testApplication`, Robolectric, Compose UI Test (`ui-test-junit4`), `ktor-client` for API tests, BCrypt for test-user setup.
 
 ---
 
@@ -16,54 +16,49 @@ Phases are independent. Work Phase B and Phase C in parallel with Phase A if des
 
 ---
 
-### Task A1: Add Testcontainers and create the TestDatabase helper
+### Task A1: Set up docker-compose test database and TestDatabase helper
+
+The dev docker-compose already runs Postgres. Add a second database (`health_test`) via an init script, and write the `TestDatabase` helper that connects to it and runs Flyway migrations.
 
 **Files:**
-- Modify: `gradle/libs.versions.toml`
-- Modify: `server/build.gradle.kts`
-- Create: `server/src/test/kotlin/org/branneman/health/TestDatabase.kt`
+- Modify: `docker-compose.yml`
+- Create: `docker/init-test-db.sql`
+- Modify: `server/src/test/kotlin/org/branneman/health/TestDatabase.kt`
 
-- [ ] **Add Testcontainers to the version catalog**
+- [ ] **Add the init script mount to docker-compose.yml**
 
-  In `gradle/libs.versions.toml`, add under `[versions]`:
-  ```toml
-  testcontainers = "1.20.4"
-  ```
-  Add under `[libraries]`:
-  ```toml
-  testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+  In the `postgres` service, add the init script volume:
+  ```yaml
+  volumes:
+    - pgdata:/var/lib/postgresql/data
+    - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql
   ```
 
-- [ ] **Add the dependency to the server module**
+- [ ] **Create docker/init-test-db.sql**
 
-  In `server/build.gradle.kts`, add inside `dependencies {}`:
-  ```kotlin
-  testImplementation(libs.testcontainers.postgresql)
+  ```sql
+  CREATE DATABASE health_test;
   ```
+
+  Note: `docker-entrypoint-initdb.d` only runs on first container start (when `pgdata` volume is empty). To apply it to an existing volume: `docker compose down -v && docker compose up -d`.
 
 - [ ] **Write the TestDatabase helper**
 
-  Create `server/src/test/kotlin/org/branneman/health/TestDatabase.kt`:
+  Create/replace `server/src/test/kotlin/org/branneman/health/TestDatabase.kt`:
   ```kotlin
   package org.branneman.health
 
   import com.zaxxer.hikari.HikariConfig
   import com.zaxxer.hikari.HikariDataSource
   import org.flywaydb.core.Flyway
-  import org.testcontainers.containers.PostgreSQLContainer
   import javax.sql.DataSource
 
   object TestDatabase {
-      private val container = PostgreSQLContainer("postgres:16-alpine").apply {
-          withDatabaseName("health_test")
-          start()
-      }
-
       val dataSource: DataSource by lazy {
           val ds = HikariDataSource(HikariConfig().apply {
-              jdbcUrl = container.jdbcUrl
-              username = container.username
-              password = container.password
+              jdbcUrl  = System.getenv("TEST_DATABASE_URL")      ?: "jdbc:postgresql://localhost:5432/health_test"
+              username = System.getenv("TEST_POSTGRES_USER")     ?: "health"
+              password = System.getenv("TEST_POSTGRES_PASSWORD") ?: "health"
               driverClassName = "org.postgresql.Driver"
               maximumPoolSize = 5
           })
@@ -83,8 +78,8 @@ Phases are independent. Work Phase B and Phase C in parallel with Phase A if des
 - [ ] **Commit**
 
   ```bash
-  git add gradle/libs.versions.toml server/build.gradle.kts server/src/test/kotlin/org/branneman/health/TestDatabase.kt
-  git commit -m "test(server): add Testcontainers + TestDatabase helper"
+  git add docker-compose.yml docker/init-test-db.sql server/src/test/kotlin/org/branneman/health/TestDatabase.kt
+  git commit -m "test(server): set up health_test DB in docker-compose + TestDatabase helper"
   ```
 
 ---
