@@ -56,10 +56,14 @@ android {
         applicationId = "org.branneman.health"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        val gitCount = providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
-            .standardOutput.asText.get().trim().toInt()
-        val gitHash = providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }
-            .standardOutput.asText.get().trim()
+        val gitCount = runCatching {
+            providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
+                .standardOutput.asText.get().trim().toInt()
+        }.getOrDefault(1)
+        val gitHash = runCatching {
+            providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }
+                .standardOutput.asText.get().trim()
+        }.getOrDefault("unknown")
         versionCode = gitCount
         versionName = "$gitCount-$gitHash"
         buildConfigField(
