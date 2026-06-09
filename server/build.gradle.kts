@@ -9,6 +9,16 @@ application {
     mainClass = "org.branneman.health.ApplicationKt"
 }
 
+sourceSets {
+    create("apiTest") {
+        kotlin.srcDir("src/apiTest/kotlin")
+        compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+val apiTestImplementation by configurations.getting
+
 dependencies {
     api(projects.shared)
     implementation(libs.logback)
@@ -28,6 +38,19 @@ dependencies {
     implementation(libs.ktor.serverForwardedHeader)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
+    apiTestImplementation(libs.ktor.clientCore)
+    apiTestImplementation(libs.ktor.clientCio)
+    apiTestImplementation(libs.ktor.clientContentNegotiation)
+    apiTestImplementation(libs.ktor.clientSerializationJson)
+    apiTestImplementation(libs.kotlin.testJunit)
+    apiTestImplementation(libs.kotlinx.coroutines.test)
+}
+
+tasks.register<Test>("apiTest") {
+    description = "Run API tests against the live server"
+    group = "verification"
+    testClassesDirs = sourceSets["apiTest"].output.classesDirs
+    classpath = sourceSets["apiTest"].runtimeClasspath
 }
 
 tasks.test {
