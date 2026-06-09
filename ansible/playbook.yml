@@ -110,3 +110,25 @@
          ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;"
       loop: "{{ pw_hashes.results }}"
       no_log: true
+
+    - name: Hash password for test accounts
+      command: >
+        python3 -c "import bcrypt;
+        h=bcrypt.hashpw('{{ item.password }}'.encode(), bcrypt.gensalt(12)).decode();
+        print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
+      loop:
+        - { id: '00000000-0000-0000-0000-000000000010', email: 'test+api@bran.name', password: '{{ test_api_account_password }}' }
+        - { id: '00000000-0000-0000-0000-000000000020', email: 'test+e2e@bran.name', password: '{{ test_e2e_account_password }}' }
+      register: test_pw_hashes
+      changed_when: false
+      no_log: true
+      delegate_to: localhost
+
+    - name: Upsert test account {{ item.item.email }}
+      command: >
+        docker exec health_postgres psql -U health -d health -c
+        "INSERT INTO users (id, username, password_hash)
+         VALUES ('{{ item.item.id }}', '{{ item.item.email }}', '{{ item.stdout }}')
+         ON CONFLICT (id) DO UPDATE SET password_hash = EXCLUDED.password_hash;"
+      loop: "{{ test_pw_hashes.results }}"
+      no_log: true
