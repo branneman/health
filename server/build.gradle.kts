@@ -51,6 +51,16 @@ tasks.register<Test>("apiTest") {
     group = "verification"
     testClassesDirs = sourceSets["apiTest"].output.classesDirs
     classpath = sourceSets["apiTest"].runtimeClasspath
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()) {
+        envFile.readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") && it.contains("=") }
+            .forEach { line ->
+                val (key, raw) = line.split("=", limit = 2)
+                val value = raw.trim().removeSurrounding("\"").removeSurrounding("'")
+                environment(key.trim(), value)
+            }
+    }
 }
 
 tasks.test {
