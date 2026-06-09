@@ -38,6 +38,8 @@ dependencies {
     implementation(libs.workmanager)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.compose.uiTestJunit4)
+    debugImplementation(libs.compose.uiTestManifest)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
 
