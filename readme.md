@@ -29,7 +29,32 @@ commands and options:
 
 Use the run button in your IDE’s editor gutter, or run tests using Gradle tasks:
 
-- Server tests: `./gradlew :server:test`
+**Server unit + integration tests** (requires local Docker Postgres running):
+```bash
+./gradlew :server:test
+```
+
+**App component tests** (Robolectric — no device needed):
+```bash
+./gradlew :app:testDebugUnitTest
+```
+
+**API tests against local server** (start the server first):
+```bash
+set -a; source .env; set +a
+./gradlew :server:run &   # or start via IDE
+API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest
+```
+
+**API tests against production:**
+```bash
+./gradlew :server:apiTest   # picks up API_TEST_* vars from .env automatically
+```
+
+**All non-device tests:**
+```bash
+./gradlew :server:test :app:testDebugUnitTest
+```
 
 ## Setting up development environment
 
