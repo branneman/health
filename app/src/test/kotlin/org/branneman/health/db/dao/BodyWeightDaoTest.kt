@@ -4,9 +4,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.branneman.health.aBodyWeightEntry
+import org.branneman.health.uuid
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
-import org.branneman.health.db.entities.BodyWeightEntity
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -22,7 +23,7 @@ class BodyWeightDaoTest {
 
     private lateinit var db: HealthDatabase
     private lateinit var dao: BodyWeightDao
-    private val userId = "user-1"
+    private val userId = uuid()
 
     @Before
     fun setUp() {
@@ -40,7 +41,7 @@ class BodyWeightDaoTest {
 
     @Test
     fun `upsert and observe entries`() = runTest {
-        val entry = BodyWeightEntity(id = "id-1", userId = userId, date = "2026-06-01", kg = 82.5)
+        val entry = aBodyWeightEntry(userId = userId, date = "2026-06-01", kg = 82.5)
         dao.upsert(entry)
         val result = dao.observeAll().first()
         assertEquals(1, result.size)
@@ -49,27 +50,18 @@ class BodyWeightDaoTest {
 
     @Test
     fun `getByStatus returns only PENDING_CREATE entries`() = runTest {
-        dao.upsert(
-            BodyWeightEntity(
-                id = "id-1", userId = userId, date = "2026-06-01", kg = 82.0,
-                syncStatus = SyncStatus.PENDING_CREATE
-            )
-        )
-        dao.upsert(
-            BodyWeightEntity(
-                id = "id-2", userId = userId, date = "2026-06-02", kg = 81.9,
-                syncStatus = SyncStatus.SYNCED
-            )
-        )
+        val id1 = uuid()
+        dao.upsert(aBodyWeightEntry(id = id1, userId = userId, date = "2026-06-01", kg = 82.0, syncStatus = SyncStatus.PENDING_CREATE))
+        dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-02", kg = 81.9, syncStatus = SyncStatus.SYNCED))
         val pending = dao.getByStatus(SyncStatus.PENDING_CREATE)
         assertEquals(1, pending.size)
-        assertEquals("id-1", pending[0].id)
+        assertEquals(id1, pending[0].id)
     }
 
     @Test
     fun `deleteAllForUser clears all entries`() = runTest {
-        dao.upsert(BodyWeightEntity(id = "id-1", userId = userId, date = "2026-06-01", kg = 80.0))
-        dao.upsert(BodyWeightEntity(id = "id-2", userId = userId, date = "2026-06-02", kg = 79.5))
+        dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-01", kg = 80.0))
+        dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-02", kg = 79.5))
         dao.deleteAllForUser(userId)
         assertTrue(dao.observeAll().first().isEmpty())
     }
