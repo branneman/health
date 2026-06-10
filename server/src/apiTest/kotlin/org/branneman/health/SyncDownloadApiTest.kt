@@ -47,11 +47,4 @@ class SyncDownloadApiTest : ApiTestBase() {
         }
     }
 
-    private suspend fun login(): String {
-        val response = client.post("$serverUrl/auth/token") {
-            contentType(ContentType.Application.Json)
-            setBody(TokenRequest(apiEmail, apiPassword))
-        }
-        return response.body<TokenResponse>().token
-    }
 }
