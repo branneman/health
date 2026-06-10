@@ -79,7 +79,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     fun update(block: OnboardingUiState.() -> OnboardingUiState) =
         _uiState.update(block)
 
-    fun goBack() = _uiState.update { it.copy(step = it.step - 1) }
+    fun goBack() = _uiState.update { if (it.step > 1) it.copy(step = it.step - 1) else it }
     fun goNext() = _uiState.update { it.copy(step = it.step + 1) }
 
     fun save() {

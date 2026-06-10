@@ -20,6 +20,7 @@ import org.branneman.health.auth.AuthViewModel
 import org.branneman.health.ui.DashboardScreen
 import org.branneman.health.ui.LogScreen
 import org.branneman.health.ui.LoginScreen
+import org.branneman.health.ui.OnboardingScreen
 import org.branneman.health.ui.SettingsScreen
 
 private enum class Tab(val label: String, val emoji: String) {
@@ -84,9 +85,7 @@ fun App() {
                 }
             )
 
-            AuthState.NeedsOnboarding -> {
-                // placeholder — OnboardingScreen wired up in a later story
-            }
+            AuthState.NeedsOnboarding -> OnboardingScreen()
 
             AuthState.LoggedIn -> MainNav(authViewModel)
         }
