@@ -26,6 +26,9 @@ import org.branneman.health.auth.AuthService
 import org.branneman.health.auth.DbLoginAttemptsStore
 import org.branneman.health.auth.LoginResult
 import org.branneman.health.auth.RateLimiter
+import org.branneman.health.budget.BudgetComputer
+import org.branneman.health.budget.EnergyRow
+import org.branneman.health.budget.UserProfileInput
 import org.branneman.health.data.BodyWeight
 import org.branneman.health.data.DailyEnergy
 import org.branneman.health.data.FoodItem
@@ -398,16 +401,100 @@ fun Application.module(dataSource: javax.sql.DataSource) {
                                 )
                             }
                         LogEntryDto(
-                            id           = eRow[LogEntry.id].toString(),
-                            loggedAt     = eRow[LogEntry.loggedAt].toString(),
-                            mealType     = eRow[LogEntry.mealType],
+                            id            = eRow[LogEntry.id].toString(),
+                            loggedAt      = eRow[LogEntry.loggedAt].toString(),
+                            mealType      = eRow[LogEntry.mealType],
                             quickAddKcal  = eRow[LogEntry.quickAddKcal],
                             quickAddLabel = eRow[LogEntry.quickAddLabel],
-                            items        = items,
+                            items         = items,
                         )
                     }
                 }
                 call.respond(entries)
+            }
+
+            get("/summary/today") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val dateParam = call.request.queryParameters["date"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val today = runCatching { java.time.LocalDate.parse(dateParam) }.getOrNull()
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+                val dayStart = today.atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
+                val dayEnd = dayStart.plusDays(1)
+
+                val dto = transaction {
+                    val profileRow = UserProfile.selectAll()
+                        .where { UserProfile.userId eq userId }
+                        .singleOrNull()
+                        ?: return@transaction null
+
+                    val profileInput = UserProfileInput(
+                        heightCm      = profileRow[UserProfile.heightCm],
+                        birthYear     = profileRow[UserProfile.birthYear],
+                        sex           = profileRow[UserProfile.sex],
+                        activityLevel = profileRow[UserProfile.activityLevel],
+                        targetDeficit = profileRow[UserProfile.targetDeficit],
+                        goalWeightKg  = profileRow[UserProfile.goalWeightKg].toDouble(),
+                    )
+
+                    val latestWeightKg = BodyWeight.selectAll()
+                        .where { BodyWeight.userId eq userId }
+                        .orderBy(BodyWeight.date, SortOrder.DESC)
+                        .limit(1)
+                        .singleOrNull()
+                        ?.get(BodyWeight.kg)?.toDouble()
+
+                    val energyRows = DailyEnergy.selectAll()
+                        .where {
+                            (DailyEnergy.userId eq userId) and
+                            (DailyEnergy.date greaterEq today.minusDays(1)) and
+                            (DailyEnergy.date lessEq today)
+                        }
+                        .map { EnergyRow(it[DailyEnergy.date], it[DailyEnergy.totalKcal]) }
+
+                    val quickAddKcal = LogEntry.selectAll()
+                        .where {
+                            (LogEntry.userId eq userId) and
+                            (LogEntry.quickAddKcal.isNotNull()) and
+                            (LogEntry.loggedAt greaterEq dayStart) and
+                            (LogEntry.loggedAt less dayEnd)
+                        }
+                        .sumOf { it[LogEntry.quickAddKcal] ?: 0 }
+
+                    val itemKcal = LogEntry
+                        .join(LogEntryItem, JoinType.INNER, LogEntry.id, LogEntryItem.logEntryId)
+                        .selectAll()
+                        .where {
+                            (LogEntry.userId eq userId) and
+                            (LogEntry.quickAddKcal.isNull()) and
+                            (LogEntry.loggedAt greaterEq dayStart) and
+                            (LogEntry.loggedAt less dayEnd)
+                        }
+                        .sumOf { row ->
+                            (row[LogEntryItem.kcalPer100g].toDouble() * row[LogEntryItem.grams].toDouble() / 100.0).toInt()
+                        }
+
+                    val budget = BudgetComputer.compute(
+                        today          = today,
+                        profile        = profileInput,
+                        latestWeightKg = latestWeightKg,
+                        energyRows     = energyRows,
+                        caloriesIn     = quickAddKcal + itemKcal,
+                    )
+
+                    TodaySummaryDto(
+                        date              = today.toString(),
+                        caloriesIn        = budget.caloriesIn,
+                        caloriesOut       = budget.caloriesOut,
+                        budgetRemaining   = budget.budgetRemaining,
+                        targetDeficit     = budget.targetDeficit,
+                        caloriesOutSource = budget.caloriesOutSource,
+                    )
+                }
+
+                if (dto == null) call.respond(HttpStatusCode.NotFound)
+                else call.respond(dto)
             }
         }
     }

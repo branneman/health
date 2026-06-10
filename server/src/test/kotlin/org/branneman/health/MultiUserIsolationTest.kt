@@ -40,6 +40,7 @@ class MultiUserIsolationTest {
             transaction {
                 listOf(USER_A_EMAIL to userAId, USER_B_EMAIL to userBId).forEach { (email, id) ->
                     Users.deleteWhere { username eq email }
+                    Users.deleteWhere { Users.id eq id }
                     Users.insert {
                         it[Users.id]           = id
                         it[Users.username]     = email
