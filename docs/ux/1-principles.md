@@ -129,7 +129,11 @@ The user ranked "a tip/nudge right now" **last** of four things to see. So:
 
 ## Tone & language
 
-- Daily/neutral surfaces: factual, no adjectives of judgment. "1,850 in · 2,300 out."
+- Daily/neutral surfaces: factual, no adjectives of judgment. "1,850 in · 2,300 out · 450 left."
+- **Calorie label vocabulary:** use **in · out · left** throughout the app. "In" = food/drink
+  consumed; "out" = energy expended; "left" = budget remaining. Never "eaten/burned" (verb-based,
+  gym-culture register) or "eaten/out" (asymmetric registers). The in/out pair names the direction
+  of calorie flow — neutral accounting language, not performance language.
 - Weekly/verdict surfaces: direct but never personal. Talk about the *trend*, not the
   person. "Down 0.3 kg this week — on track" not "Good job!" or "You failed."
 - Never punish missing data (a skipped weigh-in, an unlogged day). Degrade gracefully.
