@@ -30,6 +30,13 @@ implication for every implementation session:
 - **Spec and plan filenames do not include a date prefix.** Save them as `docs/specs/<topic>.md` and
   `docs/plans/<topic>.md`, not `docs/specs/YYYY-MM-DD-<topic>.md`. The superpowers skill suggests
   dated filenames — ignore that convention here.
+- **Conventional commits:** use the format `type(scope): message`. Valid types:
+  `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`, `ci`, `security`.
+  Always include a scope when it makes sense: use `app`, `server`, or `shared`
+  for changes confined to one Gradle module; use a topic scope (e.g. `auth`,
+  `onboarding`) when a change spans multiple modules but has a clear shared
+  theme. Omit the scope only when no single module or topic fits (e.g. root
+  build config changes).
 - **Run `git` directly, never `git -C <path>`.** The working directory is always the repo root,
   so `git -C` is never needed and triggers unnecessary permission prompts.
 - **IDs are always UUIDs** — no auto-incrementing integers anywhere (database columns,
