@@ -23,7 +23,7 @@ something a unit test can cover.
 ```
         [E2E smoke]          ← device + real server, core user journey only
         [API tests]          ← real server, no device, contract + deployment
-   [server integration]      ← Testcontainers Postgres, real routing + SQL
+   [server integration]      ← local Postgres (health_test), real routing + SQL
       [app component]        ← Robolectric, Room in-memory, Compose UI
           [unit]             ← pure logic, no I/O, the majority
 ```
@@ -43,50 +43,64 @@ interface. That pattern applies everywhere at this tier.
 These run in milliseconds. They are the first thing written when implementing any new logic.
 
 **What currently meets the bar:** `AuthServiceTest`, `RateLimiterTest`, `AuthPluginTest`,
-`HealthApiClientTest`, `AuthRepositoryTest`.
+`HealthApiClientTest`, `AuthRepositoryTest`, `OnboardingRepositoryTest`.
 
 ---
 
 ## Tier 2a — Server Integration Tests
 
 **Charter:** the real Ktor application wired to a real database, exercised over HTTP. Tests call
-actual endpoints and assert on actual database state.
+actual endpoints and assert on actual HTTP responses.
 
-Each test class covers one feature area (auth, profile, shortcuts, sync download, body weight,
-etc.). The Ktor `Application.module()` runs against a Testcontainers Postgres instance. Flyway
-migrates it before the suite. Tests insert their own seed data, make HTTP calls, and assert on
-response bodies and status codes. Isolation is per-test: each test either uses a transaction it
-rolls back, or inserts and deletes its own rows.
+Each test class covers one feature area (auth, profile/shortcuts, sync download, body weight, etc.).
+The Ktor `Application.module(ds)` runs against a local Postgres database (`health_test`). Flyway
+migrates it on first connection via `TestDatabase`. Tests insert their own seed data, make HTTP
+calls via Ktor's `testApplication`, and assert on response status codes and bodies.
 
-This is the tier that verifies: routing correctness, user-ownership enforcement in SQL, correct HTTP
-status codes for all branches, and auth middleware wiring. It is not the place for business logic
-edge cases — those belong in unit tests.
+**Infrastructure:** `TestDatabase` reads connection details from env vars
+(`TEST_DATABASE_URL`, `TEST_POSTGRES_USER`, `TEST_POSTGRES_PASSWORD`) with fallback to
+`localhost:5432/health_test`. No Docker container is spun up — the `health_test` database must
+exist before running `./gradlew :server:test`. This keeps tests fast and avoids Docker overhead.
 
-**What needs to change:** `ApplicationTest`, `MultiUserEndpointTest`, and `SyncDownloadTest` are
-currently fake — they define their own stub routing instead of booting the real application. They
-must be rewritten against the real `Application.module()` with a Testcontainers database. The
-existing test names and scenarios are largely worth keeping; the infrastructure underneath them must
-be replaced.
+**Isolation model:** each test class owns a fixed test user UUID (e.g. `00000000-0000-0000-0000-000000000001`
+through `...000005`) with a fixed email. The test user is upserted in `companion object { init {} }`.
+Mutable data (rows the tests write) is deleted in `@Before` so each test starts clean. Tests do not
+use transaction rollback — they explicitly delete their own rows.
+
+This tier verifies: routing correctness, auth middleware wiring, correct HTTP status codes for all
+branches, and that the Exposed SQL queries do what the application expects.
+
+**What currently meets the bar:** `AuthIntegrationTest`, `ProfileAndShortcutsIntegrationTest`,
+`SyncDownloadIntegrationTest`, `BodyWeightIntegrationTest`, `MultiUserIsolationTest`.
 
 ---
 
 ## Tier 2b — App Component Tests
 
-**Charter:** Android components in isolation — Room DAOs and Compose UI screens — without a real
-device.
+**Charter:** Android components in isolation — Room DAOs, sync services, and Compose UI screens —
+without a real device.
 
-**Room DAOs:** Robolectric + in-memory Room database. Every DAO gets a test class. Each test inserts
+**Room DAOs:** Robolectric + in-memory Room database. Every DAO has a test class. Each test inserts
 known data, calls a DAO method, and asserts on the result. The pattern established in
-`BodyWeightDaoTest` (Robolectric, in-memory builder, `@Before`/`@After` setup/teardown) applies to
-all remaining DAOs. `LoginSyncServiceTest` must replace its `assertTrue(true)` placeholder with a
-real Robolectric test that exercises the sync service against an in-memory Room database.
+`BodyWeightDaoTest` (Robolectric, in-memory builder, `@Before`/`@After` setup/teardown) is used
+consistently across all DAO tests.
 
-**Compose UI screens:** Robolectric + `ComposeTestRule`. Each screen (`LoginScreen`,
-`DashboardScreen`, `LogScreen`, `SettingsScreen`) gets a test that exercises its primary
-interactions: form validation, button enabled/disabled state, navigation callbacks, loading and
-error states. Dependencies (ViewModels, repositories) are injected as fakes. These are behaviour
-tests, not screenshot tests — they assert on what the user sees and can interact with, not on
-pixels.
+**Sync services:** Robolectric + in-memory Room + `MockEngine` Ktor client. `LoginSyncServiceTest`
+verifies that the sync service populates Room correctly from mock API responses and returns the right
+boolean (has profile / no profile).
+
+**Compose UI screens:** Robolectric + `ComposeTestRule`. Each screen gets a test that exercises its
+primary interactions: form validation, button enabled/disabled state, loading and error states.
+Dependencies (ViewModels, repositories) are injected as fakes. These are behaviour tests, not
+screenshot tests — they assert on what the user sees and can interact with, not on pixels.
+
+**What currently meets the bar:** all eight DAO tests (`BodyWeightDaoTest`, `DailyEnergyDaoTest`,
+`FoodItemDaoTest`, `LogEntryDaoTest`, `MealTemplateDaoTest`, `ShortcutDaoTest`, `UserProfileDaoTest`,
+`WorkoutDaoTest`), `LoginSyncServiceTest`, `LoginScreenTest`, `OnboardingScreenTest`.
+
+**What is still missing:** UI tests for screens that don't exist yet (`DashboardScreen`, `LogScreen`,
+`SettingsScreen`). These should be written alongside the story that implements each screen — not
+before.
 
 ---
 
@@ -96,24 +110,23 @@ pixels.
 account. No Android app involved.
 
 Where server integration tests prove the code is correct (in isolation), API tests prove the
-deployment is correct. They catch problems that Testcontainers cannot: a Flyway migration that
-succeeded locally but failed on the VPS, a misconfigured environment variable, a reverse proxy that
-drops or rewrites auth headers, rate limiting that behaves differently when `X-Forwarded-For` comes
-from real Nginx.
+deployment is correct. They catch problems that a local test database cannot: a Flyway migration
+that succeeded locally but failed on the VPS, a misconfigured environment variable, a reverse proxy
+that drops or rewrites auth headers, rate limiting that behaves differently when `X-Forwarded-For`
+comes from real Nginx.
 
-Tests exercise the full authentication cycle (login with real bcrypt verification, token use,
-refresh, logout), all data endpoints, and multi-user isolation (authenticate as the API test
-account, attempt to read the E2E account's data, assert 403 or 404).
+The suite lives in `server/src/apiTest/`. It reads connection details from env vars
+(`API_TEST_SERVER_URL`, `API_TEST_EMAIL`, `API_TEST_PASSWORD`). It runs on demand — not on every
+push — and is a natural gate before deploying changes to the server.
+
+Tests exercise the full authentication cycle (login, token use, refresh, logout), data endpoints,
+and multi-user isolation.
 
 The API test account is `test+api@bran.name`. Its initial state is maintained by
-`local-db-seed/test-api-account-seed.sql`. Because this tier exercises mutating operations more
-aggressively than E2E, each test that writes data must delete it in teardown. Tests that cannot
-guarantee cleanup should prefer read-only assertions or use data that is distinguishable and can be
-bulk-deleted by a dedicated teardown step.
+`local-db-seed/test-api-account-seed.sql`. Each test that writes data must delete it in teardown.
 
-The API test suite is implemented in Kotlin using `ktor-client`, so it shares DTOs from the `shared`
-module. It can live in `server/src/apiTest/` or a dedicated `api-tests` Gradle module. It runs on
-demand — not on every push — and is a natural gate before deploying changes to the server.
+**What currently meets the bar:** `AuthApiTest`, `SyncDownloadApiTest`, `ProfileApiTest`,
+`ShortcutsApiTest`, `BodyWeightApiTest`.
 
 ---
 
@@ -124,20 +137,16 @@ exercising only the core user journey.
 
 This suite is intentionally small. Its job is to verify that the app and server work together
 end-to-end, not to be a comprehensive regression suite. Scope: authenticate → view dashboard → log a
-meal → verify it appears → sign out. That is the happy path. Edge cases belong in lower tiers.
+meal → verify it appears → sign out. Edge cases belong in lower tiers.
 
 Tests run as Android instrumented tests (`androidTest` source set) using the Compose UI test API.
 The E2E test account is `test+e2e@bran.name`. Its data is pre-seeded via
-`local-db-seed/test-e2e-account-seed.sql` with realistic but clearly synthetic data: plausible
-weight history, a few food log entries, named shortcuts. Any test that writes to the database must
-delete its own writes in `@After`. If a write cannot be cleaned up deterministically, the test
-should be redesigned to be read-only.
+`local-db-seed/test-e2e-account-seed.sql` with realistic but clearly synthetic data. Any test that
+writes to the database must delete its own writes in `@After`.
 
-Credentials (email and password for both test accounts) are supplied via environment variables or CI
-secrets. They are never committed to the repository.
+Credentials are supplied via environment variables or CI secrets. Never committed to the repository.
 
-The E2E suite is a manual gate — not run on every push. It is the final check before a significant
-release.
+**What currently meets the bar:** not yet implemented.
 
 ---
 
@@ -145,24 +154,26 @@ release.
 
 Three contexts, three strategies. Never share test data across contexts.
 
-**Unit tests** use inline factory helpers defined in a `TestFactories.kt` file per module. A factory
-creates a minimal valid instance of any entity or DTO, with sensible defaults that tests override
-only for the field under test:
+**Unit and app component tests** use inline factory helpers defined in `TestFactories.kt` in the
+`app` module. A factory creates a minimal valid instance of any entity or DTO, with sensible defaults
+that tests override only for the field under test:
 
 ```kotlin
-fun aWeightEntry(
-    id: UUID = UUID.randomUUID(),
-    userId: UUID = UUID.randomUUID(),
+fun aBodyWeightEntry(
+    id: String = uuid(),
+    userId: String = uuid(),
     date: String = "2026-01-01",
     kg: Double = 80.0,
-) = BodyWeightEntity(id = id.toString(), userId = userId.toString(), date = date, kg = kg)
+    syncStatus: SyncStatus = SyncStatus.SYNCED,
+) = BodyWeightEntity(id = id, userId = userId, date = date, kg = kg, syncStatus = syncStatus)
 ```
 
-Tests read cleanly: `aWeightEntry(kg = 95.0)` says exactly what matters and nothing else.
+Tests read cleanly: `aBodyWeightEntry(kg = 95.0)` says exactly what matters and nothing else.
 
-**Server integration tests** insert their own data into the Testcontainers database at the start of
-each test. The container is discarded after the suite. There is no shared state between tests or
-test runs.
+**Server integration tests** insert their own data at suite start (`companion object { init {} }`)
+and clean up mutable rows in `@Before`. Each test class owns a fixed UUID and email address that
+does not overlap with any other class or with the API/E2E test accounts. The `health_test` database
+persists between runs; tests must leave it in a state that does not break subsequent runs.
 
 **API tests and E2E smoke tests** use dedicated production accounts with SQL seed files:
 
@@ -180,16 +191,7 @@ applied manually to reset an account to a known state after disruptive test runs
 
 Ordered by impact:
 
-1. **Rewrite the three fake server tests** (`ApplicationTest`, `MultiUserEndpointTest`,
-   `SyncDownloadTest`) using real routing + Testcontainers. This is the highest-value change: it
-   gives the first real coverage of the Exposed SQL queries and user-ownership logic that currently
-   have zero test coverage.
-2. **Replace `LoginSyncServiceTest`'s placeholder** with a real Robolectric test.
-3. **Add DAO tests** for the seven Room DAOs that have no coverage: `DailyEnergyDao`, `FoodItemDao`,
-   `LogEntryDao`, `MealTemplateDao`, `ShortcutDao`, `UserProfileDao`, `WorkoutDao`.
-4. **Add Compose UI tests** for the four screens, starting with `LoginScreen` (most logic) and
-   `DashboardScreen` (most visible to the user).
-5. **Establish the API test suite** with the `test+api@bran.name` account, starting with the auth
-   cycle and the sync-download endpoints.
-6. **Write the two seed SQL files** and create the test accounts on the production server.
-7. **Write the E2E smoke suite**, starting with the login → dashboard → log flow.
+1. **Write the E2E smoke suite** once the dashboard and log screens exist (Story 6+). Start with
+   login → dashboard → log a meal → sign out.
+2. **Write UI tests alongside each new screen** — `DashboardScreen`, `LogScreen`, `SettingsScreen`
+   each get a `*ScreenTest` in the same story that implements them.
