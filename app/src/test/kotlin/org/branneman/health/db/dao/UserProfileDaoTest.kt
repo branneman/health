@@ -14,8 +14,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -61,5 +63,25 @@ class UserProfileDaoTest {
         dao.upsert(aUserProfile(userId = userId))
         dao.deleteForUser(userId)
         assertNull(dao.get())
+    }
+
+    @Test
+    fun `existsFlow emits false when table is empty`() = runTest {
+        assertFalse(dao.existsFlow().first())
+    }
+
+    @Test
+    fun `existsFlow emits true after upsert`() = runTest {
+        dao.upsert(aUserProfile(userId = uuid()))
+        assertTrue(dao.existsFlow().first())
+    }
+
+    @Test
+    fun `existsFlow emits true then false after delete`() = runTest {
+        val userId = uuid()
+        dao.upsert(aUserProfile(userId = userId))
+        assertTrue(dao.existsFlow().first())
+        dao.deleteForUser(userId)
+        assertFalse(dao.existsFlow().first())
     }
 }
