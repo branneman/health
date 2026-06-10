@@ -63,11 +63,12 @@ class HealthApiClient(
     }
 
     suspend fun putProfile(token: String, profile: UserProfileDto) {
-        client.put("$baseUrl/profile") {
+        val response = client.put("$baseUrl/profile") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(profile)
         }
+        check(response.status.isSuccess()) { "PUT /profile failed: ${response.status}" }
     }
 
     suspend fun getShortcuts(token: String): List<ShortcutDto> =
@@ -87,6 +88,17 @@ class HealthApiClient(
         client.get("$baseUrl/body/weight") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }.body()
+
+    suspend fun postBodyWeight(token: String, dto: WeightEntryDto) {
+        val response = client.post("$baseUrl/body/weight") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(dto)
+        }
+        if (!response.status.isSuccess() && response.status != HttpStatusCode.Conflict) {
+            throw Exception("POST /body/weight failed: ${response.status}")
+        }
+    }
 
     suspend fun getDailyEnergy(token: String, from: String): List<DailyEnergyDto> =
         client.get("$baseUrl/out/energy") {

@@ -17,6 +17,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.branneman.health.UserProfileDto
 import org.branneman.health.ShortcutDto
+import org.branneman.health.WeightEntryDto
 import org.junit.Test
 
 class HealthApiClientTest {
@@ -153,5 +154,52 @@ class HealthApiClientTest {
         }
         val result = HealthApiClient("http://test", client).getBodyWeight("token")
         assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `postBodyWeight returns on 201`() = runBlocking {
+        val client = mockClient { _ ->
+            respond(
+                """{"date":"2026-06-10","kg":84.0}""",
+                HttpStatusCode.Created,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+        }
+        // Should not throw
+        HealthApiClient("http://test", client).postBodyWeight("token", WeightEntryDto("2026-06-10", 84.0))
+    }
+
+    @Test
+    fun `postBodyWeight does not throw on 409 Conflict`() = runBlocking {
+        val client = HttpClient(MockEngine { respond("", HttpStatusCode.Conflict) }) {
+            install(ContentNegotiation) { json() }
+        }
+        // 409 = weight already exists for this date; treat as success
+        HealthApiClient("http://test", client).postBodyWeight("token", WeightEntryDto("2026-06-10", 84.0))
+    }
+
+    @Test
+    fun `postBodyWeight throws on server error`() = runBlocking {
+        val httpClient = HttpClient(MockEngine { _ -> respond("", HttpStatusCode.InternalServerError) }) {
+            install(ContentNegotiation) { json() }
+        }
+        assertFailsWith<Exception> {
+            HealthApiClient("http://test", httpClient).postBodyWeight("token", WeightEntryDto("2026-06-10", 84.0))
+        }
+        Unit
+    }
+
+    @Test
+    fun `putProfile throws on server error`() = runBlocking {
+        val httpClient = HttpClient(MockEngine { _ -> respond("", HttpStatusCode.InternalServerError) }) {
+            install(ContentNegotiation) { json() }
+        }
+        assertFailsWith<Exception> {
+            HealthApiClient("http://test", httpClient).putProfile(
+                "token",
+                UserProfileDto(177, 1986, "male", 74.0, "lightly_active", 300, "loss", false)
+            )
+        }
+        Unit
     }
 }
