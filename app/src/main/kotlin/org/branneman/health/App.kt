@@ -84,6 +84,10 @@ fun App() {
                 }
             )
 
+            AuthState.NeedsOnboarding -> {
+                // placeholder — OnboardingScreen wired up in a later story
+            }
+
             AuthState.LoggedIn -> MainNav(authViewModel)
         }
     }

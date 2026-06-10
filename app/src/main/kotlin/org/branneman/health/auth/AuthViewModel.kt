@@ -47,8 +47,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         authRepository = AuthRepository(
             tokenStore = tokenStore,
             apiClient = apiClient,
-            loginSyncService = LoginSyncService(api = apiClient, db = app.db),
             db = app.db,
+            loginSyncService = LoginSyncService(api = apiClient, db = app.db),
         )
 
         viewModelScope.launch {

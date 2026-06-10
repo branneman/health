@@ -1,25 +1,32 @@
 package org.branneman.health.auth
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandler
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.branneman.health.aUserProfile
+import org.branneman.health.db.HealthDatabase
 import org.branneman.health.network.HealthApiClient
+import org.branneman.health.uuid
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
 class AuthRepositoryTest {
 
     private fun testTokenStore(): TokenStore {
@@ -32,55 +39,76 @@ class AuthRepositoryTest {
         return TokenStore(dataStore)
     }
 
+    private fun testDb(): HealthDatabase =
+        Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            HealthDatabase::class.java
+        ).allowMainThreadQueries().build()
+
     private fun apiClient(handler: MockRequestHandler): HealthApiClient {
         val engine = MockEngine(handler)
         return HealthApiClient(
             baseUrl = "http://test",
-            client = HttpClient(engine) {
-                install(ContentNegotiation) { json() }
-            }
+            client = HttpClient(engine) { install(ContentNegotiation) { json() } }
         )
     }
 
     @Test
     fun `no token emits LoggedOut`() = runTest {
-        val store = testTokenStore()
-        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) })
+        val repo = AuthRepository(testTokenStore(), apiClient { respond("", HttpStatusCode.OK) }, testDb())
         assertEquals(AuthState.LoggedOut, repo.authState.first())
     }
 
     @Test
     fun `expired token emits Expired`() = runTest {
         val store = testTokenStore()
-        store.save("old-token", "2020-01-01T00:00:00Z", "00000000-0000-0000-0000-000000000001")
-        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) })
+        store.save("old-token", "2020-01-01T00:00:00Z", uuid())
+        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) }, testDb())
         assertEquals(AuthState.Expired, repo.authState.first())
     }
 
     @Test
-    fun `valid token with more than 7 days remaining emits LoggedIn`() = runTest {
+    fun `valid token without profile emits NeedsOnboarding`() = runTest {
         val store = testTokenStore()
         val farFuture = java.time.OffsetDateTime.now().plusDays(30).toString()
-        store.save("valid-token", farFuture, "00000000-0000-0000-0000-000000000001")
-        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) })
+        store.save("valid-token", farFuture, uuid())
+        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) }, testDb())
+        assertEquals(AuthState.NeedsOnboarding, repo.authState.first())
+    }
+
+    @Test
+    fun `valid token with profile emits LoggedIn`() = runTest {
+        val store = testTokenStore()
+        val farFuture = java.time.OffsetDateTime.now().plusDays(30).toString()
+        val userId = uuid()
+        store.save("valid-token", farFuture, userId)
+        val db = testDb()
+        db.userProfileDao().upsert(aUserProfile(userId = userId))
+        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) }, db)
         assertEquals(AuthState.LoggedIn, repo.authState.first())
     }
 
     @Test
-    fun `token expiring within 7 days triggers refresh and emits LoggedIn on success`() = runTest {
+    fun `token expiring within 7 days triggers refresh and emits LoggedIn when profile exists`() = runTest {
         val store = testTokenStore()
         val soonExpiry = java.time.OffsetDateTime.now().plusDays(3).toString()
-        val newExpiry = java.time.OffsetDateTime.now().plusDays(30).toString()
-        store.save("soon-expiring-token", soonExpiry, "00000000-0000-0000-0000-000000000001")
+        val newExpiry  = java.time.OffsetDateTime.now().plusDays(30).toString()
+        val userId = uuid()
+        store.save("soon-expiring-token", soonExpiry, userId)
+        val db = testDb()
+        db.userProfileDao().upsert(aUserProfile(userId = userId))
 
         val client = apiClient { _ ->
             respond(
-                """{"token":"refreshed-token","expiresAt":"$newExpiry","userId":"00000000-0000-0000-0000-000000000001"}""",
+                """{"token":"refreshed-token","expiresAt":"$newExpiry","userId":"$userId"}""",
                 HttpStatusCode.OK,
-                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                io.ktor.http.headersOf(
+                    io.ktor.http.HttpHeaders.ContentType,
+                    io.ktor.http.ContentType.Application.Json.toString()
+                )
             )
         }
-        val repo = AuthRepository(store, client)
+        val repo = AuthRepository(store, client, db)
         repo.proactiveRefreshIfNeeded()
 
         assertEquals(AuthState.LoggedIn, repo.authState.first())
@@ -91,12 +119,14 @@ class AuthRepositoryTest {
     fun `token expiring within 7 days emits Expired when refresh fails`() = runTest {
         val store = testTokenStore()
         val soonExpiry = java.time.OffsetDateTime.now().plusDays(3).toString()
-        store.save("soon-expiring-token", soonExpiry, "00000000-0000-0000-0000-000000000001")
+        store.save("soon-expiring-token", soonExpiry, uuid())
 
-        val client = apiClient { respond("", HttpStatusCode.Unauthorized) }
-        val repo = AuthRepository(store, client)
+        val repo = AuthRepository(
+            store,
+            apiClient { respond("", HttpStatusCode.Unauthorized) },
+            testDb()
+        )
         repo.proactiveRefreshIfNeeded()
-
         assertEquals(AuthState.Expired, repo.authState.first())
     }
 }
