@@ -11,7 +11,7 @@ interface LogEntryDao {
     @Query("SELECT * FROM log_entry WHERE syncStatus != 'PENDING_DELETE' ORDER BY loggedAt DESC")
     fun observeAll(): Flow<List<LogEntryEntity>>
 
-    @Query("SELECT COALESCE(SUM(quickAddKcal), 0) FROM log_entry WHERE userId = :userId AND loggedAt LIKE :datePattern")
+    @Query("SELECT COALESCE(SUM(quickAddKcal), 0) FROM log_entry WHERE userId = :userId AND loggedAt LIKE :datePattern AND syncStatus != 'PENDING_DELETE'")
     suspend fun sumQuickAddKcalForDate(userId: String, datePattern: String): Int
 
     @Query("SELECT * FROM log_entry WHERE syncStatus = :status")

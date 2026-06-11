@@ -76,8 +76,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun observeLogEntries() {
         val stored = tokenStore.tokenFlow.first() ?: return
-        val today = LocalDate.now().toString()
         app.db.logEntryDao().observeAll().collect { entries ->
+            val today = LocalDate.now().toString()
             val caloriesIn = entries
                 .filter { it.userId == stored.userId && it.loggedAt.startsWith(today) }
                 .sumOf { it.quickAddKcal ?: 0 }

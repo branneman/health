@@ -131,12 +131,15 @@ class HealthApiClient(
             parameter("from", from)
         }.body()
 
-    suspend fun postQuickAdd(token: String, dto: QuickAddRequestDto): LogEntryDto =
-        client.post("$baseUrl/in/log/quick-add") {
+    suspend fun postQuickAdd(token: String, dto: QuickAddRequestDto): LogEntryDto? {
+        val response = client.post("$baseUrl/in/log/quick-add") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(dto)
-        }.body()
+        }
+        if (response.status == HttpStatusCode.Conflict) return null
+        return response.body()
+    }
 
     suspend fun deleteLogEntry(token: String, id: String) {
         val response = client.delete("$baseUrl/in/log/$id") {

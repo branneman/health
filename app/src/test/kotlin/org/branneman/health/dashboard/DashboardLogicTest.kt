@@ -96,6 +96,22 @@ class DashboardLogicTest {
         assertEquals(400, sum)
     }
 
+    @Test fun `caloriesIn sum excludes PENDING_DELETE entries`() {
+        val today = "2026-06-11"
+        val entries = listOf(
+            LogEntryEntity(id = uuid(), userId = "u1", loggedAt = "${today}T08:00:00Z",
+                mealType = "unknown", quickAddKcal = 400, quickAddLabel = null,
+                syncStatus = SyncStatus.SYNCED),
+            LogEntryEntity(id = uuid(), userId = "u1", loggedAt = "${today}T12:00:00Z",
+                mealType = "unknown", quickAddKcal = 600, quickAddLabel = null,
+                syncStatus = SyncStatus.PENDING_DELETE),
+        )
+        val sum = entries
+            .filter { it.userId == "u1" && it.loggedAt.startsWith(today) && it.syncStatus != SyncStatus.PENDING_DELETE }
+            .sumOf { it.quickAddKcal ?: 0 }
+        assertEquals(400, sum)
+    }
+
     @Test fun `caloriesIn sum excludes entries with null quickAddKcal`() {
         val today = "2026-06-11"
         val entries = listOf(

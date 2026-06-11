@@ -419,12 +419,15 @@ fun Application.module(dataSource: javax.sql.DataSource) {
                 val dto = call.receive<QuickAddRequestDto>()
                 val id = runCatching { UUID.fromString(dto.id) }.getOrNull()
                     ?: return@post call.respond(HttpStatusCode.BadRequest)
+                if (dto.quickAddKcal <= 0) return@post call.respond(HttpStatusCode.BadRequest)
                 val loggedAt = dto.loggedAt
                     ?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
                     ?: OffsetDateTime.now()
 
                 val inserted = transaction {
-                    val exists = LogEntry.selectAll().where { LogEntry.id eq id }.count() > 0
+                    val exists = LogEntry.selectAll()
+                        .where { (LogEntry.id eq id) and (LogEntry.userId eq userId) }
+                        .count() > 0
                     if (exists) return@transaction false
                     LogEntry.insert {
                         it[LogEntry.id]            = id

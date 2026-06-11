@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.branneman.health.auth.Users
 import org.branneman.health.data.LogEntry
+import org.branneman.health.data.UserProfile
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
@@ -19,6 +20,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mindrot.jbcrypt.BCrypt
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -47,7 +49,10 @@ class LogEntryIntegrationTest {
     }
 
     @Before fun cleanMutableRows() {
-        transaction { LogEntry.deleteWhere { userId eq testUserId } }
+        transaction {
+            LogEntry.deleteWhere { userId eq testUserId }
+            UserProfile.deleteWhere { userId eq testUserId }
+        }
     }
 
     private fun appTest(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
@@ -125,6 +130,25 @@ class LogEntryIntegrationTest {
         val r = client.get("/in/log") { bearerAuth(token) }
         val arr = Json.parseToJsonElement(r.bodyAsText()).jsonArray
         assertTrue(arr.none { it.jsonObject["id"]!!.jsonPrimitive.content == id })
+    }
+
+    @Test fun `GET summary today caloriesIn reflects quick-add entry`() = appTest {
+        val token = login()
+        client.put("/profile") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"heightCm":175,"birthYear":1985,"sex":"male","goalWeightKg":75.0,"activityLevel":"moderate","targetDeficit":500,"phase":"loss","vacationMode":false}""")
+        }
+        val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        client.post("/in/log/quick-add") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"${UUID.randomUUID()}","quickAddKcal":450,"loggedAt":"${today}T12:00:00Z"}""")
+        }
+        val r = client.get("/summary/today?date=$today") { bearerAuth(token) }
+        assertEquals(HttpStatusCode.OK, r.status)
+        val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
+        assertEquals(450, body["caloriesIn"]!!.jsonPrimitive.content.toInt())
     }
 
     @Test fun `DELETE in-log for another user's entry returns 404`() = appTest {
