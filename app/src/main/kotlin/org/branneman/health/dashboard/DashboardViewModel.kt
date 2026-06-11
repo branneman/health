@@ -57,6 +57,14 @@ fun computeSportEstimate(activityType: String, intensity: String, weightKg: Doub
     return (cfg.met * weightKg * cfg.mins / 60.0).toInt()
 }
 
+fun isValidWeightInput(input: String): Boolean {
+    val value = input.toDoubleOrNull() ?: return false
+    if (value < 20.0 || value > 300.0) return false
+    val dotIndex = input.indexOf('.')
+    if (dotIndex != -1 && input.length - dotIndex - 1 > 1) return false
+    return true
+}
+
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app = application as HealthApplication

@@ -6,7 +6,9 @@ import org.branneman.health.db.entities.SportTonightEntity
 import org.branneman.health.uuid
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DashboardLogicTest {
 
@@ -126,5 +128,47 @@ class DashboardLogicTest {
             .filter { it.userId == "u1" && it.loggedAt.startsWith(today) }
             .sumOf { it.quickAddKcal ?: 0 }
         assertEquals(350, sum)
+    }
+
+    // --- isValidWeightInput ---
+
+    @Test fun `valid integer weight passes`() {
+        assertTrue(isValidWeightInput("85"))
+    }
+
+    @Test fun `valid one-decimal weight passes`() {
+        assertTrue(isValidWeightInput("85.5"))
+    }
+
+    @Test fun `explicitly one-decimal zero passes`() {
+        assertTrue(isValidWeightInput("85.0"))
+    }
+
+    @Test fun `two decimal places fails`() {
+        assertFalse(isValidWeightInput("85.24"))
+    }
+
+    @Test fun `below minimum fails`() {
+        assertFalse(isValidWeightInput("19.9"))
+    }
+
+    @Test fun `minimum boundary passes`() {
+        assertTrue(isValidWeightInput("20.0"))
+    }
+
+    @Test fun `maximum boundary passes`() {
+        assertTrue(isValidWeightInput("300.0"))
+    }
+
+    @Test fun `above maximum fails`() {
+        assertFalse(isValidWeightInput("300.1"))
+    }
+
+    @Test fun `non-numeric input fails`() {
+        assertFalse(isValidWeightInput("abc"))
+    }
+
+    @Test fun `empty input fails`() {
+        assertFalse(isValidWeightInput(""))
     }
 }
