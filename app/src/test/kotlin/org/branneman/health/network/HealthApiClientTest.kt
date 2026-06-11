@@ -15,6 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.UserProfileDto
 import org.branneman.health.ShortcutDto
 import org.branneman.health.WeightEntryDto
@@ -185,6 +186,51 @@ class HealthApiClientTest {
         }
         assertFailsWith<Exception> {
             HealthApiClient("http://test", httpClient).postBodyWeight("token", WeightEntryDto("2026-06-10", 84.0))
+        }
+        Unit
+    }
+
+    @Test
+    fun `postQuickAdd returns LogEntryDto on 201`() = runBlocking {
+        val entryId = "00000000-0000-0000-0000-000000000099"
+        val client = mockClient { _ ->
+            respond(
+                """{"id":"$entryId","loggedAt":"2026-06-11T12:00:00Z","mealType":"unknown","quickAddKcal":350,"quickAddLabel":"Lunch","items":[]}""",
+                HttpStatusCode.Created,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+        }
+        val result = HealthApiClient("http://test", client).postQuickAdd(
+            "token",
+            QuickAddRequestDto(id = entryId, quickAddKcal = 350, quickAddLabel = "Lunch"),
+        )
+        assertEquals(entryId, result.id)
+        assertEquals(350, result.quickAddKcal)
+    }
+
+    @Test
+    fun `deleteLogEntry completes without error on 204`() = runBlocking {
+        val client = HttpClient(MockEngine { respond("", HttpStatusCode.NoContent) }) {
+            install(ContentNegotiation) { json() }
+        }
+        HealthApiClient("http://test", client).deleteLogEntry("token", "some-uuid")
+    }
+
+    @Test
+    fun `deleteLogEntry completes without error on 404`() = runBlocking {
+        val client = HttpClient(MockEngine { respond("", HttpStatusCode.NotFound) }) {
+            install(ContentNegotiation) { json() }
+        }
+        HealthApiClient("http://test", client).deleteLogEntry("token", "some-uuid")
+    }
+
+    @Test
+    fun `deleteLogEntry throws on server error`() = runBlocking {
+        val client = HttpClient(MockEngine { respond("", HttpStatusCode.InternalServerError) }) {
+            install(ContentNegotiation) { json() }
+        }
+        assertFailsWith<Exception> {
+            HealthApiClient("http://test", client).deleteLogEntry("token", "some-uuid")
         }
         Unit
     }

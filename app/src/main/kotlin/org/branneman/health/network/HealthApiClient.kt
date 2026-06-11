@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -17,6 +18,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import org.branneman.health.BuildConfig
+import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.TodaySummaryDto
 import org.branneman.health.FoodItemDto
@@ -128,6 +130,22 @@ class HealthApiClient(
             header(HttpHeaders.Authorization, "Bearer $token")
             parameter("from", from)
         }.body()
+
+    suspend fun postQuickAdd(token: String, dto: QuickAddRequestDto): LogEntryDto =
+        client.post("$baseUrl/in/log/quick-add") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(dto)
+        }.body()
+
+    suspend fun deleteLogEntry(token: String, id: String) {
+        val response = client.delete("$baseUrl/in/log/$id") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+        if (!response.status.isSuccess() && response.status != HttpStatusCode.NotFound) {
+            throw Exception("DELETE /in/log/$id failed: ${response.status}")
+        }
+    }
 
     suspend fun getTodaySummary(token: String, date: String): TodaySummaryDto =
         client.get("$baseUrl/summary/today") {
