@@ -15,6 +15,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
+import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
 import org.branneman.health.LogEntryDto
@@ -411,6 +412,56 @@ fun Application.module(dataSource: javax.sql.DataSource) {
                     }
                 }
                 call.respond(entries)
+            }
+
+            post("/in/log/quick-add") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val dto = call.receive<QuickAddRequestDto>()
+                val id = runCatching { UUID.fromString(dto.id) }.getOrNull()
+                    ?: return@post call.respond(HttpStatusCode.BadRequest)
+                val loggedAt = dto.loggedAt
+                    ?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
+                    ?: OffsetDateTime.now()
+
+                val inserted = transaction {
+                    val exists = LogEntry.selectAll().where { LogEntry.id eq id }.count() > 0
+                    if (exists) return@transaction false
+                    LogEntry.insert {
+                        it[LogEntry.id]            = id
+                        it[LogEntry.userId]        = userId
+                        it[LogEntry.loggedAt]      = loggedAt
+                        it[LogEntry.mealType]      = "unknown"
+                        it[LogEntry.quickAddKcal]  = dto.quickAddKcal
+                        it[LogEntry.quickAddLabel] = dto.quickAddLabel
+                        it[LogEntry.createdAt]     = OffsetDateTime.now()
+                    }
+                    true
+                }
+                if (!inserted) return@post call.respond(HttpStatusCode.Conflict)
+
+                call.respond(HttpStatusCode.Created, LogEntryDto(
+                    id            = id.toString(),
+                    loggedAt      = loggedAt.toString(),
+                    mealType      = "unknown",
+                    quickAddKcal  = dto.quickAddKcal,
+                    quickAddLabel = dto.quickAddLabel,
+                    items         = emptyList(),
+                ))
+            }
+
+            delete("/in/log/{id}") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val entryId = call.parameters["id"]
+                    ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                    ?: return@delete call.respond(HttpStatusCode.BadRequest)
+
+                val deleted = transaction {
+                    LogEntry.deleteWhere {
+                        Op.build { (LogEntry.id eq entryId) and (LogEntry.userId eq userId) }
+                    } > 0
+                }
+                if (deleted) call.respond(HttpStatusCode.NoContent)
+                else call.respond(HttpStatusCode.NotFound)
             }
 
             get("/summary/today") {

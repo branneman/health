@@ -68,7 +68,7 @@ object LogEntry : Table("log_entry") {
     val id            = uuid("id")
     val userId        = uuid("user_id")
     val loggedAt      = timestampWithTimeZone("logged_at")
-    val mealType      = text("meal_type")
+    val mealType      = registerColumn<String>("meal_type", PgEnumColumnType("meal_type"))
     val createdAt     = timestampWithTimeZone("created_at")
     val quickAddKcal  = integer("quick_add_kcal").nullable()
     val quickAddLabel = text("quick_add_label").nullable()
