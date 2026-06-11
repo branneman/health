@@ -69,6 +69,23 @@ fun aLogEntry(
     quickAddKcal = null, quickAddLabel = null, syncStatus = SyncStatus.PENDING_CREATE,
 )
 
+fun aQuickAddEntry(
+    id: String = uuid(),
+    userId: String = uuid(),
+    loggedAt: String = "2026-01-01T08:00:00Z",
+    quickAddKcal: Int = 350,
+    quickAddLabel: String? = null,
+    syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
+) = LogEntryEntity(
+    id            = id,
+    userId        = userId,
+    loggedAt      = loggedAt,
+    mealType      = "unknown",
+    quickAddKcal  = quickAddKcal,
+    quickAddLabel = quickAddLabel,
+    syncStatus    = syncStatus,
+)
+
 fun aMealTemplate(
     id: String = uuid(),
     userId: String = uuid(),

@@ -35,6 +35,9 @@ interface LogEntryDao {
     @Query("UPDATE log_entry SET syncStatus = :status WHERE id = :id")
     suspend fun updateSyncStatus(id: String, status: SyncStatus)
 
+    @Query("DELETE FROM log_entry WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     @Query("DELETE FROM log_entry WHERE userId = :userId")
     suspend fun deleteAllForUser(userId: String)
 

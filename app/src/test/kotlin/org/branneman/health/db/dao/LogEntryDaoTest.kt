@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.branneman.health.aLogEntry
+import org.branneman.health.aQuickAddEntry
 import org.branneman.health.uuid
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
@@ -57,6 +58,40 @@ class LogEntryDaoTest {
         dao.upsert(aLogEntry(userId = userId))
         val pending = dao.getByStatus(SyncStatus.PENDING_CREATE)
         assertEquals(2, pending.size)
+    }
+
+    @Test
+    fun `deleteById removes the entry`() = runTest {
+        val userId = uuid()
+        val id = uuid()
+        dao.upsert(aLogEntry(id = id, userId = userId))
+        assertEquals(1, dao.observeAll().first().size)
+
+        dao.deleteById(id)
+
+        assertTrue(dao.observeAll().first().isEmpty())
+    }
+
+    @Test
+    fun `sumQuickAddKcalForDate only counts today`() = runTest {
+        val userId = uuid()
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 400))
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-10T19:00:00Z", quickAddKcal = 800))
+
+        val sum = dao.sumQuickAddKcalForDate(userId, "2026-06-11%")
+
+        assertEquals(400, sum)
+    }
+
+    @Test
+    fun `sumQuickAddKcalForDate excludes entries with null quickAddKcal`() = runTest {
+        val userId = uuid()
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 350))
+        dao.upsert(aLogEntry(userId = userId, loggedAt = "2026-06-11T12:00:00Z"))
+
+        val sum = dao.sumQuickAddKcalForDate(userId, "2026-06-11%")
+
+        assertEquals(350, sum)
     }
 
     @Test
