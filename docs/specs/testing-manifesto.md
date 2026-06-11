@@ -110,7 +110,7 @@ branches, and that the Exposed SQL queries do what the application expects.
 
 **What currently meets the bar:** `AuthIntegrationTest`, `ProfileAndShortcutsIntegrationTest`,
 `SyncDownloadIntegrationTest`, `BodyWeightIntegrationTest`, `MultiUserIsolationTest`,
-`SummaryIntegrationTest`.
+`SummaryIntegrationTest`, `LogEntryIntegrationTest`.
 
 ---
 
@@ -135,11 +135,10 @@ screenshot tests — they assert on what the user sees and can interact with, no
 
 **What currently meets the bar:** all nine DAO tests (`BodyWeightDaoTest`, `DailyEnergyDaoTest`,
 `FoodItemDaoTest`, `LogEntryDaoTest`, `MealTemplateDaoTest`, `ShortcutDaoTest`, `UserProfileDaoTest`,
-`WorkoutDaoTest`, `SportTonightDaoTest`), `LoginSyncServiceTest`, `LoginScreenTest`,
-`OnboardingScreenTest`, `DashboardScreenTest`.
+`WorkoutDaoTest`, `SportTonightDaoTest`), `LoginSyncServiceTest`, `LogEntrySyncServiceTest`,
+`LoginScreenTest`, `OnboardingScreenTest`, `DashboardScreenTest`, `LogScreenTest`.
 
-**What is still missing:** UI tests for screens that don't exist yet (`LogScreen`, `SettingsScreen`).
-These should be written alongside the story that implements each screen — not before.
+**What is still missing:** UI tests for `SettingsScreen` — to be written alongside story 15.
 
 ---
 
@@ -165,7 +164,7 @@ The API test account is `test+api@bran.name`. Its initial state is maintained by
 `local-db-seed/test-api-account-seed.sql`. Each test that writes data must delete it in teardown.
 
 **What currently meets the bar:** `AuthApiTest`, `SyncDownloadApiTest`, `ProfileApiTest`,
-`ShortcutsApiTest`, `BodyWeightApiTest`.
+`ShortcutsApiTest`, `BodyWeightApiTest`, `LogEntryApiTest`.
 
 ---
 
@@ -185,7 +184,7 @@ writes to the database must delete its own writes in `@After`.
 
 Credentials are supplied via environment variables or CI secrets. Never committed to the repository.
 
-**What currently meets the bar:** not yet implemented.
+**What currently meets the bar:** `E2ESmokeTest` — login → dashboard → log a meal → sign out.
 
 ---
 
@@ -230,7 +229,4 @@ applied manually to reset an account to a known state after disruptive test runs
 
 Ordered by impact:
 
-1. **Write the E2E smoke suite** once the dashboard and log screens exist (Story 6+). Start with
-   login → dashboard → log a meal → sign out.
-2. **Write UI tests alongside each new screen** — `DashboardScreen`, `LogScreen`, `SettingsScreen`
-   each get a `*ScreenTest` in the same story that implements them.
+1. **Write UI tests alongside each new screen** — `SettingsScreen` gets a `*ScreenTest` in the same story that implements it.
