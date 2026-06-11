@@ -12,12 +12,11 @@ import kotlin.test.assertTrue
 class BodyWeightApiTest : ApiTestBase() {
 
     // A fixed past date used as a stable test anchor.
-    // No delete endpoint exists, so this entry accumulates across runs —
-    // 201 on first run, 409 (already exists) on subsequent runs; both are correct.
+    // POST is idempotent (upsert) — always returns 200 regardless of how many times it runs.
     private val testDate = "2020-01-01"
 
     @Test
-    fun `POST body weight returns 201 or 409 and GET includes the entry`() = runTest {
+    fun `POST body weight returns 200 and GET includes the entry`() = runTest {
         val token = login()
 
         val postResp = client.post("$serverUrl/body/weight") {
@@ -25,10 +24,7 @@ class BodyWeightApiTest : ApiTestBase() {
             contentType(ContentType.Application.Json)
             setBody(WeightEntryDto(testDate, 80.0))
         }
-        assertTrue(
-            postResp.status == HttpStatusCode.Created || postResp.status == HttpStatusCode.Conflict,
-            "Expected 201 or 409, got ${postResp.status}",
-        )
+        assertEquals(HttpStatusCode.OK, postResp.status)
 
         val entries = client.get("$serverUrl/body/weight") { bearerAuth(token) }
             .body<List<WeightEntryDto>>()

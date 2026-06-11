@@ -5,6 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.branneman.health.auth.Users
@@ -33,6 +34,7 @@ class BodyWeightIntegrationTest {
             Database.connect(ds)
             transaction {
                 Users.deleteWhere { username eq TEST_EMAIL }
+                Users.deleteWhere { id eq testUserId }
                 Users.insert {
                     it[id]           = testUserId
                     it[username]     = TEST_EMAIL
@@ -71,32 +73,55 @@ class BodyWeightIntegrationTest {
     }
 
     @Test
-    fun `POST body-weight creates entry and returns 201 with date and kg`() = appTest {
+    fun `POST body-weight creates entry and returns 200 with date and kg`() = appTest {
         val token = login()
         val r = client.post("/body/weight") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody("""{"date":"2026-06-10","kg":84.0}""")
         }
-        assertEquals(HttpStatusCode.Created, r.status)
+        assertEquals(HttpStatusCode.OK, r.status)
         val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
         assertEquals("2026-06-10", body["date"]!!.jsonPrimitive.content)
         assertEquals(84.0, body["kg"]!!.jsonPrimitive.content.toDouble())
     }
 
     @Test
-    fun `POST body-weight returns 409 when entry already exists for this date`() = appTest {
+    fun `POST body-weight twice for same date updates the value`() = appTest {
         val token = login()
         client.post("/body/weight") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody("""{"date":"2026-06-10","kg":84.0}""")
         }
-        val r = client.post("/body/weight") {
+        val r2 = client.post("/body/weight") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
-            setBody("""{"date":"2026-06-10","kg":84.5}""")
+            setBody("""{"date":"2026-06-10","kg":85.5}""")
         }
-        assertEquals(HttpStatusCode.Conflict, r.status)
+        assertEquals(HttpStatusCode.OK, r2.status)
+
+        val entries = client.get("/body/weight") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+        val arr = Json.parseToJsonElement(entries.bodyAsText()).jsonArray
+        val entry = arr.first { it.jsonObject["date"]!!.jsonPrimitive.content == "2026-06-10" }
+        assertEquals(85.5, entry.jsonObject["kg"]!!.jsonPrimitive.content.toDouble())
+    }
+
+    @Test
+    fun `GET body-weight returns all entries for user`() = appTest {
+        val token = login()
+        client.post("/body/weight") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody("""{"date":"2026-06-10","kg":84.0}""")
+        }
+        val r = client.get("/body/weight") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+        assertEquals(HttpStatusCode.OK, r.status)
+        val arr = Json.parseToJsonElement(r.bodyAsText()).jsonArray
+        assertTrue(arr.any { it.jsonObject["date"]!!.jsonPrimitive.content == "2026-06-10" })
     }
 }

@@ -200,25 +200,25 @@ fun Application.module(dataSource: javax.sql.DataSource) {
                     val dto = call.receive<WeightEntryDto>()
                     val date = java.time.LocalDate.parse(dto.date)
 
-                    val inserted = transaction {
-                        val exists = BodyWeight.selectAll()
+                    transaction {
+                        val existing = BodyWeight.selectAll()
                             .where { (BodyWeight.userId eq userId) and (BodyWeight.date eq date) }
-                            .count() > 0
-                        if (exists) return@transaction false
-                        BodyWeight.insert {
-                            it[BodyWeight.id]        = UUID.randomUUID()
-                            it[BodyWeight.userId]    = userId
-                            it[BodyWeight.date]      = date
-                            it[BodyWeight.kg]        = dto.kg.toBigDecimal()
-                            it[BodyWeight.createdAt] = OffsetDateTime.now()
+                            .singleOrNull()
+                        if (existing != null) {
+                            BodyWeight.update({ (BodyWeight.userId eq userId) and (BodyWeight.date eq date) }) {
+                                it[BodyWeight.kg] = dto.kg.toBigDecimal()
+                            }
+                        } else {
+                            BodyWeight.insert {
+                                it[BodyWeight.id]        = UUID.randomUUID()
+                                it[BodyWeight.userId]    = userId
+                                it[BodyWeight.date]      = date
+                                it[BodyWeight.kg]        = dto.kg.toBigDecimal()
+                                it[BodyWeight.createdAt] = OffsetDateTime.now()
+                            }
                         }
-                        true
                     }
-                    if (!inserted) {
-                        call.respond(HttpStatusCode.Conflict)
-                        return@post
-                    }
-                    call.respond(HttpStatusCode.Created, dto)
+                    call.respond(HttpStatusCode.OK, dto)
                 }
             }
 
