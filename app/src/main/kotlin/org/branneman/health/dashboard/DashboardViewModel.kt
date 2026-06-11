@@ -18,6 +18,8 @@ import org.branneman.health.BuildConfig
 import org.branneman.health.HealthApplication
 import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
+import org.branneman.health.db.SyncStatus
+import org.branneman.health.db.entities.BodyWeightEntity
 import org.branneman.health.db.entities.SportTonightEntity
 import org.branneman.health.network.HealthApiClient
 import org.branneman.health.onboarding.activityMultiplier
@@ -33,6 +35,7 @@ data class DashboardUiState(
     val budgetRemaining: Int = 0,
     val sportTonight: SportTonightEntity? = null,
     val adjustedBudgetRemaining: Int = 0,
+    val weightKgToday: Double? = null,
 )
 
 fun computeSportEstimate(activityType: String, intensity: String, weightKg: Double): Int {
@@ -126,6 +129,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val profile = app.db.userProfileDao().get()
             ?: return DashboardUiState(isLoading = false)
         val latestWeight = app.db.bodyWeightDao().observeAll().first().firstOrNull()?.kg
+        val weightToday = app.db.bodyWeightDao().getForDate(userId, today)?.kg
         val energy = app.db.dailyEnergyDao().getForDate(userId, today)
         val caloriesIn = app.db.logEntryDao().sumQuickAddKcalForDate(userId, "$today%")
         val sport = app.db.sportTonightDao().getForDate(today)?.takeIf { it.date == today }
@@ -149,6 +153,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             budgetRemaining         = budgetBase,
             sportTonight            = sport,
             adjustedBudgetRemaining = budgetBase + (sport?.estimatedKcal ?: 0),
+            weightKgToday           = weightToday,
         )
     }
 
@@ -179,6 +184,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _uiState.update { state ->
                 state.copy(sportTonight = null, adjustedBudgetRemaining = state.budgetRemaining)
             }
+        }
+    }
+
+    fun logWeight(kg: Double) {
+        viewModelScope.launch {
+            val stored = tokenStore.tokenFlow.first() ?: return@launch
+            val today = LocalDate.now().toString()
+            app.db.bodyWeightDao().upsert(
+                BodyWeightEntity(
+                    id         = today,
+                    userId     = stored.userId,
+                    date       = today,
+                    kg         = kg,
+                    syncStatus = SyncStatus.PENDING_CREATE,
+                )
+            )
+            _uiState.update { it.copy(weightKgToday = kg) }
         }
     }
 }
