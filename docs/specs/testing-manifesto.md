@@ -62,16 +62,55 @@ calls via Ktor's `testApplication`, and assert on response status codes and bodi
 `localhost:5432/health_test`. No Docker container is spun up — the `health_test` database must
 exist before running `./gradlew :server:test`. This keeps tests fast and avoids Docker overhead.
 
-**Isolation model:** each test class owns a fixed test user UUID (e.g. `00000000-0000-0000-0000-000000000001`
-through `...000005`) with a fixed email. The test user is upserted in `companion object { init {} }`.
+**Isolation model:** each test class owns a fixed test user UUID and email that no other class uses.
 Mutable data (rows the tests write) is deleted in `@Before` so each test starts clean. Tests do not
 use transaction rollback — they explicitly delete their own rows.
+
+**UUID registry** — claim the next free slot when adding a new integration test class. The
+`health_test` database persists between runs; a UUID that appears here must never be reused by
+another class.
+
+| # | UUID suffix | Test class | Email |
+|---|-------------|------------|-------|
+| 1 | `...000001` | `AuthIntegrationTest` | `integration@test.local` |
+| 2 | `...000002` | `ProfileAndShortcutsIntegrationTest` | `profile-test@test.local` |
+| 3 | `...000003` | `SyncDownloadIntegrationTest` | `sync-test@test.local` |
+| 4 | `...000004` | *(free)* | |
+| 5 | `...000005` | `BodyWeightIntegrationTest` | `bodyweight-test@test.local` |
+| 6 | `...000006` | `MultiUserIsolationTest` (user A) | `isolation-a@test.local` |
+| 7 | `...000007` | `MultiUserIsolationTest` (user B) | `isolation-b@test.local` |
+| 8 | `...000008` | `SummaryIntegrationTest` | `summary-test@test.local` |
+| 9 | `...000009` | *(free)* | |
+
+**`init` block pattern** — the `health_test` database is persistent, so a UUID from a previous run
+may still exist with a stale email, or vice versa. Delete by **both** UUID and email before
+inserting to handle either case:
+
+```kotlin
+init {
+    Database.connect(ds)
+    transaction {
+        Users.deleteWhere { username eq TEST_EMAIL }   // remove stale row if email matches
+        Users.deleteWhere { id eq testUserId }          // remove stale row if UUID matches
+        Users.insert {
+            it[id]           = testUserId
+            it[username]     = TEST_EMAIL
+            it[passwordHash] = TEST_HASH
+        }
+    }
+}
+```
+
+Deleting only by email is insufficient: if a previous partial run left the UUID with a different
+email, the insert will PK-conflict. Deleting only by UUID is also insufficient: if the email exists
+on a different UUID, a unique-constraint conflict follows. Both deletes together cover all cases.
 
 This tier verifies: routing correctness, auth middleware wiring, correct HTTP status codes for all
 branches, and that the Exposed SQL queries do what the application expects.
 
 **What currently meets the bar:** `AuthIntegrationTest`, `ProfileAndShortcutsIntegrationTest`,
-`SyncDownloadIntegrationTest`, `BodyWeightIntegrationTest`, `MultiUserIsolationTest`.
+`SyncDownloadIntegrationTest`, `BodyWeightIntegrationTest`, `MultiUserIsolationTest`,
+`SummaryIntegrationTest`.
 
 ---
 
@@ -94,13 +133,13 @@ primary interactions: form validation, button enabled/disabled state, loading an
 Dependencies (ViewModels, repositories) are injected as fakes. These are behaviour tests, not
 screenshot tests — they assert on what the user sees and can interact with, not on pixels.
 
-**What currently meets the bar:** all eight DAO tests (`BodyWeightDaoTest`, `DailyEnergyDaoTest`,
+**What currently meets the bar:** all nine DAO tests (`BodyWeightDaoTest`, `DailyEnergyDaoTest`,
 `FoodItemDaoTest`, `LogEntryDaoTest`, `MealTemplateDaoTest`, `ShortcutDaoTest`, `UserProfileDaoTest`,
-`WorkoutDaoTest`), `LoginSyncServiceTest`, `LoginScreenTest`, `OnboardingScreenTest`.
+`WorkoutDaoTest`, `SportTonightDaoTest`), `LoginSyncServiceTest`, `LoginScreenTest`,
+`OnboardingScreenTest`, `DashboardScreenTest`.
 
-**What is still missing:** UI tests for screens that don't exist yet (`DashboardScreen`, `LogScreen`,
-`SettingsScreen`). These should be written alongside the story that implements each screen — not
-before.
+**What is still missing:** UI tests for screens that don't exist yet (`LogScreen`, `SettingsScreen`).
+These should be written alongside the story that implements each screen — not before.
 
 ---
 
