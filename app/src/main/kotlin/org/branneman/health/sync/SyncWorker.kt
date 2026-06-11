@@ -31,7 +31,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         const val WORK_NAME = "SyncWorker"
 
         fun enqueue(context: Context) {
-            val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+            val request = PeriodicWorkRequestBuilder<SyncWorker>(4, TimeUnit.HOURS)
                 .setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -40,7 +40,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }
