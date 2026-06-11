@@ -10,8 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -77,10 +75,7 @@ fun LogContent(
     var kcal by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
     var entryToDelete by remember { mutableStateOf<LogEntryEntity?>(null) }
-    val kcalFocusRequester = remember { FocusRequester() }
     val addEnabled = kcal.isNotEmpty() && (kcal.toIntOrNull() ?: 0) > 0
-
-    LaunchedEffect(Unit) { kcalFocusRequester.requestFocus() }
 
     entryToDelete?.let { entry ->
         DeleteConfirmDialog(
@@ -110,7 +105,6 @@ fun LogContent(
                 singleLine = true,
                 modifier   = Modifier
                     .width(90.dp)
-                    .focusRequester(kcalFocusRequester)
                     .testTag("kcal_input"),
             )
             OutlinedTextField(
