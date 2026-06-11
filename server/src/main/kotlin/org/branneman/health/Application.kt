@@ -15,6 +15,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
+import kotlinx.serialization.Serializable
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
@@ -106,6 +107,10 @@ fun Application.module(dataSource: javax.sql.DataSource) {
 
         get("/server-health") {
             call.respondText("""{"status":"ok"}""", ContentType.Application.Json)
+        }
+
+        get("/version") {
+            call.respond(VersionResponse(System.getenv("GIT_SHA") ?: "unknown"))
         }
 
         route("/auth") {
@@ -553,3 +558,6 @@ fun Application.module(dataSource: javax.sql.DataSource) {
         }
     }
 }
+
+@Serializable
+data class VersionResponse(val sha: String)
