@@ -15,6 +15,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -64,5 +66,28 @@ class BodyWeightDaoTest {
         dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-02", kg = 79.5))
         dao.deleteAllForUser(userId)
         assertTrue(dao.observeAll().first().isEmpty())
+    }
+
+    @Test
+    fun `getForDate returns entry for matching userId and date`() = runTest {
+        val userId = uuid()
+        val entry = aBodyWeightEntry(id = "2026-06-11", userId = userId, date = "2026-06-11", kg = 83.2)
+        dao.upsert(entry)
+        val result = dao.getForDate(userId, "2026-06-11")
+        assertNotNull(result)
+        assertEquals(83.2, result.kg)
+    }
+
+    @Test
+    fun `getForDate returns null for a different date`() = runTest {
+        val userId = uuid()
+        dao.upsert(aBodyWeightEntry(id = "2026-06-10", userId = userId, date = "2026-06-10", kg = 83.2))
+        assertNull(dao.getForDate(userId, "2026-06-11"))
+    }
+
+    @Test
+    fun `getForDate returns null for a different userId`() = runTest {
+        dao.upsert(aBodyWeightEntry(id = "2026-06-11", userId = uuid(), date = "2026-06-11", kg = 83.2))
+        assertNull(dao.getForDate(uuid(), "2026-06-11"))
     }
 }
