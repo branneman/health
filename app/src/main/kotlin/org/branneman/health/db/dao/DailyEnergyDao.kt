@@ -9,6 +9,9 @@ interface DailyEnergyDao {
     @Query("SELECT * FROM daily_energy ORDER BY date DESC")
     fun observeAll(): Flow<List<DailyEnergyEntity>>
 
+    @Query("SELECT * FROM daily_energy WHERE userId = :userId AND date = :date LIMIT 1")
+    suspend fun getForDate(userId: String, date: String): DailyEnergyEntity?
+
     @Upsert
     suspend fun upsertAll(entities: List<DailyEnergyEntity>)
 

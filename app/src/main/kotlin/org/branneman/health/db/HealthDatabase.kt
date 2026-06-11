@@ -17,8 +17,9 @@ import org.branneman.health.db.entities.*
         FoodItemEntity::class,
         ShortcutEntity::class,
         UserProfileEntity::class,
+        SportTonightEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class HealthDatabase : RoomDatabase() {
@@ -30,4 +31,5 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun foodItemDao(): FoodItemDao
     abstract fun shortcutDao(): ShortcutDao
     abstract fun userProfileDao(): UserProfileDao
+    abstract fun sportTonightDao(): SportTonightDao
 }
