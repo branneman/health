@@ -24,3 +24,4 @@ node_modules/
 ansible/vars/vault.yml
 docs/ux/0-context-private.md
 .claude
+.superpowers/

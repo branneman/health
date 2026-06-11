@@ -58,12 +58,9 @@ a one-off snack, a glass of milk, a meal out, anything. Three paths, in this ord
 - A kcal number field + an **optional short label** ("What was it?"). The label is
   purely for the user's own memory — it appears in the history entry so they can
   remember what they logged. Not required; skip with one tap.
-- Logs immediately as "Pasta at work — ~800 kcal (est.)" or just "~800 kcal (est.)"
-  if no label is given.
-- The primary path for anything the user can roughly quantify. First-class path, not a
-  fallback.
-- The "(est.)" label is honest: no snapshotted nutrition detail, but it counts toward
-  the daily calorie total.
+- Logs immediately as "Pasta at work — 800 kcal" or just "800 kcal" if no label is
+  given.
+- The primary path for anything the user can quantify. First-class path, not a fallback.
 
 ### Path 3: Build from scratch (rare — first time, template-worthy)
 

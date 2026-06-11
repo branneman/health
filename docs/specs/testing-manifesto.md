@@ -75,7 +75,7 @@ another class.
 | 1 | `...000001` | `AuthIntegrationTest` | `integration@test.local` |
 | 2 | `...000002` | `ProfileAndShortcutsIntegrationTest` | `profile-test@test.local` |
 | 3 | `...000003` | `SyncDownloadIntegrationTest` | `sync-test@test.local` |
-| 4 | `...000004` | *(free)* | |
+| 4 | `...000004` | `LogEntryIntegrationTest` | `logentry-test@test.local` |
 | 5 | `...000005` | `BodyWeightIntegrationTest` | `bodyweight-test@test.local` |
 | 6 | `...000006` | `MultiUserIsolationTest` (user A) | `isolation-a@test.local` |
 | 7 | `...000007` | `MultiUserIsolationTest` (user B) | `isolation-b@test.local` |

@@ -64,13 +64,14 @@
 
 ### Calories in — food log
 
-| Method   | Path               | Auth | Description                         |
-|----------|--------------------|------|-------------------------------------|
-| `POST`   | `/in/log/food`     | Yes  | Log a custom meal                   |
-| `POST`   | `/in/log/template` | Yes  | Log from a meal template (one-tap)  |
-| `GET`    | `/in/log`          | Yes  | List entries for `?date=YYYY-MM-DD` |
-| `GET`    | `/in/log/{id}`     | Yes  | Get single log entry                |
-| `DELETE` | `/in/log/{id}`     | Yes  | Delete entry (correction mechanism) |
+| Method   | Path                    | Auth | Description                              |
+|----------|-------------------------|------|------------------------------------------|
+| `POST`   | `/in/log/quick-add`     | Yes  | Log kcal + optional label (story 7)      |
+| `POST`   | `/in/log/food`          | Yes  | Log a custom meal (story 14)             |
+| `POST`   | `/in/log/template`      | Yes  | Log from a meal template (story 12)      |
+| `GET`    | `/in/log`               | Yes  | List entries for `?date=YYYY-MM-DD`      |
+| `GET`    | `/in/log/{id}`          | Yes  | Get single log entry                     |
+| `DELETE` | `/in/log/{id}`          | Yes  | Delete entry (correction mechanism)      |
 
 ### Calories out — Polar (read-only; not yet implemented)
 
@@ -312,28 +313,17 @@ All totals and per-item values are computed server-side from snapshotted nutriti
 {
   "date": "2026-06-03",
   "caloriesIn": 1850,
-  "caloriesOut": null,
-  "deficit": null,
-  "meals": [
-    {
-      "mealType": "breakfast",
-      "kcal": 520
-    },
-    {
-      "mealType": "lunch",
-      "kcal": 680
-    },
-    {
-      "mealType": "dinner",
-      "kcal": 650
-    }
-  ],
-  "weightToday": 82.05
+  "caloriesOut": 2200,
+  "budgetRemaining": 50,
+  "targetDeficit": 300,
+  "caloriesOutSource": "estimate"
 }
 ```
 
-`caloriesOut` and `deficit` are `null` until Polar integration is complete.  
-`weightToday` is `null` if no body weight entry exists for today.
+`caloriesOutSource` values: `"polar_today"` / `"polar_yesterday"` / `"estimate"`.  
+`caloriesIn` reflects all log entries synced to the server for the date. The Android
+app computes `caloriesIn` locally from Room (reactive) and ignores this field; it is
+retained for completeness and future multi-client use.
 
 **`GET /summary/week`:**
 

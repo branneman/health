@@ -343,8 +343,7 @@ Reached via the Log tab in bottom nav, or by tapping a notification.
 │ Today                        │
 │  08:14  Breakfast    430 kcal│ ← tap → delete sheet
 │  13:02  Lunch        560 kcal│
-│  20:47  Pasta at work        │ ← quick-add with label
-│         ~800 kcal (est.)     │
+│  20:47  Pasta at work 800 kcal│ ← quick-add with label
 │  21:15  🍺 Pils      140 kcal│ ← shortcut entry uses icon + label
 └──────────────────────────────┘
 ```
@@ -460,8 +459,8 @@ Template list states:
 │  │  Pasta at work   │        │
 │  └──────────────────┘        │
 │                              │
-│  "Pasta at work — ~800 kcal  │
-│   (est.)"                    │ ← preview updates live; no label → "~800 kcal (est.)"
+│  "Pasta at work — 800 kcal"  │
+│                              │ ← preview updates live; no label → "800 kcal"
 ├──────────────────────────────┤
 │           [ Log ]            │
 └──────────────────────────────┘
@@ -470,7 +469,6 @@ Template list states:
 - Numeric keyboard opens immediately on arrival; label field is next in tab order
 - "Log" enabled as soon as a kcal value is entered; label is always optional
 - Label is freeform, short — a memory aid, not a categorisation field
-- "(est.)" is always applied — honest about data quality
 - Undo snackbar on confirm
 
 ### F05c — Build from scratch (S08)
@@ -581,8 +579,7 @@ Reached by tapping a day in the history row of F03.
 ├──────────────────────────────┤
 │  08:05  Breakfast   430 kcal │ ← tap → delete sheet (same as F04)
 │  13:10  Lunch       560 kcal │
-│  19:30  Pasta at work        │
-│         ~750 kcal (est.)     │
+│  19:30  Pasta at work 750 kcal│
 │  21:20  Late snack  210 kcal │
 ├──────────────────────────────┤
 │  Weight: 83.5 kg             │ ← shown only if logged that day
