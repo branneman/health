@@ -2,11 +2,17 @@ package org.branneman.health.sync
 
 import android.content.Context
 import androidx.work.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.android.Android
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.first
+import org.branneman.health.BuildConfig
 import org.branneman.health.HealthApplication
 import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.SyncStatus
+import org.branneman.health.network.HealthApiClient
 import java.util.concurrent.TimeUnit
 
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -17,12 +23,16 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val tokenStore = TokenStore(applicationContext.authDataStore)
         val stored = tokenStore.tokenFlow.first() ?: return Result.success()
 
-        // Process PENDING_DELETE: delete locally only (upload endpoint added in later story)
+        val apiClient = HealthApiClient(
+            baseUrl = BuildConfig.SERVER_BASE_URL,
+            client  = HttpClient(Android) { install(ContentNegotiation) { json() } },
+        )
+
         db.bodyWeightDao().getByStatus(SyncStatus.PENDING_DELETE).forEach { entity ->
             db.bodyWeightDao().deleteById(entity.id)
         }
 
-        // PENDING_CREATE rows stay pending until upload endpoints exist (later story)
+        LogEntrySyncService(apiClient, db).sync(stored.token)
 
         return Result.success()
     }
