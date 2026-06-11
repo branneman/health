@@ -154,8 +154,9 @@ that drops or rewrites auth headers, rate limiting that behaves differently when
 comes from real Nginx.
 
 The suite lives in `server/src/apiTest/`. It reads connection details from env vars
-(`API_TEST_SERVER_URL`, `API_TEST_EMAIL`, `API_TEST_PASSWORD`). It runs on demand — not on every
-push — and is a natural gate before deploying changes to the server.
+(`API_TEST_SERVER_URL`, `API_TEST_EMAIL`, `API_TEST_PASSWORD`). It runs automatically on every push
+to `main`, after the Docker image is built and Watchtower has deployed it to the VPS. The CI job
+polls `GET /version` until the deployed SHA matches the pushed commit, then runs the suite.
 
 Tests exercise the full authentication cycle (login, token use, refresh, logout), data endpoints,
 and multi-user isolation.
@@ -164,7 +165,7 @@ The API test account is `test+api@bran.name`. Its initial state is maintained by
 `local-db-seed/test-api-account-seed.sql`. Each test that writes data must delete it in teardown.
 
 **What currently meets the bar:** `AuthApiTest`, `SyncDownloadApiTest`, `ProfileApiTest`,
-`ShortcutsApiTest`, `BodyWeightApiTest`, `LogEntryApiTest`.
+`ShortcutsApiTest`, `BodyWeightApiTest`, `LogEntryApiTest`, `VersionApiTest`.
 
 ---
 

@@ -137,7 +137,7 @@ class LogEntryIntegrationTest {
         client.put("/profile") {
             bearerAuth(token)
             contentType(ContentType.Application.Json)
-            setBody("""{"heightCm":175,"birthYear":1985,"sex":"male","goalWeightKg":75.0,"activityLevel":"moderate","targetDeficit":500,"phase":"loss","vacationMode":false}""")
+            setBody("""{"heightCm":175,"birthYear":1985,"sex":"male","goalWeightKg":75.0,"activityLevel":"moderately_active","targetDeficit":500,"phase":"loss","vacationMode":false}""")
         }
         val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
         client.post("/in/log/quick-add") {

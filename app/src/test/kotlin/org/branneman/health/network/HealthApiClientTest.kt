@@ -204,7 +204,7 @@ class HealthApiClientTest {
             "token",
             QuickAddRequestDto(id = entryId, quickAddKcal = 350, quickAddLabel = "Lunch"),
         )
-        assertEquals(entryId, result.id)
+        assertEquals(entryId, result!!.id)
         assertEquals(350, result.quickAddKcal)
     }
 

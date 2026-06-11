@@ -33,6 +33,7 @@ jobs:
           java-version: 21
           distribution: temurin
       - uses: gradle/actions/setup-gradle@v4
+      - run: echo "server.baseUrl=https://placeholder" >> local.properties
       - run: ./gradlew :server:test
 
   app-tests:
@@ -44,6 +45,7 @@ jobs:
           java-version: 21
           distribution: temurin
       - uses: gradle/actions/setup-gradle@v4
+      - run: echo "server.baseUrl=https://placeholder" >> local.properties
       - run: ./gradlew :app:test
 
   build-push:
@@ -92,6 +94,8 @@ jobs:
           distribution: temurin
 
       - uses: gradle/actions/setup-gradle@v4
+
+      - run: echo "server.baseUrl=https://placeholder" >> local.properties
 
       - name: Wait for Watchtower to deploy
         env:

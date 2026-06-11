@@ -36,6 +36,7 @@ dependencies {
     implementation(libs.flyway.postgres)
     implementation(libs.jbcrypt)
     implementation(libs.ktor.serverForwardedHeader)
+    implementation(libs.ktor.serverStatusPages)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
     apiTestImplementation(libs.ktor.clientCore)

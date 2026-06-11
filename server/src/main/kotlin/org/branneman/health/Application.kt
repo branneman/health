@@ -10,12 +10,12 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.forwardedheaders.*
+import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
-import kotlinx.serialization.Serializable
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
@@ -81,6 +81,11 @@ fun Application.module(dataSource: javax.sql.DataSource) {
     val usernameRateLimiter = RateLimiter(store = DbLoginAttemptsStore())
 
     install(XForwardedHeaders)
+    install(StatusPages) {
+        exception<Throwable> { call, _ ->
+            call.respond(HttpStatusCode.InternalServerError)
+        }
+    }
     install(ContentNegotiation) { json() }
 
     intercept(ApplicationCallPipeline.Plugins) {
@@ -110,7 +115,8 @@ fun Application.module(dataSource: javax.sql.DataSource) {
         }
 
         get("/version") {
-            call.respond(VersionResponse(System.getenv("GIT_SHA") ?: "unknown"))
+            val sha = System.getenv("GIT_SHA") ?: "unknown"
+            call.respondText("""{"sha":"$sha"}""", ContentType.Application.Json)
         }
 
         route("/auth") {
@@ -558,6 +564,3 @@ fun Application.module(dataSource: javax.sql.DataSource) {
         }
     }
 }
-
-@Serializable
-data class VersionResponse(val sha: String)
