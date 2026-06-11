@@ -18,6 +18,7 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import org.branneman.health.BuildConfig
 import org.branneman.health.DailyEnergyDto
+import org.branneman.health.TodaySummaryDto
 import org.branneman.health.FoodItemDto
 import org.branneman.health.LogEntryDto
 import org.branneman.health.MealTemplateDto
@@ -126,5 +127,11 @@ class HealthApiClient(
         client.get("$baseUrl/in/log") {
             header(HttpHeaders.Authorization, "Bearer $token")
             parameter("from", from)
+        }.body()
+
+    suspend fun getTodaySummary(token: String, date: String): TodaySummaryDto =
+        client.get("$baseUrl/summary/today") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            parameter("date", date)
         }.body()
 }
