@@ -10,6 +10,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -69,7 +70,26 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch { observeLogEntries() }
         viewModelScope.launch { load() }
+    }
+
+    private suspend fun observeLogEntries() {
+        val stored = tokenStore.tokenFlow.first() ?: return
+        val today = LocalDate.now().toString()
+        app.db.logEntryDao().observeAll().collect { entries ->
+            val caloriesIn = entries
+                .filter { it.userId == stored.userId && it.loggedAt.startsWith(today) }
+                .sumOf { it.quickAddKcal ?: 0 }
+            _uiState.update { state ->
+                val budget = state.caloriesOut - state.targetDeficit - caloriesIn
+                state.copy(
+                    caloriesIn              = caloriesIn,
+                    budgetRemaining         = budget,
+                    adjustedBudgetRemaining = budget + (state.sportTonight?.estimatedKcal ?: 0),
+                )
+            }
+        }
     }
 
     private suspend fun load() {
@@ -81,15 +101,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         runCatching { apiClient.getTodaySummary(stored.token, today) }
             .onSuccess { dto ->
                 _uiState.update { state ->
-                    val sport = state.sportTonight
+                    val budget = dto.caloriesOut - dto.targetDeficit - state.caloriesIn
                     state.copy(
-                        isLoading             = false,
-                        caloriesIn            = dto.caloriesIn,
-                        caloriesOut           = dto.caloriesOut,
-                        caloriesOutSource     = dto.caloriesOutSource,
-                        targetDeficit         = dto.targetDeficit,
-                        budgetRemaining       = dto.budgetRemaining,
-                        adjustedBudgetRemaining = dto.budgetRemaining + (sport?.estimatedKcal ?: 0),
+                        isLoading               = false,
+                        caloriesOut             = dto.caloriesOut,
+                        caloriesOutSource       = dto.caloriesOutSource,
+                        targetDeficit           = dto.targetDeficit,
+                        budgetRemaining         = budget,
+                        adjustedBudgetRemaining = budget + (state.sportTonight?.estimatedKcal ?: 0),
                     )
                 }
             }

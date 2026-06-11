@@ -1,6 +1,9 @@
 package org.branneman.health.dashboard
 
+import org.branneman.health.db.SyncStatus
+import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.SportTonightEntity
+import org.branneman.health.uuid
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -73,5 +76,39 @@ class DashboardLogicTest {
     @Test fun `adjustedBudget equals base when no sport tonight`() {
         val sportKcal = 0
         assertEquals(1847, 1847 + sportKcal)
+    }
+
+    // --- caloriesIn reactive filter rules ---
+
+    @Test fun `caloriesIn sum includes only today's entries`() {
+        val today = "2026-06-11"
+        val entries = listOf(
+            LogEntryEntity(id = uuid(), userId = "u1", loggedAt = "${today}T08:00:00Z",
+                mealType = "unknown", quickAddKcal = 400, quickAddLabel = null,
+                syncStatus = SyncStatus.PENDING_CREATE),
+            LogEntryEntity(id = uuid(), userId = "u1", loggedAt = "2026-06-10T19:00:00Z",
+                mealType = "unknown", quickAddKcal = 800, quickAddLabel = null,
+                syncStatus = SyncStatus.SYNCED),
+        )
+        val sum = entries
+            .filter { it.userId == "u1" && it.loggedAt.startsWith(today) }
+            .sumOf { it.quickAddKcal ?: 0 }
+        assertEquals(400, sum)
+    }
+
+    @Test fun `caloriesIn sum excludes entries with null quickAddKcal`() {
+        val today = "2026-06-11"
+        val entries = listOf(
+            LogEntryEntity(id = uuid(), userId = "u1", loggedAt = "${today}T08:00:00Z",
+                mealType = "unknown", quickAddKcal = 350, quickAddLabel = null,
+                syncStatus = SyncStatus.PENDING_CREATE),
+            LogEntryEntity(id = uuid(), userId = "u1", loggedAt = "${today}T12:00:00Z",
+                mealType = "breakfast", quickAddKcal = null, quickAddLabel = null,
+                syncStatus = SyncStatus.SYNCED),
+        )
+        val sum = entries
+            .filter { it.userId == "u1" && it.loggedAt.startsWith(today) }
+            .sumOf { it.quickAddKcal ?: 0 }
+        assertEquals(350, sum)
     }
 }
