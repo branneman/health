@@ -1,15 +1,20 @@
 package org.branneman.health.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.dashboard.DashboardUiState
 import org.branneman.health.dashboard.DashboardViewModel
+import org.branneman.health.dashboard.isValidWeightInput
 import org.branneman.health.db.entities.SportTonightEntity
 
 private val activities = listOf("climbing" to "Climbing", "rowing" to "Rowing", "other" to "Other")
@@ -22,6 +27,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
         state = state,
         onSetSportTonight = viewModel::setSportTonight,
         onClearSportTonight = viewModel::clearSportTonight,
+        onLogWeight = viewModel::logWeight,
     )
 }
 
@@ -30,10 +36,12 @@ fun DashboardContent(
     state: DashboardUiState,
     onSetSportTonight: (String, String) -> Unit,
     onClearSportTonight: () -> Unit,
+    onLogWeight: (Double) -> Unit,
 ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         Text(
@@ -44,6 +52,10 @@ fun DashboardContent(
         Spacer(Modifier.height(16.dp))
         BudgetSection(state)
         Spacer(Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(12.dp))
+        WeightChipRow(weightKg = state.weightKgToday, onLogWeight = onLogWeight)
+        Spacer(Modifier.height(12.dp))
         HorizontalDivider()
         Spacer(Modifier.height(12.dp))
         SportTonightSection(state, onSetSportTonight, onClearSportTonight)
@@ -91,6 +103,72 @@ private fun InOutColumn(value: Int, label: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun WeightChipRow(
+    weightKg: Double?,
+    onLogWeight: (Double) -> Unit,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    TextButton(
+        onClick = { showDialog = true },
+        contentPadding = PaddingValues(0.dp),
+    ) {
+        Text(
+            text = if (weightKg != null) "⚖ ${"%.1f".format(weightKg)} kg" else "⚖ -- kg",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (weightKg != null) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    if (showDialog) {
+        WeightEntryDialog(
+            initialValue = weightKg,
+            onSave = { kg ->
+                onLogWeight(kg)
+                showDialog = false
+            },
+            onDismiss = { showDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun WeightEntryDialog(
+    initialValue: Double?,
+    onSave: (Double) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var input by remember { mutableStateOf(initialValue?.let { "%.1f".format(it) } ?: "") }
+    val isValid = isValidWeightInput(input)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Log weight") },
+        text = {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                label = { Text("kg") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { input.toDoubleOrNull()?.let { onSave(it) } },
+                enabled = isValid,
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable

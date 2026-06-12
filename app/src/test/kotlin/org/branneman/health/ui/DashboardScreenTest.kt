@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -21,6 +22,7 @@ class DashboardScreenTest {
         state: DashboardUiState = DashboardUiState(),
         onSetSportTonight: (String, String) -> Unit = { _, _ -> },
         onClearSportTonight: () -> Unit = {},
+        onLogWeight: (Double) -> Unit = {},
     ) {
         compose.setContent {
             MaterialTheme {
@@ -28,6 +30,7 @@ class DashboardScreenTest {
                     state = state,
                     onSetSportTonight = onSetSportTonight,
                     onClearSportTonight = onClearSportTonight,
+                    onLogWeight = onLogWeight,
                 )
             }
         }
@@ -121,7 +124,69 @@ class DashboardScreenTest {
             ),
             onClearSportTonight = { cleared = true },
         )
-        compose.onNodeWithText("clear", substring = true, ignoreCase = true).performClick()
+        compose.onNodeWithText("clear", substring = true, ignoreCase = true).performScrollTo().performClick()
         assert(cleared)
+    }
+
+    // --- Weight chip ---
+
+    @Test fun `weight chip shows dashes when not logged today`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = null))
+        compose.onNodeWithText("-- kg", substring = true).assertExists()
+    }
+
+    @Test fun `weight chip shows value when logged today`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = 82.5))
+        compose.onNodeWithText("82.5 kg", substring = true).assertExists()
+    }
+
+    @Test fun `tapping weight chip opens log weight dialog`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = null))
+        compose.onNodeWithText("-- kg", substring = true).performClick()
+        compose.onNodeWithText("Log weight").assertExists()
+    }
+
+    @Test fun `tapping logged weight chip also opens dialog`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = 82.5))
+        compose.onNodeWithText("82.5 kg", substring = true).performClick()
+        compose.onNodeWithText("Log weight").assertExists()
+    }
+
+    @Test fun `save button is disabled with no input`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = null))
+        compose.onNodeWithText("-- kg", substring = true).performClick()
+        compose.onNodeWithText("Save").assertIsNotEnabled()
+    }
+
+    @Test fun `save button is enabled for valid weight`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = null))
+        compose.onNodeWithText("-- kg", substring = true).performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("82.5")
+        compose.onNodeWithText("Save").assertIsEnabled()
+    }
+
+    @Test fun `save button is disabled for two decimal places`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = null))
+        compose.onNodeWithText("-- kg", substring = true).performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("82.55")
+        compose.onNodeWithText("Save").assertIsNotEnabled()
+    }
+
+    @Test fun `tapping save calls onLogWeight with parsed kg`() {
+        var logged: Double? = null
+        render(
+            state = DashboardUiState(isLoading = false, weightKgToday = null),
+            onLogWeight = { logged = it },
+        )
+        compose.onNodeWithText("-- kg", substring = true).performClick()
+        compose.onNode(hasSetTextAction()).performTextInput("82.5")
+        compose.onNodeWithText("Save").performClick()
+        assertEquals(82.5, logged)
+    }
+
+    @Test fun `dialog pre-fills with current value when editing`() {
+        render(state = DashboardUiState(isLoading = false, weightKgToday = 82.5))
+        compose.onNodeWithText("82.5 kg", substring = true).performClick()
+        compose.onNode(hasSetTextAction()).assertTextContains("82.5")
     }
 }
