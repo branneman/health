@@ -84,9 +84,7 @@
 
     - name: Derive user list from vault
       set_fact:
-        app_users: "{{ vars | dict2items
-                           | selectattr('key', 'match', '^user_.+_password$')
-                           | map(attribute='key')
+        app_users: "{{ query('varnames', '^user_.+_password$')
                            | map('regex_replace', '^user_(.+)_password$', '\\1')
                            | list }}"
 

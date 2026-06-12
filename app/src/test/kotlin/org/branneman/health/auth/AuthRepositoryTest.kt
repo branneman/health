@@ -11,6 +11,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -29,6 +30,7 @@ import kotlin.test.assertEquals
 @Config(sdk = [28])
 class AuthRepositoryTest {
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun testTokenStore(): TokenStore {
         val dataStore = PreferenceDataStoreFactory.create(
             scope = CoroutineScope(UnconfinedTestDispatcher()),

@@ -23,11 +23,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val tokenStore = TokenStore(application.authDataStore)
 
-    // lateinit resolves the circular dependency: the lambdas below capture authRepository
-    // by reference. They are only called after init {} completes, by which point
-    // authRepository is initialized.
-    private lateinit var authRepository: AuthRepository
-
     private val apiClient = HealthApiClient(
         baseUrl = BuildConfig.SERVER_BASE_URL,
         client = HttpClient(Android) {
@@ -39,18 +34,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     )
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
-    val authState: StateFlow<AuthState> = _authState.asStateFlow()
-
-    init {
+    private val authRepository: AuthRepository by lazy {
         val app = application as HealthApplication
-        authRepository = AuthRepository(
+        AuthRepository(
             tokenStore = tokenStore,
             apiClient = apiClient,
             db = app.db,
             loginSyncService = LoginSyncService(api = apiClient, db = app.db),
         )
+    }
 
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    init {
         viewModelScope.launch {
             authRepository.authState.collect { _authState.value = it }
         }

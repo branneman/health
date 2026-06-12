@@ -2,7 +2,7 @@ package org.branneman.health.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import org.branneman.health.dashboard.DashboardUiState
 import org.branneman.health.db.entities.SportTonightEntity
 import org.junit.Rule

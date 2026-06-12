@@ -1,5 +1,6 @@
 package org.branneman.health.auth
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -29,6 +30,7 @@ class AuthRepository(
 ) {
     private val _expiredChannel = Channel<Unit>(Channel.CONFLATED)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     val authState: Flow<AuthState> = merge(
         tokenStore.tokenFlow.flatMapLatest { stored ->
             when {
