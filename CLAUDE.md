@@ -42,6 +42,11 @@ implication for every implementation session:
 - **IDs are always UUIDs** — no auto-incrementing integers anywhere (database columns,
   Kotlin data classes, DTOs, Room entities). Postgres: `UUID DEFAULT gen_random_uuid()`.
   Kotlin: `java.util.UUID`. Never `Int`, `Long`, or `BIGSERIAL` for an identifier.
+  **Exception:** `BodyWeightEntity` uses `id = date` (a `String` date like `"2026-06-12"`)
+  as its Room primary key. This is intentional: it enables `@Upsert` to overwrite the
+  same-day entry rather than creating a duplicate, enforcing the one-entry-per-day
+  invariant at the database level. Postgres `body_weight` has a `UNIQUE(user_id, date)`
+  constraint instead of relying on a UUID PK for the same reason.
 
 ## Goals & constraints
 
