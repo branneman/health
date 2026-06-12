@@ -216,55 +216,88 @@ Polar is a Finnish company → fits the "outside the US" preference. The API is
 ### Token model — note this
 
 Classic AccessLink access tokens **do not expire** and there is **no refresh token**.
-Authorize once, store the token, reuse it indefinitely. (Earlier assumption about a
-"refresh token background process" was wrong — it doesn't apply here.) For a single
-user this is simpler, not harder.
+Authorize once, store the token, reuse it indefinitely. For a single user this is
+simpler, not harder.
 
 ### One-time setup flow
 
 1. **Register a client** at `admin.polaraccesslink.com` (log in with the Polar Flow
    account). Set the redirect URL (e.g. `https://yourdomain.eu/polar/callback`) and
-   enable all three data types: exercise, daily activity, physical info. You receive a
+   enable the data types needed: exercise, daily activity. You receive a
    **client_id** + **client_secret**.
-2. **Authorize** by visiting in a browser:
-   `https://flow.polar.com/oauth2/authorization?response_type=code&client_id=...`
-   Log in to Polar Flow, grant access, get redirected back to the callback with a
-   `code` in the query string.
-3. **Exchange the code for a token**: server-side POST to
-   `https://polarremote.com/v2/oauth2/token`, using `client_id:client_secret` as HTTP
-   Basic auth. The response contains the `access_token` and an `x_user_id`.
-4. **Register the user once**: POST `/v3/users`. A `409 Conflict` means the user is
-   already registered — ignore that error.
+2. The in-app "Connect Polar" flow (story 11) handles authorization from there —
+   the app opens the Polar authorization URL in a browser, the user grants access,
+   Polar redirects to the server callback, and the server exchanges the code for a token.
 
-Store the token + user_id in Postgres. One-time setup done.
+Store the token + Polar user id in Postgres (`polar_auth` table). One-time setup done.
 
-### Pulling data — transaction model (not a plain GET)
+### API base URLs (verified)
 
-1. **Open an activity transaction.** If there's new daily-activity data since last
-   time, you get a transaction id with a list of URLs. No new data → empty response.
-2. **Fetch each URL** — these hold the day summary (incl. `calories`, steps, active
-   time).
-3. **Commit the transaction.** This marks the data "processed" so it won't reappear in
-   the next transaction. If you *don't* commit, you can fetch it again later — useful
-   when processing fails.
+- **AccessLink API:** `https://www.polaraccesslink.com` (all `/v3/` endpoints)
+- **OAuth token exchange:** `https://polarremote.com/v2/oauth2/token`
+- **OAuth authorisation:** `https://flow.polar.com/oauth2/authorization`
+
+### OAuth token exchange (verified)
+
+`POST https://polarremote.com/v2/oauth2/token`
+- Auth: HTTP Basic with `client_id:client_secret` (base64-encoded)
+- Headers: `Content-Type: application/x-www-form-urlencoded`, `Accept: application/json;charset=UTF-8`
+- Body (form-encoded): `grant_type=authorization_code&code=<code>&redirect_uri=<uri>`
+- Response: `{ "access_token": "…", "token_type": "bearer", "expires_in": 31535999, "x_user_id": 10579 }`
+- `x_user_id` is an **integer**, stored as TEXT in `polar_auth.user_id`.
+- `expires_in` is present in the response but Polar's docs state tokens do not expire
+  unless explicitly revoked — treat the token as permanent.
+
+### User registration (verified)
+
+`POST https://www.polaraccesslink.com/v3/users`
+- Auth: Bearer token (the freshly exchanged `access_token`)
+- Body: `{ "member-id": "<our health user UUID>" }` — Polar's identifier for us; use
+  the health `user_id` UUID as the member-id so Polar links back to the right user.
+- 409 Conflict = user already registered with this client → ignore, proceed.
+- Response on 200 includes `polar-user-id` (integer) — same value as `x_user_id` from
+  token exchange. No need to store separately.
+
+### Pulling data — current REST API (not the deprecated transaction model)
+
+**Do not use the deprecated transaction-based API** (open transaction → fetch URLs →
+commit). The current Polar AccessLink API is a straightforward REST approach:
+
+- **Daily activity:** `GET https://www.polaraccesslink.com/v3/users/activities?from=YYYY-MM-DD&to=YYYY-MM-DD`
+  Scope: `accesslink.read_all`. Returns one record per day (date is the unique key).
+  Fields: `start_time` (ISO 8601 datetime — extract date portion), `calories`
+  (total = BMR + active), `active_calories` (active portion only), `steps`.
+  Default range: last 28 days. Max lookback: 365 days.
+  Upsert on `(user_id, date)` — matches the existing Postgres primary key exactly.
+
+- **Exercises:** `GET https://www.polaraccesslink.com/v3/exercises`
+  Scope: `accesslink.read_all`. Returns exercises from the last **30 days** only,
+  and only those uploaded **after** the user registered with our client.
+  Each exercise has a Polar-assigned hashed string `id` (e.g. `"2AC312F"`) — not a UUID.
+  Fields: `id`, `start_time`, `sport`, `duration` (ISO 8601 duration), `calories`,
+  `heart_rate.average`.
+  Upsert on `(user_id, polar_exercise_id)` — requires a `polar_exercise_id TEXT`
+  column on the `workout` table (added in story 11 migration). Our own UUID `id`
+  remains the primary key per project convention.
 
 ### Trigger strategy
 
-- **Cron (start here, simplest for one user):** a job every few hours runs the
-  transaction flow. No signature handling, robust; a failed run is just picked up next
-  time.
-- **Webhook (more elegant, later):** register a webhook subscription so Polar POSTs to
-  an endpoint when the watch syncs. Requires a signature secret in the environment to
-  verify incoming calls. Nicer, but more moving parts.
+- **Cron (hourly, coroutine loop in Ktor):** a coroutine launched at startup runs
+  `while (true) { pullPolarData(); delay(1.hour) }`. A failed run is safe — the next
+  run fetches the same date window and upserts idempotently.
+- **Webhook (future):** register a webhook subscription so Polar POSTs to an endpoint
+  when the watch syncs. Requires an HMAC signature secret. Not in scope for story 11.
 
 ### Practical notes
 
 - Data is only as fresh as the **last watch sync** — not real-time.
-- **Rate limits:** short-term (15 min) and long-term (24 h). Current usage comes back
-  in the HTTP headers of every response; exceeding a limit returns `429`. A single
-  user will never hit these.
-- Polar publishes a `swagger.yaml` — use it to generate a client SDK / autogenerate
-  Kotlin models for Ktor instead of hand-writing them.
+- **Rate limits:** 520 requests/15 min and 5,100 requests/24 h (for 1 user). An
+  hourly pull costs ~2 API calls. That is well under 1% of the daily limit.
+  The `RateLimit-Usage`, `RateLimit-Limit`, and `RateLimit-Reset` headers are returned
+  on every response. A 429 means back off; log it and skip that cycle.
+- **Do not use code generation** for the Polar client. The API surface we need is small
+  (2 endpoints); a hand-written Ktor `HttpClient` wrapper is simpler and has no
+  codegen build dependency.
 
 ---
 
