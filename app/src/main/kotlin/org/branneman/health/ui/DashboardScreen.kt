@@ -159,7 +159,7 @@ private fun WeightEntryDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { input.toDoubleOrNull()?.let { onSave(it) } },
+                onClick = { input.replace(',', '.').toDoubleOrNull()?.let { onSave(it) } },
                 enabled = isValid,
             ) {
                 Text("Save")

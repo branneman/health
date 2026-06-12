@@ -171,4 +171,16 @@ class DashboardLogicTest {
     @Test fun `empty input fails`() {
         assertFalse(isValidWeightInput(""))
     }
+
+    @Test fun `comma as decimal separator passes`() {
+        assertTrue(isValidWeightInput("85,5"))
+    }
+
+    @Test fun `comma with two decimal places fails`() {
+        assertFalse(isValidWeightInput("85,24"))
+    }
+
+    @Test fun `comma at minimum boundary passes`() {
+        assertTrue(isValidWeightInput("20,0"))
+    }
 }

@@ -61,10 +61,11 @@ fun computeSportEstimate(activityType: String, intensity: String, weightKg: Doub
 }
 
 fun isValidWeightInput(input: String): Boolean {
-    val value = input.toDoubleOrNull() ?: return false
+    val normalized = input.replace(',', '.')
+    val value = normalized.toDoubleOrNull() ?: return false
     if (value < 20.0 || value > 300.0) return false
-    val dotIndex = input.indexOf('.')
-    if (dotIndex != -1 && input.length - dotIndex - 1 > 1) return false
+    val sepIndex = normalized.indexOf('.')
+    if (sepIndex != -1 && normalized.length - sepIndex - 1 > 1) return false
     return true
 }
 
