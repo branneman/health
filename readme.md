@@ -136,5 +136,6 @@ A wireless alternative to manual APK transfers. Works on the same local network.
   adb pair <ip>:<pairing-port>
   # enter the 6-digit code shown on the phone when prompted
   adb connect <ip>:<connect-port>
-  adb -s <ip>:<connect-port> install app/build/outputs/apk/debug/app-debug.apk
+  # install only for user in primary profile
+  adb -s <ip>:<connect-port> install --user 0 app/build/outputs/apk/debug/app-debug.apk
   ```
