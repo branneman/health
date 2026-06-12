@@ -32,6 +32,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             db.bodyWeightDao().deleteById(entity.id)
         }
 
+        BodyWeightSyncService(apiClient, db).sync(stored.token)
         LogEntrySyncService(apiClient, db).sync(stored.token)
 
         return Result.success()
