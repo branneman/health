@@ -73,7 +73,7 @@ android {
         versionName = "$gitCount-$gitHash"
         buildConfigField(
             "String", "SERVER_BASE_URL",
-            "\"${localProps.getProperty("server.baseUrl") ?: error("server.baseUrl must be set in local.properties")}\""
+            "\"${System.getenv("SERVER_BASE_URL") ?: localProps.getProperty("server.baseUrl") ?: error("SERVER_BASE_URL env var or server.baseUrl in local.properties must be set")}\""
         )
     }
     packaging {

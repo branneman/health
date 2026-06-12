@@ -33,8 +33,9 @@ jobs:
           java-version: 21
           distribution: temurin
       - uses: gradle/actions/setup-gradle@v5
-      - run: echo "server.baseUrl=https://placeholder" >> local.properties
       - run: ./gradlew :server:test
+        env:
+          SERVER_BASE_URL: https://placeholder
 
   app-tests:
     runs-on: ubuntu-latest
@@ -45,8 +46,9 @@ jobs:
           java-version: 21
           distribution: temurin
       - uses: gradle/actions/setup-gradle@v5
-      - run: echo "server.baseUrl=https://placeholder" >> local.properties
       - run: ./gradlew :app:test
+        env:
+          SERVER_BASE_URL: https://placeholder
 
   build-push:
     if: github.event_name == 'push'
@@ -94,8 +96,6 @@ jobs:
           distribution: temurin
 
       - uses: gradle/actions/setup-gradle@v5
-
-      - run: echo "server.baseUrl=https://placeholder" >> local.properties
 
       - name: Wait for Watchtower to deploy
         env:
