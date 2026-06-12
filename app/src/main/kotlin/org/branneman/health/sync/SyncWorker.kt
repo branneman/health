@@ -35,11 +35,23 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         BodyWeightSyncService(apiClient, db).sync(stored.token)
         LogEntrySyncService(apiClient, db).sync(stored.token)
 
+        applicationContext.syncDataStore.saveLastSyncedAt(System.currentTimeMillis())
         return Result.success()
     }
 
     companion object {
         const val WORK_NAME = "SyncWorker"
+
+        fun syncNow(context: Context) {
+            val request = OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                )
+                .build()
+            WorkManager.getInstance(context).enqueue(request)
+        }
 
         fun enqueue(context: Context) {
             val request = PeriodicWorkRequestBuilder<SyncWorker>(4, TimeUnit.HOURS)
