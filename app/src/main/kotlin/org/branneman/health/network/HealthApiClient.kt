@@ -30,6 +30,10 @@ import org.branneman.health.TokenResponse
 import org.branneman.health.UserProfileDto
 import org.branneman.health.WeightEntryDto
 import org.branneman.health.WorkoutDto
+import org.branneman.health.PolarStatusDto
+
+@kotlinx.serialization.Serializable
+private data class PolarConnectUrlResponse(val url: String)
 
 class HealthApiClient(
     private val baseUrl: String = BuildConfig.SERVER_BASE_URL,
@@ -154,5 +158,18 @@ class HealthApiClient(
         client.get("$baseUrl/summary/today") {
             header(HttpHeaders.Authorization, "Bearer $token")
             parameter("date", date)
+        }.body()
+
+    suspend fun getPolarConnectUrl(token: String): String {
+        val response = client.get("$baseUrl/polar/connect-url") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+        check(response.status.isSuccess()) { "GET /polar/connect-url failed: ${response.status}" }
+        return response.body<PolarConnectUrlResponse>().url
+    }
+
+    suspend fun getPolarStatus(token: String): PolarStatusDto =
+        client.get("$baseUrl/polar/status") {
+            header(HttpHeaders.Authorization, "Bearer $token")
         }.body()
 }

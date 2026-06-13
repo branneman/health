@@ -19,6 +19,7 @@ import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.UserProfileDto
 import org.branneman.health.ShortcutDto
 import org.branneman.health.WeightEntryDto
+import org.branneman.health.PolarStatusDto
 import org.junit.Test
 
 class HealthApiClientTest {
@@ -247,5 +248,31 @@ class HealthApiClientTest {
             )
         }
         Unit
+    }
+
+    @Test
+    fun `getPolarConnectUrl returns url field`() = runBlocking {
+        val client = mockClient { _ ->
+            respond(
+                """{"url":"https://flow.polar.com/oauth2/authorization?state=abc"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+        }
+        val url = HealthApiClient("http://test", client).getPolarConnectUrl("token")
+        assertEquals("https://flow.polar.com/oauth2/authorization?state=abc", url)
+    }
+
+    @Test
+    fun `getPolarStatus returns connected = true`() = runBlocking {
+        val client = mockClient { _ ->
+            respond(
+                """{"connected":true}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+        }
+        val result = HealthApiClient("http://test", client).getPolarStatus("token")
+        assertTrue(result.connected)
     }
 }
