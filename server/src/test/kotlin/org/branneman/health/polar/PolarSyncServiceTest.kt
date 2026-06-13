@@ -125,6 +125,24 @@ class PolarSyncServiceTest {
     }
 
     @Test
+    fun `syncForUser syncs only the given user`() = runBlocking {
+        insertPolarAuth(userId, "tok-single")
+        val activity = PolarActivity(LocalDate.of(2026, 6, 14), 2300, 500, 10000)
+        service(activities = listOf(activity)).syncForUser(userId)
+
+        val count = transaction { DailyEnergy.selectAll().where { DailyEnergy.userId eq userId }.count() }
+        assertEquals(1L, count)
+    }
+
+    @Test
+    fun `syncForUser is a no-op for user with no Polar connection`() = runBlocking {
+        // userId2 has no polar_auth row
+        service().syncForUser(userId2)
+        val count = transaction { DailyEnergy.selectAll().where { DailyEnergy.userId eq userId2 }.count() }
+        assertEquals(0L, count)
+    }
+
+    @Test
     fun `expired polar_connect_state rows are GC-ed`() = runBlocking {
         val ownerUserId = userId
         transaction {

@@ -45,6 +45,8 @@ class SyncWorkerTest {
     private fun fakeApiClient(): HealthApiClient {
         val engine = MockEngine { request ->
             when {
+                request.url.encodedPath == "/polar/sync" ->
+                    respond("", HttpStatusCode.NoContent)
                 request.url.encodedPath.contains("/out/energy") ->
                     respond(
                         """[{"date":"2026-06-12","bmrKcal":1700,"activeKcal":400,"totalKcal":2100,"steps":9000,"source":"polar"}]""",

@@ -133,6 +133,10 @@ fun Application.module(
         }
     }
 
+    val polarSyncService: PolarSyncService? =
+        if (polarApiClient != null && polarCipher != null) PolarSyncService(polarApiClient, dataSource, polarCipher)
+        else null
+
     routing {
         get("/") {
             call.respondText("OK")
@@ -607,17 +611,16 @@ fun Application.module(
             }
         }
 
-        if (polarApiClient != null && polarCipher != null) {
-            polarRoutes(polarApiClient, polarCipher)
+        if (polarApiClient != null && polarCipher != null && polarSyncService != null) {
+            polarRoutes(polarApiClient, polarCipher, polarSyncService)
         }
     }
 
-    if (polarApiClient != null && polarCipher != null) {
-        val syncService = PolarSyncService(polarApiClient, dataSource, polarCipher)
+    if (polarSyncService != null) {
         launch {
             while (true) {
                 delay(1.hours)
-                runCatching { syncService.syncAll() }
+                runCatching { polarSyncService.syncAll() }
             }
         }
     }

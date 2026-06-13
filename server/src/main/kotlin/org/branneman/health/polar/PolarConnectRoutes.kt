@@ -16,8 +16,18 @@ import java.security.SecureRandom
 import java.time.OffsetDateTime
 import java.util.UUID
 
-fun Route.polarRoutes(polarApiClient: PolarApiClient, cipher: TokenCipher) {
+fun Route.polarRoutes(polarApiClient: PolarApiClient, cipher: TokenCipher, syncService: PolarSyncService) {
     authenticate("api") {
+        post("/polar/sync") {
+            val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+            try {
+                syncService.syncForUser(userId)
+                call.respond(HttpStatusCode.NoContent)
+            } catch (_: PolarRateLimitException) {
+                call.respond(HttpStatusCode.TooManyRequests)
+            }
+        }
+
         get("/polar/connect-url") {
             val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
             val stateBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }

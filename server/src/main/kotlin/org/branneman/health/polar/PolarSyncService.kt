@@ -50,6 +50,18 @@ class PolarSyncService(
         }
     }
 
+    suspend fun syncForUser(healthUserId: UUID) {
+        val row = transaction {
+            PolarAuth.selectAll()
+                .where { PolarAuth.healthUserId eq healthUserId }
+                .singleOrNull()
+                ?.let { PolarAuthRow(healthUserId, it[PolarAuth.userId], it[PolarAuth.accessToken]) }
+        } ?: return
+
+        val token = cipher.decrypt(row.encryptedToken)
+        syncUser(healthUserId, token)
+    }
+
     private suspend fun syncUser(healthUserId: UUID, accessToken: String) {
         val today = LocalDate.now()
 

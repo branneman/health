@@ -172,4 +172,10 @@ class HealthApiClient(
         client.get("$baseUrl/polar/status") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }.body()
+
+    suspend fun triggerPolarSync(token: String) {
+        client.post("$baseUrl/polar/sync") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+    }
 }

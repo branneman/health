@@ -116,6 +116,27 @@ class PolarIntegrationTest {
     }
 
     @Test
+    fun `POST polar-sync returns 204 when Polar connected, 401 without token`() = appTest {
+        assertEquals(HttpStatusCode.Unauthorized, client.post("/polar/sync").status)
+
+        val token = login()
+        // Not connected yet — still succeeds (no-op)
+        var r = client.post("/polar/sync") { header(HttpHeaders.Authorization, "Bearer $token") }
+        assertEquals(HttpStatusCode.NoContent, r.status)
+
+        // Connect Polar
+        client.get("/polar/connect-url") { header(HttpHeaders.Authorization, "Bearer $token") }
+        val state = transaction {
+            PolarConnectState.selectAll().where { PolarConnectState.userId eq testUserId }.single()[PolarConnectState.state]
+        }
+        client.get("/polar/callback?code=x&state=$state")
+
+        // Now connected — sync runs against FakePolarApiClient
+        r = client.post("/polar/sync") { header(HttpHeaders.Authorization, "Bearer $token") }
+        assertEquals(HttpStatusCode.NoContent, r.status)
+    }
+
+    @Test
     fun `GET polar-status returns false before OAuth, true after`() = appTest {
         val token = login()
         var r = client.get("/polar/status") { header(HttpHeaders.Authorization, "Bearer $token") }
