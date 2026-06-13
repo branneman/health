@@ -48,6 +48,24 @@ implication for every implementation session:
   invariant at the database level. Postgres `body_weight` has a `UNIQUE(user_id, date)`
   constraint instead of relying on a UUID PK for the same reason.
 
+## Documentation index
+
+Load these on demand when the topic comes up — don't load all upfront:
+
+| When you need…                                                             | Read…                             |
+|----------------------------------------------------------------------------|-----------------------------------|
+| What a domain term means, or whether a name is canonical                   | `docs/ubiquitous-language.md`     |
+| How the domain is structured (aggregates, bounded contexts, value objects) | `docs/domain-model.md`            |
+| Which story to work on next, or the scope of a feature                     | `docs/specs/feature-backlog.md`   |
+| API endpoint shapes or DTO fields                                          | `docs/specs/api-design.md`        |
+| How the daily budget, verdict, or insights are calculated                  | `docs/specs/math-model.md`        |
+| Auth, rate limiting, or Polar token security rules                         | `docs/specs/security.md`          |
+| Polar OAuth flow, cron sync, or AccessLink API details                     | `docs/specs/polar-sync.md`        |
+| Test pyramid, tier definitions, or UUID slot registry                      | `docs/specs/testing-manifesto.md` |
+| Why a UX decision was made the way it was                                  | `docs/ux/1-principles.md`         |
+| What a specific user flow looks like end-to-end                            | `docs/ux/2-scenarios.md`          |
+| What a specific screen should contain                                      | `docs/ux/3-features/`             |
+
 ## Goals & constraints
 
 - **Scope:** personal use (the owner plus invited users — family, friends), built
@@ -240,10 +258,13 @@ Store the token + Polar user id in Postgres (`polar_auth` table). One-time setup
 ### OAuth token exchange (verified)
 
 `POST https://polarremote.com/v2/oauth2/token`
+
 - Auth: HTTP Basic with `client_id:client_secret` (base64-encoded)
-- Headers: `Content-Type: application/x-www-form-urlencoded`, `Accept: application/json;charset=UTF-8`
+- Headers: `Content-Type: application/x-www-form-urlencoded`,
+  `Accept: application/json;charset=UTF-8`
 - Body (form-encoded): `grant_type=authorization_code&code=<code>&redirect_uri=<uri>`
-- Response: `{ "access_token": "…", "token_type": "bearer", "expires_in": 31535999, "x_user_id": 10579 }`
+- Response:
+  `{ "access_token": "…", "token_type": "bearer", "expires_in": 31535999, "x_user_id": 10579 }`
 - `x_user_id` is an **integer**, stored as TEXT in `polar_auth.user_id`.
 - `expires_in` is present in the response but Polar's docs state tokens do not expire
   unless explicitly revoked — treat the token as permanent.
@@ -251,6 +272,7 @@ Store the token + Polar user id in Postgres (`polar_auth` table). One-time setup
 ### User registration (verified)
 
 `POST https://www.polaraccesslink.com/v3/users`
+
 - Auth: Bearer token (the freshly exchanged `access_token`)
 - Body: `{ "member-id": "<our health user UUID>" }` — Polar's identifier for us; use
   the health `user_id` UUID as the member-id so Polar links back to the right user.
@@ -263,7 +285,8 @@ Store the token + Polar user id in Postgres (`polar_auth` table). One-time setup
 **Do not use the deprecated transaction-based API** (open transaction → fetch URLs →
 commit). The current Polar AccessLink API is a straightforward REST approach:
 
-- **Daily activity:** `GET https://www.polaraccesslink.com/v3/users/activities?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- **Daily activity:**
+  `GET https://www.polaraccesslink.com/v3/users/activities?from=YYYY-MM-DD&to=YYYY-MM-DD`
   Scope: `accesslink.read_all`. Returns one record per day (date is the unique key).
   Fields: `start_time` (ISO 8601 datetime — extract date portion), `calories`
   (total = BMR + active), `active_calories` (active portion only), `steps`.

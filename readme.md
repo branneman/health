@@ -17,6 +17,21 @@ Kotlin everywhere — Android app, shared DTOs, and backend server in one monore
 * [`/shared`](./shared/src/commonMain/kotlin) — KMP module: API DTOs shared between app and server
 * [`/server`](./server/src/main/kotlin) — Ktor server (JVM), backed by PostgreSQL
 
+## Documentation
+
+- [Ubiquitous language](docs/ubiquitous-language.md) — canonical domain terms used throughout the
+  codebase, plus a naming-divergence TODO list
+- [Domain model](docs/domain-model.md) — bounded contexts, aggregates, value objects, domain
+  services, and a context map
+- [Feature backlog](docs/specs/feature-backlog.md) — stack-ranked product backlog; each story is an
+  end-to-end vertical slice
+- [API design](docs/specs/api-design.md) — server endpoints and DTO shapes
+- [Math model](docs/specs/math-model.md) — algorithms behind the daily budget, weight trend, weekly
+  verdict, and insights
+- [Security](docs/specs/security.md) — auth, rate limiting, Polar token handling
+- [UX principles](docs/ux/1-principles.md) — the design philosophy behind every interaction decision
+- [UX scenarios](docs/ux/2-scenarios.md) — concrete user flows from trigger to outcome
+
 ## Running the apps
 
 Use the run configurations provided by the run widget in your IDE’s toolbar. You can also use these
@@ -30,16 +45,19 @@ commands and options:
 Use the run button in your IDE’s editor gutter, or run tests using Gradle tasks:
 
 **Server unit + integration tests** (requires local Docker Postgres running):
+
 ```bash
 ./gradlew :server:test
 ```
 
 **App component tests** (Robolectric — no device needed):
+
 ```bash
 ./gradlew :app:testDebugUnitTest
 ```
 
 **API tests against local server** (start the server first):
+
 ```bash
 set -a; source .env; set +a
 ./gradlew :server:run &   # or start via IDE
@@ -47,11 +65,13 @@ API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest
 ```
 
 **API tests against production:**
+
 ```bash
 ./gradlew :server:apiTest   # picks up API_TEST_* vars from .env automatically
 ```
 
 **All non-device tests:**
+
 ```bash
 ./gradlew :server:test :app:testDebugUnitTest
 ```
@@ -94,17 +114,20 @@ API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest
 Schema is managed by Flyway and applied automatically when the server starts.
 
 Start a fresh database:
+
 ```
 docker compose up -d postgres postgres-mcp
 ./gradlew :server:run   # Flyway creates all tables on first run
 ```
 
 Load seed data (optional, after server has started):
+
 ```
 psql $DATABASE_URL < local-db-seed/seed_data.sql
 ```
 
 Reset and reload from scratch:
+
 ```
 docker compose down -v && docker compose up -d postgres postgres-mcp
 ./gradlew :server:run
@@ -131,6 +154,7 @@ A wireless alternative to manual APK transfers. Works on the same local network.
 2. Tap into the Wireless debugging screen and note the IP address and port shown
 3. Tap **Pair device with pairing code** and note the separate pairing port and 6-digit code
 4. On your Mac:
+
   ```bash
   # Pair (one-time per machine)
   adb pair <ip>:<pairing-port>
