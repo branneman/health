@@ -25,13 +25,14 @@ object DailyEnergy : Table("daily_energy") {
 }
 
 object Workout : Table("workout") {
-    val id           = uuid("id")
-    val userId       = uuid("user_id")
-    val date         = date("date")
-    val type         = text("type")
-    val durationSecs = integer("duration_secs").nullable()
-    val avgHr        = integer("avg_hr").nullable()
-    val kcal         = integer("kcal").nullable()
+    val id              = uuid("id")
+    val userId          = uuid("user_id")
+    val date            = date("date")
+    val type            = text("type")
+    val durationSecs    = integer("duration_secs").nullable()
+    val avgHr           = integer("avg_hr").nullable()
+    val kcal            = integer("kcal").nullable()
+    val polarExerciseId = text("polar_exercise_id").nullable()
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -109,4 +110,19 @@ object Shortcut : Table("shortcut") {
     val sortOrder = integer("sort_order")
     val updatedAt = timestampWithTimeZone("updated_at")
     override val primaryKey = PrimaryKey(id)
+}
+
+object PolarAuth : Table("polar_auth") {
+    val userId       = text("user_id")
+    val accessToken  = text("access_token")
+    val createdAt    = timestampWithTimeZone("created_at")
+    val healthUserId = uuid("health_user_id").nullable()
+    override val primaryKey = PrimaryKey(userId)
+}
+
+object PolarConnectState : Table("polar_connect_state") {
+    val state     = text("state")
+    val userId    = uuid("user_id")
+    val expiresAt = timestampWithTimeZone("expires_at")
+    override val primaryKey = PrimaryKey(state)
 }
