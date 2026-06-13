@@ -34,6 +34,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
         BodyWeightSyncService(apiClient, db).sync(stored.token)
         LogEntrySyncService(apiClient, db).sync(stored.token)
+        DailyEnergySyncService(apiClient, db).sync(stored.token, stored.userId)
+        WorkoutSyncService(apiClient, db).sync(stored.token, stored.userId)
 
         applicationContext.syncDataStore.saveLastSyncedAt(System.currentTimeMillis())
         return Result.success()
