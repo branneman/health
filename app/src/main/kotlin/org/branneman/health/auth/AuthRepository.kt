@@ -15,11 +15,12 @@ import org.branneman.health.sync.LoginSyncService
 import java.time.OffsetDateTime
 
 sealed class AuthState {
-    data object Loading         : AuthState()
-    data object LoggedOut       : AuthState()
-    data object Expired         : AuthState()
-    data object NeedsOnboarding : AuthState()
-    data object LoggedIn        : AuthState()
+    data object Loading          : AuthState()
+    data object LoggedOut        : AuthState()
+    data object Expired          : AuthState()
+    data object NeedsOnboarding  : AuthState()
+    data object NeedsPolarSetup  : AuthState()
+    data object LoggedIn         : AuthState()
 }
 
 class AuthRepository(
@@ -27,6 +28,7 @@ class AuthRepository(
     private val apiClient: HealthApiClient,
     private val db: HealthDatabase,
     private val loginSyncService: LoginSyncService? = null,
+    private val polarPreferences: PolarPreferences? = null,
 ) {
     private val _expiredChannel = Channel<Unit>(Channel.CONFLATED)
 
@@ -36,9 +38,12 @@ class AuthRepository(
             when {
                 stored == null -> flowOf(AuthState.LoggedOut)
                 OffsetDateTime.parse(stored.expiresAt) < OffsetDateTime.now() -> flowOf(AuthState.Expired)
-                else -> db.userProfileDao()
-                    .existsFlow()
-                    .map { exists -> if (exists) AuthState.LoggedIn else AuthState.NeedsOnboarding }
+                else -> db.userProfileDao().existsFlow().flatMapLatest { exists ->
+                    if (!exists) flowOf(AuthState.NeedsOnboarding)
+                    else polarPreferences?.polarSetupShownFlow?.map { shown ->
+                        if (shown) AuthState.LoggedIn else AuthState.NeedsPolarSetup
+                    } ?: flowOf(AuthState.LoggedIn)
+                }
             }
         },
         _expiredChannel.receiveAsFlow().map { AuthState.Expired }

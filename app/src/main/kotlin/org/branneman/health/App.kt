@@ -87,6 +87,10 @@ fun App() {
 
             AuthState.NeedsOnboarding -> OnboardingScreen()
 
+            AuthState.NeedsPolarSetup -> {
+                // Polar setup screen — placeholder until that screen is implemented
+            }
+
             AuthState.LoggedIn -> MainNav(authViewModel)
         }
     }

@@ -47,6 +47,17 @@ class AuthRepositoryTest {
             HealthDatabase::class.java
         ).allowMainThreadQueries().build()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun testPolarPreferences(): PolarPreferences {
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(UnconfinedTestDispatcher()),
+            produceFile = {
+                File.createTempFile("test_polar", ".preferences_pb").also { it.deleteOnExit() }
+            }
+        )
+        return PolarPreferences(dataStore)
+    }
+
     private fun apiClient(handler: MockRequestHandler): HealthApiClient {
         val engine = MockEngine(handler)
         return HealthApiClient(
@@ -87,6 +98,33 @@ class AuthRepositoryTest {
         val db = testDb()
         db.userProfileDao().upsert(aUserProfile(userId = userId))
         val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) }, db)
+        assertEquals(AuthState.LoggedIn, repo.authState.first())
+    }
+
+    @Test
+    fun `valid token with profile and polar setup not shown emits NeedsPolarSetup`() = runTest {
+        val store = testTokenStore()
+        val farFuture = java.time.OffsetDateTime.now().plusDays(30).toString()
+        val userId = uuid()
+        store.save("valid-token", farFuture, userId)
+        val db = testDb()
+        db.userProfileDao().upsert(aUserProfile(userId = userId))
+        val polarPrefs = testPolarPreferences() // polarSetupShown defaults to false
+        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) }, db, polarPreferences = polarPrefs)
+        assertEquals(AuthState.NeedsPolarSetup, repo.authState.first())
+    }
+
+    @Test
+    fun `valid token with profile and polar setup shown emits LoggedIn`() = runTest {
+        val store = testTokenStore()
+        val farFuture = java.time.OffsetDateTime.now().plusDays(30).toString()
+        val userId = uuid()
+        store.save("valid-token", farFuture, userId)
+        val db = testDb()
+        db.userProfileDao().upsert(aUserProfile(userId = userId))
+        val polarPrefs = testPolarPreferences()
+        polarPrefs.markPolarSetupShown()
+        val repo = AuthRepository(store, apiClient { respond("", HttpStatusCode.OK) }, db, polarPreferences = polarPrefs)
         assertEquals(AuthState.LoggedIn, repo.authState.first())
     }
 

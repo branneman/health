@@ -34,6 +34,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     )
 
+    private val polarPreferences: PolarPreferences by lazy {
+        PolarPreferences(application.polarDataStore)
+    }
+
     private val authRepository: AuthRepository by lazy {
         val app = application as HealthApplication
         AuthRepository(
@@ -41,6 +45,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             apiClient = apiClient,
             db = app.db,
             loginSyncService = LoginSyncService(api = apiClient, db = app.db),
+            polarPreferences = polarPreferences,
         )
     }
 
@@ -62,6 +67,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             authRepository.login(username, password)
                 .onSuccess { SyncWorker.enqueue(getApplication()) }
                 .onFailure { onError(it.message ?: "Unknown error") }
+        }
+    }
+
+    fun completePolarSetup() {
+        viewModelScope.launch {
+            polarPreferences.markPolarSetupShown()
         }
     }
 
