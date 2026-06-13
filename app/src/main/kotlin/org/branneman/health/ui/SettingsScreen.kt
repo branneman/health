@@ -53,7 +53,10 @@ fun SettingsScreen(onSignOut: () -> Unit) {
     }
 
     LaunchedEffect(polarCallbackPending) {
-        if (polarCallbackPending) viewModel.recheckPolarStatus()
+        if (polarCallbackPending) {
+            (context.applicationContext as HealthApplication).clearPolarCallback()
+            viewModel.recheckPolarStatus()
+        }
     }
 
     Column(
