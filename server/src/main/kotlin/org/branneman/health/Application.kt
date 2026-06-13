@@ -335,10 +335,18 @@ fun Application.module(
             }
 
             get("/out/energy") {
-                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val userId   = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val fromStr  = call.request.queryParameters["from"]
+                val fromDate = fromStr?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
                 val rows = transaction {
                     DailyEnergy.selectAll()
-                        .where { DailyEnergy.userId eq userId }
+                        .where {
+                            if (fromDate != null) {
+                                (DailyEnergy.userId eq userId) and (DailyEnergy.date greaterEq fromDate)
+                            } else {
+                                DailyEnergy.userId eq userId
+                            }
+                        }
                         .orderBy(DailyEnergy.date, SortOrder.DESC)
                         .map {
                             DailyEnergyDto(
@@ -355,19 +363,27 @@ fun Application.module(
             }
 
             get("/out/workouts") {
-                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val userId   = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val fromStr  = call.request.queryParameters["from"]
+                val fromDate = fromStr?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
                 val rows = transaction {
                     Workout.selectAll()
-                        .where { Workout.userId eq userId }
+                        .where {
+                            if (fromDate != null) {
+                                (Workout.userId eq userId) and (Workout.date greaterEq fromDate)
+                            } else {
+                                Workout.userId eq userId
+                            }
+                        }
                         .orderBy(Workout.date, SortOrder.DESC)
                         .map {
                             WorkoutDto(
-                                id          = it[Workout.id].toString(),
-                                date        = it[Workout.date].toString(),
-                                type        = it[Workout.type],
+                                id           = it[Workout.id].toString(),
+                                date         = it[Workout.date].toString(),
+                                type         = it[Workout.type],
                                 durationSecs = it[Workout.durationSecs],
-                                avgHr       = it[Workout.avgHr],
-                                kcal        = it[Workout.kcal],
+                                avgHr        = it[Workout.avgHr],
+                                kcal         = it[Workout.kcal],
                             )
                         }
                 }

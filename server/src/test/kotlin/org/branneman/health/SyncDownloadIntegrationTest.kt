@@ -9,11 +9,15 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.branneman.health.auth.Users
+import org.branneman.health.data.DailyEnergy
+import org.branneman.health.data.Workout
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.upsert
 import org.mindrot.jbcrypt.BCrypt
 import java.util.UUID
 import kotlin.test.*
@@ -126,5 +130,55 @@ class SyncDownloadIntegrationTest {
         }
         assertEquals(HttpStatusCode.OK, r.status)
         assertEquals(0, Json.parseToJsonElement(r.bodyAsText()).jsonArray.size)
+    }
+
+    @Test
+    fun `GET out-energy with from filters by date`() = appTest {
+        val token = login()
+        transaction {
+            DailyEnergy.upsert {
+                it[DailyEnergy.userId]     = testUserId
+                it[DailyEnergy.date]       = java.time.LocalDate.of(2026, 1, 1)
+                it[DailyEnergy.bmrKcal]    = 1600; it[DailyEnergy.activeKcal] = 300
+                it[DailyEnergy.totalKcal]  = 1900; it[DailyEnergy.dataSource] = "polar"
+            }
+            DailyEnergy.upsert {
+                it[DailyEnergy.userId]     = testUserId
+                it[DailyEnergy.date]       = java.time.LocalDate.of(2026, 6, 1)
+                it[DailyEnergy.bmrKcal]    = 1700; it[DailyEnergy.activeKcal] = 400
+                it[DailyEnergy.totalKcal]  = 2100; it[DailyEnergy.dataSource] = "polar"
+            }
+        }
+        val r = client.get("/out/energy?from=2026-06-01") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+        val arr = Json.parseToJsonElement(r.bodyAsText()).jsonArray
+        assertEquals(1, arr.size)
+        assertEquals("2026-06-01", arr[0].jsonObject["date"]!!.jsonPrimitive.content)
+
+        transaction { DailyEnergy.deleteWhere { Op.build { DailyEnergy.userId eq testUserId } } }
+    }
+
+    @Test
+    fun `GET out-workouts with from filters by date`() = appTest {
+        val token = login()
+        transaction {
+            Workout.insert {
+                it[Workout.id]     = UUID.randomUUID(); it[Workout.userId] = testUserId
+                it[Workout.date]   = java.time.LocalDate.of(2026, 1, 1); it[Workout.type] = "CYCLING"
+            }
+            Workout.insert {
+                it[Workout.id]     = UUID.randomUUID(); it[Workout.userId] = testUserId
+                it[Workout.date]   = java.time.LocalDate.of(2026, 6, 1); it[Workout.type] = "RUNNING"
+            }
+        }
+        val r = client.get("/out/workouts?from=2026-06-01") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+        val arr = Json.parseToJsonElement(r.bodyAsText()).jsonArray
+        assertEquals(1, arr.size)
+        assertEquals("2026-06-01", arr[0].jsonObject["date"]!!.jsonPrimitive.content)
+
+        transaction { Workout.deleteWhere { Op.build { Workout.userId eq testUserId } } }
     }
 }
