@@ -9,6 +9,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout ORDER BY date DESC")
     fun observeAll(): Flow<List<WorkoutEntity>>
 
+    @Query("SELECT * FROM workout WHERE userId = :userId ORDER BY date DESC")
+    suspend fun getAll(userId: String): List<WorkoutEntity>
+
     @Upsert
     suspend fun upsertAll(entities: List<WorkoutEntity>)
 
