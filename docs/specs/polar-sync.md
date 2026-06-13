@@ -64,14 +64,33 @@ The Polar access token is server-side only. It must not appear in:
 The app has no path to the token. Every app-facing endpoint (`/polar/connect-url`,
 `/polar/status`, `/out/energy`, `/out/workouts`) returns derived data only.
 
-### Additional env vars
+### Token revocation — incident response
 
-Added to Ansible vault + `env.j2`:
+If the Polar access token is suspected to have leaked:
 
-- `POLAR_CLIENT_ID`
-- `POLAR_CLIENT_SECRET`
-- `POLAR_REDIRECT_URI`
-- `POLAR_TOKEN_ENCRYPTION_KEY` — **new**, required for token encryption
+1. **Immediate (no API token needed):** log into `flow.polar.com` → account settings →
+   connected apps → revoke access for this client. Token is invalidated instantly.
+2. **Alternative:** call `DELETE https://www.polaraccesslink.com/v3/users/{x_user_id}`
+   with the (potentially compromised) Bearer token → 204, token revoked, user
+   de-registered from the client.
+3. **Reconnect:** go through the "Connect Polar" flow in the app to issue a new token.
+4. **If `POLAR_CLIENT_SECRET` is also compromised:** contact `b2bhelpdesk@polar.com`
+   to rotate the client credentials. This invalidates all tokens issued under that
+   `client_id`.
+
+Token encryption (AES-256-GCM) means a DB dump alone is not enough — an attacker
+also needs `POLAR_TOKEN_ENCRYPTION_KEY` from the server environment. Revocation is
+still required on confirmed leak; encryption buys time and limits blast radius.
+
+### Env vars — placement
+
+`POLAR_TOKEN_ENCRYPTION_KEY` and the other Polar secrets are **server-side only**:
+
+- Local development: `.env` in repo root (gitignored), loaded by Docker Compose
+- Production: `ansible/vars/vault.yml` (gitignored) → templated into server `.env`
+  via `ansible/templates/env.j2`
+- **Never** in `local.properties` (that file is Android-build-only — `server.baseUrl`
+  only). Gradle does not read `.env`. No Polar secret can reach the APK.
 
 ---
 
