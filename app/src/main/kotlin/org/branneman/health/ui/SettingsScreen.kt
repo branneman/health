@@ -1,5 +1,7 @@
 package org.branneman.health.ui
 
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.BuildConfig
+import org.branneman.health.HealthApplication
 import org.branneman.health.network.HealthApiClient
 import org.branneman.health.sync.SyncWorker
 import org.branneman.health.sync.lastSyncedAtFlow
@@ -39,9 +43,17 @@ fun SettingsScreen(onSignOut: () -> Unit) {
     var serverReachable by remember { mutableStateOf<Boolean?>(null) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     val lastSyncedAt by context.syncDataStore.lastSyncedAtFlow.collectAsState(initial = null)
+    val viewModel: SettingsViewModel = viewModel()
+    val polarStatus by viewModel.polarStatus.collectAsState()
+    val polarCallbackPending by (context.applicationContext as HealthApplication)
+        .polarCallbackPending.collectAsState()
 
     LaunchedEffect(Unit) {
         serverReachable = HealthApiClient().isServerReachable()
+    }
+
+    LaunchedEffect(polarCallbackPending) {
+        if (polarCallbackPending) viewModel.recheckPolarStatus()
     }
 
     Column(
@@ -71,6 +83,28 @@ fun SettingsScreen(onSignOut: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Polar: ${when (polarStatus) {
+                PolarStatus.Loading -> "Checking…"
+                PolarStatus.Connected -> "Connected"
+                PolarStatus.NotConnected -> "Not connected"
+                PolarStatus.Unknown -> "Unknown"
+            }}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (polarStatus == PolarStatus.NotConnected) {
+            TextButton(
+                onClick = {
+                    viewModel.connectPolar { url ->
+                        CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Connect Polar")
+            }
+        }
         Spacer(modifier = Modifier.height(4.dp))
         TextButton(
             onClick = { SyncWorker.syncNow(context) },
