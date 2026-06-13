@@ -16,6 +16,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
@@ -41,6 +42,11 @@ import org.branneman.health.data.MealTemplateItem
 import org.branneman.health.data.Shortcut
 import org.branneman.health.data.UserProfile
 import org.branneman.health.data.Workout
+import org.branneman.health.polar.HttpPolarApiClient
+import org.branneman.health.polar.PolarApiClient
+import org.branneman.health.polar.PolarSyncService
+import org.branneman.health.polar.TokenCipher
+import org.branneman.health.polar.polarRoutes
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -70,10 +76,31 @@ fun Application.module() {
         driverClassName = "org.postgresql.Driver"
         maximumPoolSize = 5
     })
-    module(dataSource)
+
+    val clientId     = System.getenv("POLAR_CLIENT_ID")            ?: ""
+    val clientSecret = System.getenv("POLAR_CLIENT_SECRET")        ?: ""
+    val redirectUri  = System.getenv("POLAR_REDIRECT_URI")         ?: ""
+    val encKeyBase64 = System.getenv("POLAR_TOKEN_ENCRYPTION_KEY")
+
+    val polarApiClient: PolarApiClient? = if (clientId.isNotEmpty() && clientSecret.isNotEmpty()) {
+        HttpPolarApiClient(
+            httpClient   = buildPolarHttpClient(),
+            clientId     = clientId,
+            clientSecret = clientSecret,
+            redirectUri  = redirectUri,
+        )
+    } else null
+
+    val polarCipher: TokenCipher? = encKeyBase64?.let { TokenCipher.fromBase64(it) }
+
+    module(dataSource, polarApiClient, polarCipher)
 }
 
-fun Application.module(dataSource: javax.sql.DataSource) {
+fun Application.module(
+    dataSource: javax.sql.DataSource,
+    polarApiClient: PolarApiClient? = null,
+    polarCipher: TokenCipher? = null,
+) {
     Database.connect(dataSource)
 
     val authService = AuthService()
@@ -561,6 +588,28 @@ fun Application.module(dataSource: javax.sql.DataSource) {
                 if (dto == null) call.respond(HttpStatusCode.NotFound)
                 else call.respond(dto)
             }
+        }
+
+        if (polarApiClient != null && polarCipher != null) {
+            polarRoutes(polarApiClient, polarCipher)
+        }
+    }
+
+    if (polarApiClient != null && polarCipher != null) {
+        val syncService = PolarSyncService(polarApiClient, dataSource, polarCipher)
+        launch {
+            while (true) {
+                kotlinx.coroutines.delay(kotlin.time.Duration.parse("1h"))
+                runCatching { syncService.syncAll() }
+            }
+        }
+    }
+}
+
+private fun buildPolarHttpClient(): io.ktor.client.HttpClient {
+    return io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
+        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            json()
         }
     }
 }

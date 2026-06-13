@@ -21,24 +21,6 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.test.*
 
-class FakePolarApiClient(
-    private val activities: List<PolarActivity> = emptyList(),
-    private val exercises: List<PolarExercise> = emptyList(),
-    private val throwRateLimitForToken: String? = null,
-) : PolarApiClient {
-    override fun buildAuthorizationUrl(state: String) = "https://example.com?state=$state"
-    override suspend fun exchangeCode(code: String) = PolarTokenResponse("tok", 1L)
-    override suspend fun registerUser(accessToken: String, memberIdUuid: UUID) {}
-    override suspend fun getActivities(accessToken: String, from: LocalDate, to: LocalDate): List<PolarActivity> {
-        if (accessToken == throwRateLimitForToken) throw PolarRateLimitException()
-        return activities
-    }
-    override suspend fun getExercises(accessToken: String): List<PolarExercise> {
-        if (accessToken == throwRateLimitForToken) throw PolarRateLimitException()
-        return exercises
-    }
-}
-
 class PolarSyncServiceTest {
     companion object {
         private val ds = TestDatabase.dataSource
