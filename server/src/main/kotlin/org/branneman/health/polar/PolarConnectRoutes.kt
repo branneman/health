@@ -50,7 +50,7 @@ fun Route.polarRoutes(polarApiClient: PolarApiClient, cipher: TokenCipher) {
         val state = call.parameters["state"]
 
         if (code == null || state == null) {
-            call.respondText(errorHtml("Missing parameters"), ContentType.Text.Html, HttpStatusCode.BadRequest)
+            call.respondText(errorHtml(), ContentType.Text.Html, HttpStatusCode.BadRequest)
             return@get
         }
 
@@ -64,12 +64,12 @@ fun Route.polarRoutes(polarApiClient: PolarApiClient, cipher: TokenCipher) {
         }
 
         if (userId == null) {
-            call.respondText(errorHtml("Invalid or expired state"), ContentType.Text.Html, HttpStatusCode.BadRequest)
+            call.respondText(errorHtml(), ContentType.Text.Html, HttpStatusCode.BadRequest)
             return@get
         }
 
         val tokenResponse = runCatching { polarApiClient.exchangeCode(code) }.getOrElse {
-            call.respondText(errorHtml("Token exchange failed"), ContentType.Text.Html, HttpStatusCode.InternalServerError)
+            call.respondText(errorHtml(), ContentType.Text.Html, HttpStatusCode.InternalServerError)
             return@get
         }
 
@@ -104,7 +104,7 @@ private fun successHtml() = """
 </html>
 """.trimIndent()
 
-private fun errorHtml(message: String) = """
+private fun errorHtml() = """
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Error</title></head>

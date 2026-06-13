@@ -17,6 +17,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.hours
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
@@ -599,7 +600,7 @@ fun Application.module(
         val syncService = PolarSyncService(polarApiClient, dataSource, polarCipher)
         launch {
             while (true) {
-                kotlinx.coroutines.delay(kotlin.time.Duration.parse("1h"))
+                delay(1.hours)
                 runCatching { syncService.syncAll() }
             }
         }
