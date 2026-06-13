@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.branneman.health.db.HealthDatabase
 
 private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -22,6 +23,16 @@ class HealthApplication : Application() {
 
     lateinit var db: HealthDatabase
         private set
+
+    val polarCallbackPending = MutableStateFlow(false)
+
+    fun onPolarCallback() {
+        polarCallbackPending.value = true
+    }
+
+    fun clearPolarCallback() {
+        polarCallbackPending.value = false
+    }
 
     override fun onCreate() {
         super.onCreate()
