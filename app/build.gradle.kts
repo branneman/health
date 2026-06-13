@@ -43,6 +43,7 @@ dependencies {
     androidTestImplementation(libs.compose.uiTestJunit4)
     androidTestImplementation(libs.androidx.testExt.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation(libs.androidx.browser)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
 

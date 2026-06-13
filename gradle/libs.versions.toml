@@ -83,6 +83,7 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 workmanager = { module = "androidx.work:work-runtime-ktx", version.ref = "workmanager" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
+androidx-browser = { group = "androidx.browser", name = "browser", version = "1.8.0" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

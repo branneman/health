@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.auth.AuthState
 import org.branneman.health.auth.AuthViewModel
+import org.branneman.health.ui.ConnectPolarScreen
 import org.branneman.health.ui.DashboardScreen
 import org.branneman.health.ui.LogScreen
 import org.branneman.health.ui.LoginScreen
@@ -87,9 +88,9 @@ fun App() {
 
             AuthState.NeedsOnboarding -> OnboardingScreen()
 
-            AuthState.NeedsPolarSetup -> {
-                // Polar setup screen — placeholder until that screen is implemented
-            }
+            AuthState.NeedsPolarSetup -> ConnectPolarScreen(
+                onSetupComplete = { authViewModel.completePolarSetup() }
+            )
 
             AuthState.LoggedIn -> MainNav(authViewModel)
         }
