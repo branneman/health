@@ -15,6 +15,7 @@ import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.LogEntryEntity
+import org.branneman.health.db.entities.MealTemplateEntity
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
@@ -24,6 +25,9 @@ class LogViewModel(application: Application) : AndroidViewModel(application) {
     private val tokenStore = TokenStore(application.authDataStore)
 
     private val _undoPending = MutableStateFlow<Pair<LogEntryEntity, SyncStatus>?>(null)
+
+    val pinnedTemplates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observePinned()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val entries: StateFlow<List<LogEntryEntity>> = db.logEntryDao().observeAll()
         .map { all ->
@@ -42,6 +46,22 @@ class LogViewModel(application: Application) : AndroidViewModel(application) {
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = label.trim().ifEmpty { null },
+            )
+            db.logEntryDao().upsert(entity)
+            _undoPending.value = entity to SyncStatus.PENDING_CREATE
+        }
+    }
+
+    fun logFromTemplate(template: MealTemplateEntity) {
+        val kcal = template.quickAddKcal ?: return
+        viewModelScope.launch {
+            val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val entity = LogEntryEntity(
+                userId        = userId,
+                loggedAt      = OffsetDateTime.now().toString(),
+                mealType      = "unknown",
+                quickAddKcal  = kcal,
+                quickAddLabel = template.name,
             )
             db.logEntryDao().upsert(entity)
             _undoPending.value = entity to SyncStatus.PENDING_CREATE
