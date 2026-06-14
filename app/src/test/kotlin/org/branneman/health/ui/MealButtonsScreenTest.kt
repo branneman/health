@@ -71,4 +71,33 @@ class MealButtonsScreenTest {
         compose.onNodeWithText("Usual snack").assertDoesNotExist()
         compose.onNodeWithText("Usual lunch").assertExists()
     }
+
+    @Test fun `adding a row via dialog then saving passes the new row to onSave`() {
+        var saved: List<MealTemplateEntity>? = null
+        render(onSave = { saved = it })
+
+        compose.onNodeWithText("Add button").performClick()
+        compose.onNodeWithText("Name").performTextInput("Late snack")
+        compose.onAllNodesWithText("kcal")[0].performTextInput("200")
+        compose.onNodeWithText("Add").performClick()
+
+        compose.onNodeWithText("Save").performClick()
+
+        assertEquals(1, saved?.size)
+        assertEquals("Late snack", saved?.first()?.name)
+        assertEquals(200, saved?.first()?.quickAddKcal)
+    }
+
+    @Test fun `saving after deleting a row excludes it from onSave`() {
+        val snack = aMealTemplate(name = "Usual snack", sortOrder = 0, quickAddKcal = 200)
+        val lunch = aMealTemplate(name = "Usual lunch", sortOrder = 1, quickAddKcal = 600)
+        var saved: List<MealTemplateEntity>? = null
+        render(draft = listOf(snack, lunch), onSave = { saved = it })
+
+        compose.onNodeWithContentDescription("Delete Usual snack").performClick()
+        compose.onNodeWithText("Save").performClick()
+
+        assertEquals(1, saved?.size)
+        assertEquals("Usual lunch", saved?.first()?.name)
+    }
 }

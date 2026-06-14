@@ -18,6 +18,7 @@ import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -97,12 +98,12 @@ class LogViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
-private fun dateFlow(): Flow<LocalDate> = flow {
+internal fun dateFlow(clock: Clock = Clock.systemDefaultZone()): Flow<LocalDate> = flow {
     while (true) {
-        val today = LocalDate.now()
+        val today = LocalDate.now(clock)
         emit(today)
         val millisUntilMidnight = ChronoUnit.MILLIS.between(
-            LocalDateTime.now(),
+            LocalDateTime.now(clock),
             today.plusDays(1).atStartOfDay(),
         )
         kotlinx.coroutines.delay(millisUntilMidnight)
