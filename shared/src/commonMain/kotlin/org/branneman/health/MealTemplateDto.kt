@@ -12,5 +12,7 @@ data class MealTemplateItemDto(
 data class MealTemplateDto(
     val id: String,
     val name: String,
+    val sortOrder: Int?,
+    val quickAddKcal: Int?,
     val items: List<MealTemplateItemDto>,
 )

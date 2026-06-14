@@ -436,13 +436,45 @@ fun Application.module(
                                 )
                             }
                         MealTemplateDto(
-                            id    = tRow[MealTemplate.id].toString(),
-                            name  = tRow[MealTemplate.name],
-                            items = items,
+                            id           = tRow[MealTemplate.id].toString(),
+                            name         = tRow[MealTemplate.name],
+                            sortOrder    = tRow[MealTemplate.sortOrder],
+                            quickAddKcal = tRow[MealTemplate.quickAddKcal],
+                            items        = items,
                         )
                     }
                 }
                 call.respond(templates)
+            }
+
+            put("/in/templates") {
+                val userId   = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val incoming = call.receive<List<MealTemplateDto>>()
+                val saved = transaction {
+                    val existingIds = MealTemplate.select(MealTemplate.id)
+                        .where { MealTemplate.userId eq userId }
+                        .map { it[MealTemplate.id] }
+                    if (existingIds.isNotEmpty()) {
+                        MealTemplateItem.deleteWhere {
+                            Op.build { templateId inList existingIds }
+                        }
+                    }
+                    MealTemplate.deleteWhere { Op.build { MealTemplate.userId eq userId } }
+                    incoming.map { dto ->
+                        val newId = UUID.randomUUID()
+                        MealTemplate.insert {
+                            it[MealTemplate.id]           = newId
+                            it[MealTemplate.userId]       = userId
+                            it[MealTemplate.name]         = dto.name
+                            it[MealTemplate.quickAddKcal] = dto.quickAddKcal
+                            it[MealTemplate.sortOrder]    = dto.sortOrder
+                            it[MealTemplate.createdAt]    = OffsetDateTime.now()
+                            it[MealTemplate.updatedAt]    = OffsetDateTime.now()
+                        }
+                        dto.copy(id = newId.toString())
+                    }
+                }
+                call.respond(HttpStatusCode.OK, saved)
             }
 
             get("/in/log") {
