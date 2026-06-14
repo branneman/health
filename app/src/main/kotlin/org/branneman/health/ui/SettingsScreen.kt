@@ -38,10 +38,12 @@ import java.time.format.DateTimeFormatter
 private val syncTimestampFormatter = DateTimeFormatter.ofPattern("d MMM, HH:mm")
 
 @Composable
-fun SettingsScreen(onSignOut: () -> Unit) {
+fun SettingsScreen(
+    onSignOut: () -> Unit,
+    onNavigateMealButtons: () -> Unit = {},
+) {
     val context = LocalContext.current
     var serverReachable by remember { mutableStateOf<Boolean?>(null) }
-    var showSignOutConfirm by remember { mutableStateOf(false) }
     val lastSyncedAt by context.syncDataStore.lastSyncedAtFlow.collectAsState(initial = null)
     val viewModel: SettingsViewModel = viewModel()
     val polarStatus by viewModel.polarStatus.collectAsState()
@@ -58,6 +60,37 @@ fun SettingsScreen(onSignOut: () -> Unit) {
             viewModel.recheckPolarStatus()
         }
     }
+
+    SettingsContent(
+        onNavigateMealButtons = onNavigateMealButtons,
+        onSignOut             = onSignOut,
+        serverReachable       = serverReachable,
+        lastSyncedAt          = lastSyncedAt,
+        polarStatus           = polarStatus,
+        onConnectPolar        = if (polarStatus == PolarStatus.NotConnected) {
+            {
+                viewModel.connectPolar { url ->
+                    CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+                }
+            }
+        } else null,
+        onSyncNow             = { SyncWorker.syncNow(context) },
+        versionName           = BuildConfig.VERSION_NAME,
+    )
+}
+
+@Composable
+fun SettingsContent(
+    onNavigateMealButtons: () -> Unit,
+    onSignOut: () -> Unit,
+    serverReachable: Boolean? = null,
+    lastSyncedAt: Long? = null,
+    polarStatus: PolarStatus = PolarStatus.Unknown,
+    onConnectPolar: (() -> Unit)? = null,
+    onSyncNow: (() -> Unit)? = null,
+    versionName: String = "",
+) {
+    var showSignOutConfirm by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -96,13 +129,9 @@ fun SettingsScreen(onSignOut: () -> Unit) {
             }}",
             style = MaterialTheme.typography.bodyMedium,
         )
-        if (polarStatus == PolarStatus.NotConnected) {
+        if (onConnectPolar != null) {
             TextButton(
-                onClick = {
-                    viewModel.connectPolar { url ->
-                        CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
-                    }
-                },
+                onClick  = onConnectPolar,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Connect Polar")
@@ -110,14 +139,22 @@ fun SettingsScreen(onSignOut: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(4.dp))
         TextButton(
-            onClick = { SyncWorker.syncNow(context) },
+            onClick  = onNavigateMealButtons,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Sync now")
+            Text("Meal buttons →")
+        }
+        if (onSyncNow != null) {
+            TextButton(
+                onClick  = onSyncNow,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Sync now")
+            }
         }
         Spacer(modifier = Modifier.weight(1f))
         Text(
-            text = "Version: ${BuildConfig.VERSION_NAME}",
+            text  = "Version: $versionName",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -125,7 +162,7 @@ fun SettingsScreen(onSignOut: () -> Unit) {
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(
-            onClick = { showSignOutConfirm = true },
+            onClick  = { showSignOutConfirm = true },
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Sign out", color = MaterialTheme.colorScheme.error)
@@ -136,7 +173,7 @@ fun SettingsScreen(onSignOut: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showSignOutConfirm = false },
             title = { Text("Sign out?") },
-            text = { Text("Your data will be removed from this device. It's all saved on the server.") },
+            text  = { Text("Your data will be removed from this device. It's all saved on the server.") },
             confirmButton = {
                 TextButton(onClick = {
                     showSignOutConfirm = false
