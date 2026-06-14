@@ -138,7 +138,7 @@ screenshot tests — they assert on what the user sees and can interact with, no
 `WorkoutDaoTest`, `SportTonightDaoTest`), `LoginSyncServiceTest`, `LogEntrySyncServiceTest`,
 `LoginScreenTest`, `OnboardingScreenTest`, `DashboardScreenTest`, `LogScreenTest`.
 
-**What is still missing:** UI tests for `SettingsScreen` — to be written alongside story 15.
+**What is still missing:** UI tests for `SettingsScreen` — to be written alongside story 16.
 
 ---
 

@@ -16,7 +16,7 @@
 
 | Action | File |
 |--------|------|
-| Create | `server/src/main/resources/db/migration/V8__meal_template_one_tap.sql` |
+| Create | `server/src/main/resources/db/migration/V9__meal_template_one_tap.sql` |
 | Modify | `server/src/main/kotlin/org/branneman/health/data/Tables.kt` |
 | Modify | `shared/src/commonMain/kotlin/org/branneman/health/MealTemplateDto.kt` |
 | Modify | `server/src/main/kotlin/org/branneman/health/Application.kt` |
@@ -48,13 +48,13 @@
 ## Task 1: Flyway migration + Exposed table
 
 **Files:**
-- Create: `server/src/main/resources/db/migration/V8__meal_template_one_tap.sql`
+- Create: `server/src/main/resources/db/migration/V9__meal_template_one_tap.sql`
 - Modify: `server/src/main/kotlin/org/branneman/health/data/Tables.kt`
 
 - [ ] **Step 1: Create the Flyway migration**
 
 ```sql
--- V8__meal_template_one_tap.sql
+-- V9__meal_template_one_tap.sql
 ALTER TABLE meal_template
   ADD COLUMN quick_add_kcal INTEGER,
   ADD COLUMN sort_order INTEGER;
@@ -91,7 +91,7 @@ Expected: `BUILD SUCCESSFUL`
 - [ ] **Step 4: Commit**
 
 ```bash
-git add server/src/main/resources/db/migration/V8__meal_template_one_tap.sql \
+git add server/src/main/resources/db/migration/V9__meal_template_one_tap.sql \
         server/src/main/kotlin/org/branneman/health/data/Tables.kt
 git commit -m "feat(server): V8 migration — add sort_order and quick_add_kcal to meal_template"
 ```
@@ -402,16 +402,16 @@ Add after `observeAll()`:
 fun observePinned(): Flow<List<MealTemplateEntity>>
 ```
 
-- [ ] **Step 3: Bump Room schema version to 3 in `HealthDatabase.kt`**
+- [ ] **Step 3: Bump Room schema version to 4 in `HealthDatabase.kt`**
 
-Change `version = 2` to `version = 3`.
+Change `version = 3` to `version = 4`.
 
-- [ ] **Step 4: Add `MIGRATION_2_3` in `HealthApplication.kt`**
+- [ ] **Step 4: Add `MIGRATION_3_4` in `HealthApplication.kt`**
 
 Add after `MIGRATION_1_2`:
 
 ```kotlin
-private val MIGRATION_2_3 = object : Migration(2, 3) {
+private val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE meal_template ADD COLUMN sortOrder INTEGER")
         db.execSQL("ALTER TABLE meal_template ADD COLUMN quickAddKcal INTEGER")
@@ -423,7 +423,7 @@ Update the DB builder call to include both migrations:
 
 ```kotlin
 db = Room.databaseBuilder(this, HealthDatabase::class.java, "health.db")
-    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+    .addMigrations(MIGRATION_1_2, MIGRATION_3_4)
     .build()
 ```
 

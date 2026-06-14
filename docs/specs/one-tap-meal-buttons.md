@@ -20,7 +20,7 @@ stories; this story sets up the mechanism.
   entries; the template carries no fixed meal-type slot.
 
 Out of scope: ingredient-based templates, portion adjusters, the template browse list
-(story 12).
+(story 13).
 
 ---
 
@@ -38,7 +38,7 @@ CREATE UNIQUE INDEX ON meal_template (user_id, sort_order)
 ```
 
 `sort_order IS NOT NULL` marks a template as a one-tap button and defines its position
-in the row. `sort_order IS NULL` means browseable-only (future story 12). The partial
+in the row. `sort_order IS NULL` means browseable-only (future story 13). The partial
 unique index enforces no duplicate positions per user.
 
 ### Shared DTO
@@ -208,4 +208,4 @@ email `mealtemplates-test@test.local`).
 | `MealTemplateSyncServiceTest` (new) | `pushPending` calls `PUT /in/templates` with pending rows; `pull` upserts server response into Room; follows `MockEngine` pattern from `LogEntrySyncServiceTest` |
 | `LogScreenTest` (extend) | Empty state: "Set up meal buttons" button visible; configured state: template buttons visible in order; tap creates entry + snackbar with undo |
 | `MealButtonsScreenTest` (new) | Renders configured templates; add/delete/reorder updates list; Save disabled when name empty or kcal ≤ 0; Save enabled triggers `PENDING_UPDATE` |
-| `SettingsScreenTest` (new) | "Meal buttons" row is present and navigates to `MealButtonsScreen` — open this test class now per manifesto rule; full Settings coverage to follow in story 15 |
+| `SettingsScreenTest` (new) | "Meal buttons" row is present and navigates to `MealButtonsScreen` — open this test class now per manifesto rule; full Settings coverage to follow in story 16 |
