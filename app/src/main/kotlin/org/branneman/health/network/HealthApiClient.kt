@@ -129,6 +129,13 @@ class HealthApiClient(
             header(HttpHeaders.Authorization, "Bearer $token")
         }.body()
 
+    suspend fun putTemplates(token: String, templates: List<MealTemplateDto>): List<MealTemplateDto> =
+        client.put("$baseUrl/in/templates") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(templates)
+        }.body()
+
     suspend fun getLogEntries(token: String, from: String): List<LogEntryDto> =
         client.get("$baseUrl/in/log") {
             header(HttpHeaders.Authorization, "Bearer $token")
