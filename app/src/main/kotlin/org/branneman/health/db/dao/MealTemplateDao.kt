@@ -11,6 +11,9 @@ interface MealTemplateDao {
     @Query("SELECT * FROM meal_template WHERE syncStatus != 'PENDING_DELETE'")
     fun observeAll(): Flow<List<MealTemplateEntity>>
 
+    @Query("SELECT * FROM meal_template WHERE sortOrder IS NOT NULL AND syncStatus != 'PENDING_DELETE' ORDER BY sortOrder ASC")
+    fun observePinned(): Flow<List<MealTemplateEntity>>
+
     @Query("SELECT * FROM meal_template WHERE syncStatus = :status")
     suspend fun getByStatus(status: SyncStatus): List<MealTemplateEntity>
 

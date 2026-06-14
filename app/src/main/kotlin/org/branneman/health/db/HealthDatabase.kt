@@ -19,7 +19,7 @@ import org.branneman.health.db.entities.*
         UserProfileEntity::class,
         SportTonightEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class HealthDatabase : RoomDatabase() {

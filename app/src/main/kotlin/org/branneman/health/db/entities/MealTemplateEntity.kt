@@ -10,6 +10,8 @@ data class MealTemplateEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val userId: String,
     val name: String,
+    val sortOrder: Int? = null,
+    val quickAddKcal: Int? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
     val updatedAt: Long = System.currentTimeMillis(),
 )

@@ -26,6 +26,13 @@ private val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+private val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE meal_template ADD COLUMN sortOrder INTEGER")
+        db.execSQL("ALTER TABLE meal_template ADD COLUMN quickAddKcal INTEGER")
+    }
+}
+
 class HealthApplication : Application() {
 
     lateinit var db: HealthDatabase
@@ -44,7 +51,7 @@ class HealthApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         db = Room.databaseBuilder(this, HealthDatabase::class.java, "health.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 }
