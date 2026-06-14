@@ -39,8 +39,12 @@ class LoginSyncService(
         val templates = api.getTemplates(token)
         db.mealTemplateDao().upsertAll(templates.map { dto ->
             MealTemplateEntity(
-                id = dto.id, userId = userId, name = dto.name,
-                syncStatus = SyncStatus.SYNCED
+                id           = dto.id,
+                userId       = userId,
+                name         = dto.name,
+                sortOrder    = dto.sortOrder,
+                quickAddKcal = dto.quickAddKcal,
+                syncStatus   = SyncStatus.SYNCED,
             )
         })
         db.mealTemplateDao().upsertAllItems(templates.flatMap { dto ->
