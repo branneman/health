@@ -1,9 +1,11 @@
 package org.branneman.health.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -17,13 +19,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.db.entities.LogEntryEntity
+import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.log.LogViewModel
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun LogScreen(viewModel: LogViewModel = viewModel()) {
+fun LogScreen(
+    viewModel: LogViewModel = viewModel(),
+    onSetUpMealButtons: () -> Unit = {},
+) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val pinnedTemplates by viewModel.pinnedTemplates.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var lastAction by remember { mutableStateOf<LogAction?>(null) }
 
@@ -45,16 +52,22 @@ fun LogScreen(viewModel: LogViewModel = viewModel()) {
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         LogContent(
-            entries  = entries,
-            onAdd    = { kcal, label ->
+            entries            = entries,
+            pinnedTemplates    = pinnedTemplates,
+            onAdd              = { kcal, label ->
                 viewModel.addEntry(kcal, label)
                 lastAction = LogAction.Added("Logged")
             },
-            onDelete = { entry ->
+            onDelete           = { entry ->
                 viewModel.deleteEntry(entry)
                 lastAction = LogAction.Deleted("Deleted")
             },
-            modifier = Modifier.padding(padding),
+            onSetUpMealButtons = onSetUpMealButtons,
+            onLogTemplate      = { template ->
+                viewModel.logFromTemplate(template)
+                lastAction = LogAction.Added("Logged")
+            },
+            modifier           = Modifier.padding(padding),
         )
     }
 }
@@ -68,8 +81,11 @@ private sealed interface LogAction {
 @Composable
 fun LogContent(
     entries: List<LogEntryEntity>,
+    pinnedTemplates: List<MealTemplateEntity> = emptyList(),
     onAdd: (kcal: String, label: String) -> Unit,
     onDelete: (LogEntryEntity) -> Unit,
+    onSetUpMealButtons: () -> Unit = {},
+    onLogTemplate: (MealTemplateEntity) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var kcal by remember { mutableStateOf("") }
@@ -90,6 +106,31 @@ fun LogContent(
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
+        // --- Meal button row ---
+        if (pinnedTemplates.isEmpty()) {
+            OutlinedButton(
+                onClick  = onSetUpMealButtons,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Set up meal buttons →")
+            }
+        } else {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .fillMaxWidth(),
+            ) {
+                pinnedTemplates.forEach { template ->
+                    Button(onClick = { onLogTemplate(template) }) {
+                        Text(template.name)
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment     = Alignment.CenterVertically,

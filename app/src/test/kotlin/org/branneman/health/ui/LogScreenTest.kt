@@ -4,8 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import kotlin.test.assertTrue
+import org.branneman.health.aMealTemplate
 import org.branneman.health.aQuickAddEntry
 import org.branneman.health.db.entities.LogEntryEntity
+import org.branneman.health.db.entities.MealTemplateEntity
+import kotlin.test.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,6 +71,57 @@ class LogScreenTest {
         compose.onNodeWithText("Breakfast", substring = true).performClick()
         compose.onNodeWithText("Delete").performClick()
         assert(deleted?.id == entry.id)
+    }
+
+    private fun renderWithTemplates(
+        entries: List<LogEntryEntity> = emptyList(),
+        pinned: List<MealTemplateEntity> = emptyList(),
+        onAdd: (String, String) -> Unit = { _, _ -> },
+        onDelete: (LogEntryEntity) -> Unit = {},
+        onSetUpMealButtons: () -> Unit = {},
+        onLogTemplate: (MealTemplateEntity) -> Unit = {},
+    ) {
+        compose.setContent {
+            MaterialTheme {
+                LogContent(
+                    entries            = entries,
+                    pinnedTemplates    = pinned,
+                    onAdd              = onAdd,
+                    onDelete           = onDelete,
+                    onSetUpMealButtons = onSetUpMealButtons,
+                    onLogTemplate      = onLogTemplate,
+                )
+            }
+        }
+    }
+
+    @Test fun `shows set-up button when no pinned templates`() {
+        renderWithTemplates(pinned = emptyList())
+        compose.onNodeWithText("Set up meal buttons", substring = true).assertExists()
+    }
+
+    @Test fun `shows template buttons when pinned templates exist`() {
+        val template = aMealTemplate(name = "Usual breakfast", sortOrder = 0, quickAddKcal = 450)
+        renderWithTemplates(pinned = listOf(template))
+        compose.onNodeWithText("Usual breakfast").assertExists()
+    }
+
+    @Test fun `tapping a template button calls onLogTemplate`() {
+        var logged: MealTemplateEntity? = null
+        val template = aMealTemplate(name = "Usual breakfast", sortOrder = 0, quickAddKcal = 450)
+        renderWithTemplates(
+            pinned = listOf(template),
+            onLogTemplate = { logged = it },
+        )
+        compose.onNodeWithText("Usual breakfast").performClick()
+        assertEquals(template.id, logged?.id)
+    }
+
+    @Test fun `tapping set-up button calls onSetUpMealButtons`() {
+        var tapped = false
+        renderWithTemplates(pinned = emptyList(), onSetUpMealButtons = { tapped = true })
+        compose.onNodeWithText("Set up meal buttons", substring = true).performClick()
+        assertTrue(tapped)
     }
 
     @Test fun `tapping Add calls onAdd with kcal and label`() {
