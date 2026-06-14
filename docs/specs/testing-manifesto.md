@@ -80,7 +80,7 @@ another class.
 | 6 | `...000006` | `MultiUserIsolationTest` (user A) | `isolation-a@test.local` |
 | 7 | `...000007` | `MultiUserIsolationTest` (user B) | `isolation-b@test.local` |
 | 8 | `...000008` | `SummaryIntegrationTest` | `summary-test@test.local` |
-| 9 | `...000009` | *(free)* | |
+| 9 | `...000009` | `MealTemplatesIntegrationTest` | `mealtemplates-test@test.local` |
 
 **`init` block pattern** — the `health_test` database is persistent, so a UUID from a previous run
 may still exist with a stale email, or vice versa. Delete by **both** UUID and email before
