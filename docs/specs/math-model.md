@@ -85,52 +85,10 @@ numbers only affect the daytime budget preview.
 
 ## 2. Daily calorie budget
 
-### 2.1 Formula
-
-```
-budget_remaining = calories_out_today − D − calories_in_today
-```
-
-Where:
-
-- `D` = target daily deficit in kcal, configured at onboarding (recommended: 250–400)
-- `calories_in_today` = sum of all logged food and drink entries for today
-- `calories_out_today` = see §2.2
-
-A negative result means over budget. Displayed neutrally as `−X kcal` — no red
-color, no alarm. The daily zone is always calm (see `docs/ux/1-principles.md`).
-
-### 2.2 calories_out_today — source priority
-
-1. **Today's Polar total** (if synced for today) — used as-is, most accurate
-2. **Yesterday's Polar total** (if today's sync not yet received) — used as proxy,
-   shown with note "based on yesterday's activity"
-3. **BMR × activity_multiplier** — bootstrap fallback, shown with note "Polar not
-   connected — using estimate"
-
-### 2.3 Sport-tonight adjustment
-
-When the sport-tonight toggle is active:
-
-```
-calories_out_today += sport_estimate_kcal
-```
-
-Budget label: `X kcal remaining (includes planned climb ~600 kcal)`
-
-After Polar syncs the actual session data, the estimate is silently replaced by the
-real figure and `budget_remaining` recalculates. If the actual is higher than the
-estimate (harder session), the user gains remaining budget; if lower, it decreases.
-
-### 2.4 Display states
-
-| State                    | Label                                               |
-|--------------------------|-----------------------------------------------------|
-| Normal (Polar connected) | `X kcal remaining`                                  |
-| Over budget              | `−X kcal over budget`                               |
-| Sport toggle active      | `X kcal remaining (includes planned climb ~N kcal)` |
-| Using yesterday's Polar  | `X kcal remaining (based on yesterday)`             |
-| Bootstrap (no Polar)     | `X kcal remaining (estimated)`                      |
+> **Superseded.** The static formula that was here (§2.1–2.4) has been replaced by
+> the time-aware dynamic budget model. See `docs/specs/dynamic-budget.md` for the
+> full specification: formula, eating fraction, sport/non-sport buckets, post-workout
+> mode, and display states.
 
 ---
 
