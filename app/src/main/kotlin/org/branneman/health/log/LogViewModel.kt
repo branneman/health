@@ -3,11 +3,13 @@ package org.branneman.health.log
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.branneman.health.HealthApplication
@@ -17,7 +19,9 @@ import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 class LogViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -29,10 +33,9 @@ class LogViewModel(application: Application) : AndroidViewModel(application) {
     val pinnedTemplates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observePinned()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val entries: StateFlow<List<LogEntryEntity>> = db.logEntryDao().observeAll()
-        .map { all ->
-            val today = LocalDate.now().toString()
-            all.filter { it.loggedAt.startsWith(today) }
+    val entries: StateFlow<List<LogEntryEntity>> =
+        combine(db.logEntryDao().observeAll(), dateFlow()) { all, today ->
+            all.filter { it.loggedAt.startsWith(today.toString()) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -91,5 +94,17 @@ class LogViewModel(application: Application) : AndroidViewModel(application) {
                 _undoPending.value = null
             }
         }
+    }
+}
+
+private fun dateFlow(): Flow<LocalDate> = flow {
+    while (true) {
+        val today = LocalDate.now()
+        emit(today)
+        val millisUntilMidnight = ChronoUnit.MILLIS.between(
+            LocalDateTime.now(),
+            today.plusDays(1).atStartOfDay(),
+        )
+        kotlinx.coroutines.delay(millisUntilMidnight)
     }
 }
