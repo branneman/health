@@ -51,11 +51,13 @@ object FoodItem : Table("food_item") {
 }
 
 object MealTemplate : Table("meal_template") {
-    val id        = uuid("id")
-    val userId    = uuid("user_id")
-    val name      = text("name")
-    val createdAt = timestampWithTimeZone("created_at")
-    val updatedAt = timestampWithTimeZone("updated_at")
+    val id           = uuid("id")
+    val userId       = uuid("user_id")
+    val name         = text("name")
+    val quickAddKcal = integer("quick_add_kcal").nullable()
+    val sortOrder    = integer("sort_order").nullable()
+    val createdAt    = timestampWithTimeZone("created_at")
+    val updatedAt    = timestampWithTimeZone("updated_at")
     override val primaryKey = PrimaryKey(id)
 }
 
