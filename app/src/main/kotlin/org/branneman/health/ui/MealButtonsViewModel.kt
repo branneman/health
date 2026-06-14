@@ -63,13 +63,12 @@ class MealButtonsViewModel(application: Application) : AndroidViewModel(applicat
         _draft.value = current.reindexed()
     }
 
-    fun save() {
+    fun save(rows: List<MealTemplateEntity>) {
         val uid = userId ?: return
         viewModelScope.launch {
-            val current = _draft.value ?: return@launch
             db.mealTemplateDao().deleteAllItemsForUser(uid)
             db.mealTemplateDao().deleteAllForUser(uid)
-            current.forEachIndexed { i, entity ->
+            rows.forEachIndexed { i, entity ->
                 db.mealTemplateDao().upsert(entity.copy(userId = uid, sortOrder = i,
                     syncStatus = SyncStatus.PENDING_CREATE))
             }

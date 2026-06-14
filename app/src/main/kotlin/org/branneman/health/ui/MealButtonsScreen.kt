@@ -24,7 +24,10 @@ fun MealButtonsScreen(
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     MealButtonsContent(
         draft  = draft ?: emptyList(),
-        onSave = { viewModel.save() },
+        onSave = { rows ->
+            viewModel.save(rows)
+            onBack()
+        },
         onBack = onBack,
     )
 }
