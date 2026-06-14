@@ -78,6 +78,7 @@ class OnboardingRepositoryTest {
             sex = "male", heightCm = 177, currentWeightKg = 84.0,
             goalWeightKg = 74.0, birthYear = 1986,
             activityLevel = "lightly_active", targetDeficit = 300,
+            wakeTime = "07:00", bedtime = "23:00",
         )
         assertTrue(result.isSuccess)
         assertNotNull(db.userProfileDao().get())
@@ -99,6 +100,7 @@ class OnboardingRepositoryTest {
             sex = "male", heightCm = 177, currentWeightKg = 84.0,
             goalWeightKg = 74.0, birthYear = 1986,
             activityLevel = "lightly_active", targetDeficit = 300,
+            wakeTime = "07:00", bedtime = "23:00",
         )
         assertTrue(result.isFailure)
         assertNull(db.userProfileDao().get())
@@ -127,6 +129,7 @@ class OnboardingRepositoryTest {
             sex = "male", heightCm = 177, currentWeightKg = 84.0,
             goalWeightKg = 74.0, birthYear = 1986,
             activityLevel = "lightly_active", targetDeficit = 300,
+            wakeTime = "07:00", bedtime = "23:00",
         )
         assertTrue(result.isFailure)
         assertNull(db.userProfileDao().get())
@@ -149,6 +152,7 @@ class OnboardingRepositoryTest {
             sex = "male", heightCm = 177, currentWeightKg = 84.0,
             goalWeightKg = 74.0, birthYear = 1986,
             activityLevel = "lightly_active", targetDeficit = 300,
+            wakeTime = "07:00", bedtime = "23:00",
         )
         assertTrue(result.isSuccess)
         assertNotNull(db.userProfileDao().get())

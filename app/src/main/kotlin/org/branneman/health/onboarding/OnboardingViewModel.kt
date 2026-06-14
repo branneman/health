@@ -29,6 +29,8 @@ data class OnboardingUiState(
     val age: String = "",
     val activityLevel: String = "lightly_active",
     val targetDeficit: Int = 300,
+    val wakeTime: String = "07:00",
+    val bedtime: String = "23:00",
     val isSaving: Boolean = false,
     val saveError: String? = null,
 ) {
@@ -107,6 +109,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                 birthYear       = LocalDate.now().year - age,
                 activityLevel   = state.activityLevel,
                 targetDeficit   = state.targetDeficit,
+                wakeTime        = state.wakeTime,
+                bedtime         = state.bedtime,
             )
 
             if (result.isFailure) {

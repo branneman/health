@@ -15,6 +15,14 @@ import org.branneman.health.onboarding.OnboardingUiState
 import org.branneman.health.onboarding.OnboardingViewModel
 import kotlin.math.roundToInt
 
+internal fun adjustTime(time: String, deltaMinutes: Int): String {
+    val parts = time.split(":")
+    val h = parts.getOrNull(0)?.toIntOrNull() ?: 7
+    val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+    val total = ((h * 60 + m + deltaMinutes) % (24 * 60) + 24 * 60) % (24 * 60)
+    return "%02d:%02d".format(total / 60, total % 60)
+}
+
 private data class ActivityOption(val value: String, val label: String, val subtitle: String)
 
 private val activityOptions = listOf(
@@ -42,6 +50,12 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = viewModel()) {
             state    = state,
             onUpdate = viewModel::update,
             onBack   = viewModel::goBack,
+            onNext   = viewModel::goNext,
+        )
+        4 -> OnboardingStep4(
+            state    = state,
+            onUpdate = viewModel::update,
+            onBack   = viewModel::goBack,
             onSave   = viewModel::save,
         )
         else -> error("Unexpected onboarding step: ${state.step}")
@@ -61,7 +75,7 @@ fun OnboardingStep1(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Set up your profile  1/3", style = MaterialTheme.typography.headlineSmall)
+        Text("Set up your profile  1/4", style = MaterialTheme.typography.headlineSmall)
 
         // Sex toggle
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -127,7 +141,7 @@ fun OnboardingStep2(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("How active are you?  2/3", style = MaterialTheme.typography.headlineSmall)
+        Text("How active are you?  2/4", style = MaterialTheme.typography.headlineSmall)
 
         activityOptions.forEach { option ->
             Row(
@@ -172,13 +186,13 @@ fun OnboardingStep3(
     state: OnboardingUiState,
     onUpdate: (OnboardingUiState.() -> OnboardingUiState) -> Unit,
     onBack: () -> Unit,
-    onSave: () -> Unit,
+    onNext: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("How fast?  3/3", style = MaterialTheme.typography.headlineSmall)
+        Text("How fast?  3/4", style = MaterialTheme.typography.headlineSmall)
 
         Text("${state.targetDeficit} kcal/day", style = MaterialTheme.typography.titleMedium)
 
@@ -223,6 +237,59 @@ fun OnboardingStep3(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Back") }
+            Button(onClick = onNext, modifier = Modifier.weight(1f)) { Text("Continue") }
+        }
+    }
+}
+
+@Composable
+fun OnboardingStep4(
+    state: OnboardingUiState,
+    onUpdate: (OnboardingUiState.() -> OnboardingUiState) -> Unit,
+    onBack: () -> Unit,
+    onSave: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text("Your schedule  4/4", style = MaterialTheme.typography.headlineSmall)
+
+        Text(
+            "When do you typically wake up and go to bed? This lets the budget know how much eating time is left in your day.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        TimeAdjustRow(
+            label    = "Wake time",
+            time     = state.wakeTime,
+            onMinus  = { onUpdate { copy(wakeTime = adjustTime(wakeTime, -30)) } },
+            onPlus   = { onUpdate { copy(wakeTime = adjustTime(wakeTime, +30)) } },
+        )
+
+        TimeAdjustRow(
+            label    = "Bedtime",
+            time     = state.bedtime,
+            onMinus  = { onUpdate { copy(bedtime = adjustTime(bedtime, -30)) } },
+            onPlus   = { onUpdate { copy(bedtime = adjustTime(bedtime, +30)) } },
+        )
+
+        state.saveError?.let { error ->
+            Snackbar(
+                action = {
+                    TextButton(onClick = { onUpdate { copy(saveError = null) } }) {
+                        Text("Dismiss")
+                    }
+                }
+            ) { Text(error) }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Back") }
             Button(
                 onClick  = onSave,
                 enabled  = !state.isSaving,
@@ -231,6 +298,33 @@ fun OnboardingStep3(
                 if (state.isSaving) CircularProgressIndicator(modifier = Modifier.size(18.dp))
                 Text("Done")
             }
+        }
+    }
+}
+
+@Composable
+private fun TimeAdjustRow(
+    label: String,
+    time: String,
+    onMinus: () -> Unit,
+    onPlus: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        OutlinedButton(onClick = onMinus, modifier = Modifier.size(40.dp), contentPadding = PaddingValues(0.dp)) {
+            Text("−")
+        }
+        Text(
+            time,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        OutlinedButton(onClick = onPlus, modifier = Modifier.size(40.dp), contentPadding = PaddingValues(0.dp)) {
+            Text("+")
         }
     }
 }

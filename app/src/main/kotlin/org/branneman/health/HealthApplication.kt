@@ -19,6 +19,13 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+private val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE user_profile ADD COLUMN wakeTime TEXT NOT NULL DEFAULT '07:00'")
+        db.execSQL("ALTER TABLE user_profile ADD COLUMN bedtime TEXT NOT NULL DEFAULT '23:00'")
+    }
+}
+
 class HealthApplication : Application() {
 
     lateinit var db: HealthDatabase
@@ -37,7 +44,7 @@ class HealthApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         db = Room.databaseBuilder(this, HealthDatabase::class.java, "health.db")
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 }

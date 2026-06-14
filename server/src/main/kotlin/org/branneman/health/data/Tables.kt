@@ -2,6 +2,7 @@ package org.branneman.health.data
 
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.date
+import org.jetbrains.exposed.sql.javatime.time
 import org.jetbrains.exposed.sql.javatime.timestampWithTimeZone
 
 object BodyWeight : Table("body_weight") {
@@ -97,6 +98,8 @@ object UserProfile : Table("user_profile") {
     val targetDeficit = integer("target_deficit")
     val phase         = text("phase")
     val vacationMode  = bool("vacation_mode")
+    val wakeTime      = time("wake_time").default(java.time.LocalTime.of(7, 0))
+    val bedtime       = time("bedtime").default(java.time.LocalTime.of(23, 0))
     val updatedAt     = timestampWithTimeZone("updated_at")
     override val primaryKey = PrimaryKey(userId)
 }

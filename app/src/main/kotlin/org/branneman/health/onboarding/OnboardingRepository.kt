@@ -35,6 +35,8 @@ class OnboardingRepository(
         birthYear: Int,
         activityLevel: String,
         targetDeficit: Int,
+        wakeTime: String,
+        bedtime: String,
     ): Result<Unit> = runCatching {
         val profileDto = UserProfileDto(
             heightCm      = heightCm,
@@ -45,6 +47,8 @@ class OnboardingRepository(
             targetDeficit = targetDeficit,
             phase         = "loss",
             vacationMode  = false,
+            wakeTime      = wakeTime,
+            bedtime       = bedtime,
         )
         apiClient.putProfile(token, profileDto)
 
@@ -62,6 +66,8 @@ class OnboardingRepository(
                 targetDeficit = targetDeficit,
                 phase         = "loss",
                 vacationMode  = false,
+                wakeTime      = wakeTime,
+                bedtime       = bedtime,
                 syncStatus    = SyncStatus.SYNCED,
             )
         )

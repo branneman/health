@@ -1,0 +1,3 @@
+ALTER TABLE user_profile
+    ADD COLUMN wake_time TIME NOT NULL DEFAULT '07:00',
+    ADD COLUMN bedtime   TIME NOT NULL DEFAULT '23:00';

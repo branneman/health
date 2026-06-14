@@ -32,6 +32,7 @@ import org.branneman.health.auth.LoginResult
 import org.branneman.health.auth.RateLimiter
 import org.branneman.health.budget.BudgetComputer
 import org.branneman.health.budget.EnergyRow
+import org.branneman.health.budget.HistoricalDay
 import org.branneman.health.budget.UserProfileInput
 import org.branneman.health.data.BodyWeight
 import org.branneman.health.data.DailyEnergy
@@ -270,6 +271,8 @@ fun Application.module(
                                 targetDeficit = it[UserProfile.targetDeficit],
                                 phase         = it[UserProfile.phase],
                                 vacationMode  = it[UserProfile.vacationMode],
+                                wakeTime      = it[UserProfile.wakeTime].format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+                                bedtime       = it[UserProfile.bedtime].format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
                             )
                         }
                 }
@@ -291,6 +294,8 @@ fun Application.module(
                         it[UserProfile.targetDeficit] = dto.targetDeficit
                         it[UserProfile.phase]         = dto.phase
                         it[UserProfile.vacationMode]  = dto.vacationMode
+                        it[UserProfile.wakeTime]      = java.time.LocalTime.parse(dto.wakeTime)
+                        it[UserProfile.bedtime]       = java.time.LocalTime.parse(dto.bedtime)
                         it[UserProfile.updatedAt]     = OffsetDateTime.now()
                     }
                 }
@@ -550,6 +555,9 @@ fun Application.module(
                         targetDeficit = profileRow[UserProfile.targetDeficit],
                         goalWeightKg  = profileRow[UserProfile.goalWeightKg].toDouble(),
                     )
+                    val timeFmt  = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+                    val wakeTime = profileRow[UserProfile.wakeTime].format(timeFmt)
+                    val bedtime  = profileRow[UserProfile.bedtime].format(timeFmt)
 
                     val latestWeightKg = BodyWeight.selectAll()
                         .where { BodyWeight.userId eq userId }
@@ -558,13 +566,81 @@ fun Application.module(
                         .singleOrNull()
                         ?.get(BodyWeight.kg)?.toDouble()
 
-                    val energyRows = DailyEnergy.selectAll()
+                    // Today + yesterday for static budget; today's row for actualBurnedSoFar
+                    val recentEnergyRows = DailyEnergy.selectAll()
                         .where {
                             (DailyEnergy.userId eq userId) and
                             (DailyEnergy.date greaterEq today.minusDays(1)) and
                             (DailyEnergy.date lessEq today)
                         }
                         .map { EnergyRow(it[DailyEnergy.date], it[DailyEnergy.totalKcal]) }
+
+                    val actualBurnedToday = recentEnergyRows.firstOrNull { it.date == today }?.totalKcal
+
+                    // 30-day history (yesterday and earlier) for dynamic budget
+                    val historyStart = today.minusDays(29)
+                    val historyEnd   = today.minusDays(1)
+
+                    val historyEnergy = DailyEnergy.selectAll()
+                        .where {
+                            (DailyEnergy.userId eq userId) and
+                            (DailyEnergy.date greaterEq historyStart) and
+                            (DailyEnergy.date lessEq historyEnd)
+                        }
+                        .associate { it[DailyEnergy.date] to it[DailyEnergy.totalKcal] }
+
+                    val sportDates = Workout.selectAll()
+                        .where {
+                            (Workout.userId eq userId) and
+                            (Workout.date greaterEq historyStart) and
+                            (Workout.date lessEq historyEnd)
+                        }
+                        .map { it[Workout.date] }
+                        .toSet()
+
+                    val histWindowStart = historyStart.atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
+                    val histWindowEnd   = today.atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
+
+                    val quickAddByDate = mutableMapOf<java.time.LocalDate, Int>()
+                    LogEntry.selectAll()
+                        .where {
+                            (LogEntry.userId eq userId) and
+                            (LogEntry.quickAddKcal.isNotNull()) and
+                            (LogEntry.loggedAt greaterEq histWindowStart) and
+                            (LogEntry.loggedAt less histWindowEnd)
+                        }
+                        .forEach { row ->
+                            val d = row[LogEntry.loggedAt].toLocalDate()
+                            quickAddByDate[d] = (quickAddByDate[d] ?: 0) + (row[LogEntry.quickAddKcal] ?: 0)
+                        }
+
+                    val itemKcalByDate = mutableMapOf<java.time.LocalDate, Int>()
+                    LogEntry
+                        .join(LogEntryItem, JoinType.INNER, LogEntry.id, LogEntryItem.logEntryId)
+                        .selectAll()
+                        .where {
+                            (LogEntry.userId eq userId) and
+                            (LogEntry.quickAddKcal.isNull()) and
+                            (LogEntry.loggedAt greaterEq histWindowStart) and
+                            (LogEntry.loggedAt less histWindowEnd)
+                        }
+                        .forEach { row ->
+                            val d = row[LogEntry.loggedAt].toLocalDate()
+                            val k = (row[LogEntryItem.kcalPer100g].toDouble() * row[LogEntryItem.grams].toDouble() / 100.0).toInt()
+                            itemKcalByDate[d] = (itemKcalByDate[d] ?: 0) + k
+                        }
+
+                    val history = historyEnergy.map { (date, out) ->
+                        val quickAdd = quickAddByDate[date] ?: 0
+                        val items    = itemKcalByDate[date] ?: 0
+                        val totalIn  = quickAdd + items
+                        HistoricalDay(
+                            date       = date,
+                            caloriesOut = out,
+                            caloriesIn  = if (totalIn > 0) totalIn else null,
+                            isSportDay  = date in sportDates,
+                        )
+                    }
 
                     val quickAddKcal = LogEntry.selectAll()
                         .where {
@@ -592,17 +668,32 @@ fun Application.module(
                         today          = today,
                         profile        = profileInput,
                         latestWeightKg = latestWeightKg,
-                        energyRows     = energyRows,
+                        energyRows     = recentEnergyRows,
                         caloriesIn     = quickAddKcal + itemKcal,
                     )
 
+                    val dynamic = BudgetComputer.computeDynamic(
+                        history           = history,
+                        targetDeficit     = profileInput.targetDeficit,
+                        actualBurnedToday = actualBurnedToday,
+                    )
+
                     TodaySummaryDto(
-                        date              = today.toString(),
-                        caloriesIn        = budget.caloriesIn,
-                        caloriesOut       = budget.caloriesOut,
-                        budgetRemaining   = budget.budgetRemaining,
-                        targetDeficit     = budget.targetDeficit,
-                        caloriesOutSource = budget.caloriesOutSource,
+                        date                    = today.toString(),
+                        caloriesIn              = budget.caloriesIn,
+                        caloriesOut             = budget.caloriesOut,
+                        budgetRemaining         = budget.budgetRemaining,
+                        targetDeficit           = budget.targetDeficit,
+                        caloriesOutSource       = budget.caloriesOutSource,
+                        expectedTodaySport      = dynamic.expectedTodaySport,
+                        expectedTodayNonSport   = dynamic.expectedTodayNonSport,
+                        eatingFractionSport     = dynamic.eatingFractionSport,
+                        eatingFractionNonSport  = dynamic.eatingFractionNonSport,
+                        actualBurnedSoFar       = dynamic.actualBurnedSoFar,
+                        postWorkoutModeSport    = dynamic.postWorkoutModeSport,
+                        postWorkoutModeNonSport = dynamic.postWorkoutModeNonSport,
+                        wakeTime                = wakeTime,
+                        bedtime                 = bedtime,
                     )
                 }
 

@@ -15,5 +15,7 @@ data class UserProfileEntity(
     val targetDeficit: Int,
     val phase: String,
     val vacationMode: Boolean,
+    val wakeTime: String = "07:00",
+    val bedtime: String = "23:00",
     val syncStatus: SyncStatus = SyncStatus.SYNCED,
 )

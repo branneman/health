@@ -46,10 +46,10 @@ class OnboardingScreenTest {
         ),
         onUpdate: (OnboardingUiState.() -> OnboardingUiState) -> Unit = {},
         onBack: () -> Unit = {},
-        onSave: () -> Unit = {},
+        onNext: () -> Unit = {},
     ) {
         compose.setContent {
-            OnboardingStep3(state = state, onUpdate = onUpdate, onBack = onBack, onSave = onSave)
+            OnboardingStep3(state = state, onUpdate = onUpdate, onBack = onBack, onNext = onNext)
         }
     }
 
@@ -107,12 +107,9 @@ class OnboardingScreenTest {
     // Step 3
 
     @Test
-    fun `step 3 Done is disabled while saving`() {
-        renderStep3(state = OnboardingUiState(
-            sex = "male", heightCm = "177", currentWeightKg = "84.0",
-            goalWeightKg = "74.0", age = "39", isSaving = true,
-        ))
-        compose.onNodeWithText("Done").assertIsNotEnabled()
+    fun `step 3 shows Continue button`() {
+        renderStep3()
+        compose.onNodeWithText("Continue").assertExists()
     }
 
     @Test
