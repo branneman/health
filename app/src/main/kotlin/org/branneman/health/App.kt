@@ -8,6 +8,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,6 +22,7 @@ import org.branneman.health.ui.ConnectPolarScreen
 import org.branneman.health.ui.DashboardScreen
 import org.branneman.health.ui.LogScreen
 import org.branneman.health.ui.LoginScreen
+import org.branneman.health.ui.MealButtonsScreen
 import org.branneman.health.ui.OnboardingScreen
 import org.branneman.health.ui.SettingsScreen
 
@@ -97,18 +99,26 @@ fun App() {
     }
 }
 
+private enum class SettingsPage { Main, MealButtons }
+
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
     var currentTab by remember { mutableStateOf(Tab.Dashboard) }
+    var settingsPage by remember { mutableStateOf(SettingsPage.Main) }
+
+    LaunchedEffect(currentTab) {
+        if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
+    }
+
     Scaffold(
         bottomBar = {
             NavigationBar {
                 Tab.entries.forEach { tab ->
                     NavigationBarItem(
                         selected = currentTab == tab,
-                        onClick = { currentTab = tab },
-                        icon = { Text(tab.emoji) },
-                        label = { Text(tab.label) }
+                        onClick  = { currentTab = tab },
+                        icon     = { Text(tab.emoji) },
+                        label    = { Text(tab.label) }
                     )
                 }
             }
@@ -117,8 +127,21 @@ private fun MainNav(authViewModel: AuthViewModel) {
         Box(modifier = Modifier.padding(padding)) {
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
-                Tab.Log -> LogScreen()
-                Tab.Settings -> SettingsScreen(onSignOut = { authViewModel.logout() })
+                Tab.Log -> LogScreen(
+                    onSetUpMealButtons = {
+                        currentTab   = Tab.Settings
+                        settingsPage = SettingsPage.MealButtons
+                    }
+                )
+                Tab.Settings -> when (settingsPage) {
+                    SettingsPage.Main -> SettingsScreen(
+                        onSignOut             = { authViewModel.logout() },
+                        onNavigateMealButtons = { settingsPage = SettingsPage.MealButtons },
+                    )
+                    SettingsPage.MealButtons -> MealButtonsScreen(
+                        onBack = { settingsPage = SettingsPage.Main }
+                    )
+                }
             }
         }
     }
