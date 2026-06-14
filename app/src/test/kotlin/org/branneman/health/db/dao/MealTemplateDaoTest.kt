@@ -64,6 +64,35 @@ class MealTemplateDaoTest {
     }
 
     @Test
+    fun `observePinned returns only templates with non-null sortOrder ordered ascending`() = runTest {
+        val userId = uuid()
+        dao.upsert(aMealTemplate(userId = userId, name = "Dinner",    sortOrder = null))
+        dao.upsert(aMealTemplate(userId = userId, name = "Lunch",     sortOrder = 1, quickAddKcal = 600))
+        dao.upsert(aMealTemplate(userId = userId, name = "Breakfast", sortOrder = 0, quickAddKcal = 450))
+        val pinned = dao.observePinned().first()
+        assertEquals(2, pinned.size)
+        assertEquals("Breakfast", pinned[0].name)
+        assertEquals("Lunch",     pinned[1].name)
+    }
+
+    @Test
+    fun `observePinned excludes PENDING_DELETE templates`() = runTest {
+        val id = uuid()
+        dao.upsert(aMealTemplate(id = id, userId = uuid(), sortOrder = 0, quickAddKcal = 400))
+        dao.updateSyncStatus(id, SyncStatus.PENDING_DELETE)
+        assertTrue(dao.observePinned().first().isEmpty())
+    }
+
+    @Test
+    fun `quickAddKcal and sortOrder round-trip through upsert`() = runTest {
+        val id = uuid()
+        dao.upsert(aMealTemplate(id = id, userId = uuid(), sortOrder = 0, quickAddKcal = 500))
+        val result = dao.observePinned().first()
+        assertEquals(500, result[0].quickAddKcal)
+        assertEquals(0,   result[0].sortOrder)
+    }
+
+    @Test
     fun `deleteAllForUser removes templates and items`() = runTest {
         val userId = uuid()
         val templateId = uuid()

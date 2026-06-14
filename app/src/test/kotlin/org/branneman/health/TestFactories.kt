@@ -90,7 +90,14 @@ fun aMealTemplate(
     id: String = uuid(),
     userId: String = uuid(),
     name: String = "Test Template",
-) = MealTemplateEntity(id = id, userId = userId, name = name, syncStatus = SyncStatus.SYNCED)
+    sortOrder: Int? = null,
+    quickAddKcal: Int? = null,
+    syncStatus: SyncStatus = SyncStatus.SYNCED,
+) = MealTemplateEntity(
+    id = id, userId = userId, name = name,
+    sortOrder = sortOrder, quickAddKcal = quickAddKcal,
+    syncStatus = syncStatus,
+)
 
 fun aWorkout(
     id: String = uuid(),
