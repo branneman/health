@@ -21,7 +21,7 @@
 | Modify | `shared/src/commonMain/kotlin/org/branneman/health/MealTemplateDto.kt` |
 | Modify | `server/src/main/kotlin/org/branneman/health/Application.kt` |
 | Create | `server/src/test/kotlin/org/branneman/health/MealTemplatesIntegrationTest.kt` |
-| Modify | `docs/specs/testing-manifesto.md` |
+| Modify | `docs/testing-manifesto.md` |
 | Modify | `app/src/main/kotlin/org/branneman/health/db/entities/MealTemplateEntity.kt` |
 | Modify | `app/src/main/kotlin/org/branneman/health/db/dao/MealTemplateDao.kt` |
 | Modify | `app/src/main/kotlin/org/branneman/health/db/HealthDatabase.kt` |
@@ -217,13 +217,13 @@ git commit -m "feat(server): GET /in/templates returns sortOrder+quickAddKcal; a
 
 **Files:**
 - Create: `server/src/test/kotlin/org/branneman/health/MealTemplatesIntegrationTest.kt`
-- Modify: `docs/specs/testing-manifesto.md`
+- Modify: `docs/testing-manifesto.md`
 
 Requires a running `health_test` Postgres database. See manifesto for connection env vars.
 
 - [ ] **Step 1: Claim UUID slot #9 in the testing manifesto**
 
-In `docs/specs/testing-manifesto.md`, replace the `| 9 | *(free)* |` row with:
+In `docs/testing-manifesto.md`, replace the `| 9 | *(free)* |` row with:
 
 ```
 | 9 | `...000009` | `MealTemplatesIntegrationTest` | `mealtemplates-test@test.local` |
@@ -355,7 +355,7 @@ Expected: 4 tests pass.
 
 ```bash
 git add server/src/test/kotlin/org/branneman/health/MealTemplatesIntegrationTest.kt \
-        docs/specs/testing-manifesto.md
+        docs/testing-manifesto.md
 git commit -m "test(server): add MealTemplatesIntegrationTest; claim UUID slot 9"
 ```
 
@@ -1737,9 +1737,9 @@ All story 9 behaviour is now implemented and tested. Run the full test suite one
 ./gradlew :shared:test :server:test :app:testDebugUnitTest
 ```
 
-Then update `docs/specs/feature-backlog.md` to mark story 9 complete (add `✓` to the `#9` row).
+Then update `docs/feature-backlog.md` to mark story 9 complete (add `✓` to the `#9` row).
 
 ```bash
-git add docs/specs/feature-backlog.md
+git add docs/feature-backlog.md
 git commit -m "docs: mark story 9 complete"
 ```

@@ -101,10 +101,10 @@ uses a BMR × activity multiplier estimate. Once connected, real watch-measured 
 replaces the estimate and the budget becomes trustworthy.
 
 Cross-cutting docs that apply to this story:
-- `docs/specs/api-design.md` — `/out/` endpoints (read-only from app; cron writes server-side)
-- `docs/specs/math-model.md` — §2.2 calories_out source priority
-- `docs/specs/security.md` — Polar integration rules (OAuth CSRF, server-side token exchange, token exposure)
-- `docs/specs/testing-manifesto.md` — test pyramid and UUID registry
+- `docs/api-design.md` — `/out/` endpoints (read-only from app; cron writes server-side)
+- `docs/math-model.md` — §2.2 calories_out source priority
+- `docs/security.md` — Polar integration rules (OAuth CSRF, server-side token exchange, token exposure)
+- `docs/testing-manifesto.md` — test pyramid and UUID registry
 
 ---
 

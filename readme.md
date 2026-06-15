@@ -11,11 +11,23 @@ wait for a connection.
 
 ## Stack
 
-Kotlin everywhere — Android app, shared DTOs, and backend server in one monorepo.
+Kotlin throughout — Android app, shared DTOs, and backend server in one monorepo. One language means the `/shared` KMP module defines API types once, and both the Android app and Ktor server depend on it. No language boundary between client and server.
 
-* [`/app`](./app/src/main/kotlin) — Android app (Jetpack Compose)
+* [`/app`](./app/src/main/kotlin) — Android app (Jetpack Compose + Jetpack Glance widget)
 * [`/shared`](./shared/src/commonMain/kotlin) — KMP module: API DTOs shared between app and server
 * [`/server`](./server/src/main/kotlin) — Ktor server (JVM), backed by PostgreSQL
+
+## Architecture
+
+**Offline-first:** the app writes to Room (SQLite) on-device first and syncs to Postgres in the background via WorkManager. The homescreen widget (Jetpack Glance) reads Room directly — instant and no network needed.
+
+**Two sources of truth:** calorie in/out balance gives fast daily feedback; body weight is the weekly reality check. When they disagree over weeks, the scale wins and the calorie math recalibrates. See [math model](docs/math-model.md).
+
+**Low-friction logging:** fixed meals (breakfast, lunch) are one-tap templates. Only dinner — the variable meal — needs per-ingredient logging. Configurable shortcuts handle drinks and snacks. The widget surfaces the same shortcuts for truly in-the-moment logging.
+
+**Food data pipeline:** a weekly Open Food Facts Netherlands export is imported into Postgres with full-text search. The app queries the server — it never calls OFD directly, which keeps the app free of rate-limit exposure and gives fast autocomplete.
+
+**Polar integration:** hourly cron pull via the AccessLink REST API (hand-written Ktor client, no code generation). Polar access tokens are permanent and encrypted at the application layer (AES-256-GCM) before hitting the database. See [polar sync spec](docs/specs/polar-sync.md).
 
 ## Documentation
 
@@ -23,12 +35,12 @@ Kotlin everywhere — Android app, shared DTOs, and backend server in one monore
   codebase, plus a naming-divergence TODO list
 - [Domain model](docs/domain-model.md) — bounded contexts, aggregates, value objects, domain
   services, and a context map
-- [Feature backlog](docs/specs/feature-backlog.md) — stack-ranked product backlog; each story is an
+- [Feature backlog](docs/feature-backlog.md) — stack-ranked product backlog; each story is an
   end-to-end vertical slice
-- [API design](docs/specs/api-design.md) — server endpoints and DTO shapes
-- [Math model](docs/specs/math-model.md) — algorithms behind the daily budget, weight trend, weekly
+- [API design](docs/api-design.md) — server endpoints and DTO shapes
+- [Math model](docs/math-model.md) — algorithms behind the daily budget, weight trend, weekly
   verdict, and insights
-- [Security](docs/specs/security.md) — auth, rate limiting, Polar token handling
+- [Security](docs/security.md) — auth, rate limiting, Polar token handling
 - [UX principles](docs/ux/1-principles.md) — the design philosophy behind every interaction decision
 - [UX scenarios](docs/ux/2-scenarios.md) — concrete user flows from trigger to outcome
 

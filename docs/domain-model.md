@@ -4,6 +4,8 @@ Structural view of the health app domain through a DDD lens. Read alongside
 `docs/ubiquitous-language.md` (term definitions) and `CLAUDE.md` (tech stack and
 engineering rules).
 
+**Schema asymmetry:** calories-out is a single number per day (plus optional per-workout) — a flat, narrow schema. Calories-in is nested: log entry → multiple items → each item with a quantity and per-100g nutrition → totals. This asymmetry runs through the entire design: Polar Integration (calories-out) is a simple ACL, while Food Logging (calories-in) is the heaviest bounded context.
+
 ---
 
 ## Bounded Contexts
@@ -132,6 +134,11 @@ Resolves the calories-out source (priority: `polar_today` → `polar_yesterday` 
 `UserProfileInput`, a list of `EnergyRow`s from Polar, the latest weight, and a
 calories-in total. Pure function — no side effects.
 
+**Do not recompute calories from raw heart rate.** Polar already computes a daily total
+(`total_kcal` = BMR + active) using personal fitness data and its own algorithm. That
+estimate is better than anything reconstructed from HR samples — always ingest Polar's
+own `calories` value.
+
 ### Weight Trend Analyser *(not yet implemented)*
 
 Computes the 7-day SMA over a series of weight entries. Returns the smoothed weight
@@ -150,6 +157,30 @@ Scans rolling 7-day windows of log data to detect patterns: late-night snacking
 frequency, drink clusters, logging coverage gaps, deficit too aggressive, and
 calorie-vs-weight disagreement. Each insight has its own minimum data gate. Returns
 at most 1–2 insights at a time.
+
+---
+
+## Schema overview
+
+Quick reference for the main tables. Flyway migrations in
+`server/src/main/resources/db/migration/` are authoritative.
+
+**Calories-out (flat)**
+- `daily_energy(user_id, date, bmr_kcal, active_kcal, total_kcal, steps, source)` — `UNIQUE(user_id, date)`
+- `workout(id UUID PK, user_id, polar_exercise_id, date, type, duration_secs, avg_hr, kcal)`
+
+**Calories-in (nested)**
+- `product(id, barcode?, name, kcal/protein/carbs/fat per 100g, source)` — OFD mirror, server-only reference catalog
+- `food_item(id, barcode?, name, kcal/protein/carbs/fat per 100g, source)` — user's personal catalog, synced to device
+- `meal_template(id, name, sort_order?, quick_add_kcal?)` + `meal_template_item(template_id, food_item_id, grams)`
+- `log_entry(id, datetime, meal_type)` + `log_entry_item(log_entry_id, food_item_id, grams, snapshotted nutrition)` — nutrition snapshotted at log time; never changes after creation
+
+**Users**
+- `users(id UUID PK, username, password_hash)` + `user_profile(user_id, weight_kg, height_cm, age, activity_level, target_deficit_kcal, wake_time, bedtime, …)`
+- `body_weight(user_id, date, kg)` — `UNIQUE(user_id, date)`, upsert on same-day re-entry
+
+**Polar**
+- `polar_auth(health_user_id FK, user_id TEXT, access_token TEXT)` — token encrypted AES-256-GCM before storage
 
 ---
 
