@@ -48,6 +48,7 @@ import org.branneman.health.polar.HttpPolarApiClient
 import org.branneman.health.polar.PolarApiClient
 import org.branneman.health.polar.PolarSyncService
 import org.branneman.health.polar.TokenCipher
+import org.branneman.health.e2e.e2eSeedRoute
 import org.branneman.health.polar.polarRoutes
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
@@ -737,6 +738,8 @@ fun Application.module(
         if (polarApiClient != null && polarCipher != null && polarSyncService != null) {
             polarRoutes(polarApiClient, polarCipher, polarSyncService)
         }
+
+        System.getenv("E2E_PASSWORD")?.let { e2eSeedRoute(it) }
     }
 
     if (polarSyncService != null) {

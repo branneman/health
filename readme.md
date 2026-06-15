@@ -85,11 +85,10 @@ API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest
 **E2E smoke tests** (requires emulator running and production server):
 
 ```bash
-# Reset E2E account to known state first (E2E_PASSWORD from .env):
-HASH=$(python3 -c "import bcrypt, os; print(bcrypt.hashpw(os.environ['E2E_PASSWORD'].encode(), bcrypt.gensalt()).decode())")
-ssh deploy@api.health.bran.name \
-  "docker exec -i health_postgres psql -U health -d health -v e2e_password_hash='$HASH'" \
-  < local-db-seed/test-e2e-account-seed.sql
+# Reset E2E account to known state (calls the server's seed endpoint):
+set -a; source .env; set +a
+curl -sf -X POST -H "Authorization: Bearer $E2E_PASSWORD" \
+  "$API_TEST_SERVER_URL/internal/e2e/reset"
 
 # Then run with the emulator booted:
 E2E_EMAIL=test+e2e@bran.name E2E_PASSWORD=... ./gradlew :app:connectedAndroidTest

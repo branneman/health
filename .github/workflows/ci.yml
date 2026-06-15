@@ -149,18 +149,12 @@ jobs:
 
       - name: Seed E2E account
         env:
+          SERVER_URL: ${{ secrets.API_TEST_SERVER_URL }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
-          pip install bcrypt -q
-          HASH=$(python3 -c "import bcrypt, os; print(bcrypt.hashpw(os.environ['E2E_PASSWORD'].encode(), bcrypt.gensalt()).decode())")
-          install -m 600 /dev/null /tmp/vps_key
-          echo "$VPS_SSH_PRIVATE_KEY" > /tmp/vps_key
-          ssh -i /tmp/vps_key -o StrictHostKeyChecking=no deploy@"$VPS_HOST" \
-            "docker exec -i health_postgres psql -U health -d health -v e2e_password_hash='$HASH'" \
-            < local-db-seed/test-e2e-account-seed.sql
-          rm /tmp/vps_key
+          curl -sf -X POST \
+            -H "Authorization: Bearer $E2E_PASSWORD" \
+            "$SERVER_URL/internal/e2e/reset"
 
       - name: Run E2E tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
