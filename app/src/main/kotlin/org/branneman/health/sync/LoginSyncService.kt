@@ -16,15 +16,7 @@ class LoginSyncService(
 
         val profile = api.getProfile(token)
 
-        db.shortcutDao().deleteAllForUser(userId)
-        val shortcuts = api.getShortcuts(token)
-        db.shortcutDao().upsertAll(shortcuts.map { dto ->
-            ShortcutEntity(
-                id = dto.id, userId = userId, emoji = dto.emoji,
-                label = dto.label, kcal = dto.kcal, sortOrder = dto.sortOrder,
-                syncStatus = SyncStatus.SYNCED,
-            )
-        })
+        ShortcutSyncService(api, db).pull(token, userId)
 
         val foodItems = api.getFoodItems(token)
         db.foodItemDao().upsertAll(foodItems.map { dto ->
