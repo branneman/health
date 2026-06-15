@@ -180,12 +180,23 @@ meal → verify it appears → sign out. Edge cases belong in lower tiers.
 
 Tests run as Android instrumented tests (`androidTest` source set) using the Compose UI test API.
 The E2E test account is `test+e2e@bran.name`. Its data is pre-seeded via
-`local-db-seed/test-e2e-account-seed.sql` with realistic but clearly synthetic data. Any test that
-writes to the database must delete its own writes in `@After`.
+`local-db-seed/test-e2e-account-seed.sql` with realistic but clearly synthetic data. The CI job
+runs this seed SQL before each test run to reset the account to a known state, so tests that write
+data (body weight, log entries) do not need to clean up those writes — the next seed run handles it.
+Tests that would interfere with later tests in the same run (e.g. log entries that would affect kcal
+totals) still delete their own writes inline.
 
 Credentials are supplied via environment variables or CI secrets. Never committed to the repository.
+The seed SQL uses a psql variable (`:'e2e_password_hash'`) so no bcrypt hash is committed either.
 
-**What currently meets the bar:** `E2ESmokeTest` — login → dashboard → log a meal → sign out.
+**What currently meets the bar:** `E2ESmokeTest`:
+- `loginViewDashboardLogEntryAndSignOut` — login → log a manual kcal entry → delete it → sign out
+- `logOneTapMealButtonAndVerify` — login → tap seeded Breakfast one-tap button → verify entry → delete it
+- `logBodyWeightAndVerify` — login → log body weight via dashboard chip → verify chip updates
+
+**CI:** `e2e-tests` job in `ci.yml` runs on every push to `main` after Watchtower has deployed the
+new image. It seeds the E2E account, boots an API-34 AOSP Pixel 6a emulator via
+`reactivecircus/android-emulator-runner`, and executes `connectedAndroidTest`.
 
 ---
 

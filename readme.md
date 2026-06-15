@@ -82,6 +82,19 @@ API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest
 ./gradlew :server:apiTest   # picks up API_TEST_* vars from .env automatically
 ```
 
+**E2E smoke tests** (requires emulator running and production server):
+
+```bash
+# Reset E2E account to known state first (E2E_PASSWORD from .env):
+HASH=$(python3 -c "import bcrypt, os; print(bcrypt.hashpw(os.environ['E2E_PASSWORD'].encode(), bcrypt.gensalt()).decode())")
+ssh deploy@api.health.bran.name \
+  "docker exec -i health_postgres psql -U health -d health -v e2e_password_hash='$HASH'" \
+  < local-db-seed/test-e2e-account-seed.sql
+
+# Then run with the emulator booted:
+E2E_EMAIL=test+e2e@bran.name E2E_PASSWORD=... ./gradlew :app:connectedAndroidTest
+```
+
 **All non-device tests:**
 
 ```bash
@@ -96,11 +109,9 @@ API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest
 - Install Android Studio via JetBrains Toolbox.
 - Install the `Claude Code [Beta]` plugin in Android Studio.
 - Add `$HOME/Library/Android/sdk/platform-tools` to your path.
-- Create the following virtual device in the Android Studio Device Manager:
-  ```
-  Virtual Device: Pixel 6a
-  API: 34 "UpsideDownCake"; Android 14.0
-  Services: Android Open Source
+- Create the development AVD (Pixel 6a, API 34 AOSP):
+  ```bash
+  scripts/create-dev-avd.sh
   ```
 - Add to `local.properties` to point the app at the local server instead of production:  
   `server.baseUrl=http://10.0.2.2:8080`  

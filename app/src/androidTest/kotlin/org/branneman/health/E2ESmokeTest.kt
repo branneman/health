@@ -23,18 +23,21 @@ class E2ESmokeTest {
         }
     }
 
-    @Test
-    fun loginViewDashboardLogEntryAndSignOut() {
+    private fun signIn() {
         compose.onNodeWithText("Email", substring = true, ignoreCase = true)
             .performTextInput(email)
         compose.onNodeWithText("Password", substring = true, ignoreCase = true)
             .performTextInput(password)
         compose.onNodeWithText("Sign in", substring = true, ignoreCase = true)
             .performClick()
-
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Today", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test
+    fun loginViewDashboardLogEntryAndSignOut() {
+        signIn()
 
         compose.onNodeWithText("Log").performClick()
 
@@ -42,7 +45,7 @@ class E2ESmokeTest {
         compose.onNodeWithText("Add").performClick()
 
         compose.waitUntil(timeoutMillis = 3_000) {
-            compose.onAllNodesWithText("123", substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("123 kcal").fetchSemanticsNodes().isNotEmpty()
         }
 
         compose.onNodeWithText("Dashboard").performClick()
@@ -51,7 +54,45 @@ class E2ESmokeTest {
         }
 
         compose.onNodeWithText("Log").performClick()
-        compose.onNodeWithText("123", substring = true).performClick()
+        compose.onNodeWithText("123 kcal").performClick()
         compose.onNodeWithText("Delete").performClick()
+    }
+
+    @Test
+    fun logOneTapMealButtonAndVerify() {
+        signIn()
+
+        compose.onNodeWithText("Log").performClick()
+
+        // LoginSyncService runs as part of sign-in, so the Breakfast button is already in Room.
+        // waitUntil guards against any brief recomposition lag.
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Breakfast").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onAllNodesWithText("Breakfast").filterToOne(hasClickAction()).performClick()
+
+        compose.waitUntil(timeoutMillis = 3_000) {
+            compose.onAllNodesWithText("550 kcal").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Cleanup: delete the entry via the delete-confirm dialog.
+        compose.onNodeWithText("550 kcal").performClick()
+        compose.onNodeWithText("Delete").performClick()
+    }
+
+    @Test
+    fun logBodyWeightAndVerify() {
+        signIn()
+
+        // The seed SQL leaves no body-weight entry for today, so the chip shows "-- kg".
+        compose.onNodeWithText("-- kg", substring = true).performClick()
+        compose.onNodeWithText("Log weight").assertIsDisplayed()
+
+        compose.onNode(hasSetTextAction()).performTextInput("82.5")
+        compose.onNodeWithText("Save").performClick()
+
+        compose.waitUntil(timeoutMillis = 3_000) {
+            compose.onAllNodesWithText("82.5 kg", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
     }
 }
