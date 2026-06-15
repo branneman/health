@@ -26,11 +26,17 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 
-class LogViewModel(
+class LogViewModel private constructor(
     application: Application,
-    private val db: HealthDatabase = (application as HealthApplication).db,
-    private val tokenStore: TokenStore = TokenStore(application.authDataStore),
+    private val db: HealthDatabase,
+    private val tokenStore: TokenStore,
 ) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(
+        application = application,
+        db = (application as HealthApplication).db,
+        tokenStore = TokenStore(application.authDataStore),
+    )
 
     internal constructor(db: HealthDatabase, tokenStore: TokenStore) : this(
         application = Application(),
