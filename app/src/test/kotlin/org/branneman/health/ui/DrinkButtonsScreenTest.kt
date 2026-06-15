@@ -78,6 +78,45 @@ class DrinkButtonsScreenTest {
         compose.onNodeWithText("Wine").assertExists()
     }
 
+    @Test fun `add dialog confirm is disabled when all fields are empty`() {
+        render()
+        compose.onNodeWithText("Add button").performClick()
+        compose.onNodeWithText("Add").assertIsNotEnabled()
+    }
+
+    @Test fun `add dialog confirm is disabled when emoji is blank`() {
+        render()
+        compose.onNodeWithText("Add button").performClick()
+        compose.onNodeWithText("Label").performTextInput("Pils")
+        compose.onAllNodesWithText("kcal")[0].performTextInput("150")
+        compose.onNodeWithText("Add").assertIsNotEnabled()
+    }
+
+    @Test fun `add dialog confirm is disabled when label is blank`() {
+        render()
+        compose.onNodeWithText("Add button").performClick()
+        compose.onNodeWithText("Emoji").performTextInput("🍺")
+        compose.onAllNodesWithText("kcal")[0].performTextInput("150")
+        compose.onNodeWithText("Add").assertIsNotEnabled()
+    }
+
+    @Test fun `add dialog confirm is disabled when kcal is zero`() {
+        render()
+        compose.onNodeWithText("Add button").performClick()
+        compose.onNodeWithText("Emoji").performTextInput("🍺")
+        compose.onNodeWithText("Label").performTextInput("Pils")
+        compose.onNodeWithText("Add").assertIsNotEnabled()
+    }
+
+    @Test fun `add dialog confirm is enabled when all fields are valid`() {
+        render()
+        compose.onNodeWithText("Add button").performClick()
+        compose.onNodeWithText("Emoji").performTextInput("🍺")
+        compose.onNodeWithText("Label").performTextInput("Pils")
+        compose.onAllNodesWithText("kcal")[0].performTextInput("150")
+        compose.onNodeWithText("Add").assertIsEnabled()
+    }
+
     @Test fun `adding a row via dialog then saving passes new row to onSave`() {
         var saved: List<ShortcutEntity>? = null
         render(onSave = { saved = it })
