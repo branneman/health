@@ -8,7 +8,9 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
+import org.branneman.health.aShortcut
 import org.branneman.health.db.HealthDatabase
+import org.branneman.health.db.SyncStatus
 import org.branneman.health.network.HealthApiClient
 import org.junit.After
 import org.junit.Before
@@ -89,5 +91,17 @@ class SyncWorkerTest {
         val energyRow = db.dailyEnergyDao().getForDate(userId, "2026-06-12")
         assertEquals(2100, energyRow?.totalKcal)
         assertEquals(1, db.workoutDao().getAll(userId).size)
+    }
+
+    @Test
+    fun `shortcut pushPending wires correctly in sync pass`() = runTest {
+        val api = fakeApiClient()
+        db.shortcutDao().upsertAll(listOf(
+            aShortcut(userId = userId, label = "Pils", sortOrder = 0,
+                syncStatus = SyncStatus.PENDING_CREATE)
+        ))
+        ShortcutSyncService(api, db).pushPending(token, userId)
+        assertEquals(SyncStatus.SYNCED,
+            db.shortcutDao().getByStatus(SyncStatus.SYNCED).single().syncStatus)
     }
 }

@@ -35,6 +35,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         BodyWeightSyncService(apiClient, db).sync(stored.token)
         LogEntrySyncService(apiClient, db).sync(stored.token)
         MealTemplateSyncService(apiClient, db).pushPending(stored.token, stored.userId)
+        ShortcutSyncService(apiClient, db).pushPending(stored.token, stored.userId)
         runCatching { apiClient.triggerPolarSync(stored.token) }
         DailyEnergySyncService(apiClient, db).sync(stored.token, stored.userId)
         WorkoutSyncService(apiClient, db).sync(stored.token, stored.userId)
