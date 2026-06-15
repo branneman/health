@@ -21,10 +21,11 @@ import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 
 /**
- * Verifies that SyncWorker's doWork() wires up DailyEnergySyncService and WorkoutSyncService.
+ * Verifies that SyncWorker's doWork() wires up DailyEnergySyncService, WorkoutSyncService,
+ * and ShortcutSyncService.
  *
  * SyncWorker itself cannot be instantiated in a unit test (requires WorkManager infrastructure),
- * so this test exercises the same two service calls directly with a shared multi-endpoint fake API
+ * so this test exercises the same service calls directly with a shared multi-endpoint fake API
  * and an in-memory Room DB, asserting the results land in Room as expected.
  */
 @RunWith(RobolectricTestRunner::class)
