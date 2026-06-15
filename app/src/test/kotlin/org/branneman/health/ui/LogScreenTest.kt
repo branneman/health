@@ -6,8 +6,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import kotlin.test.assertTrue
 import org.branneman.health.aMealTemplate
 import org.branneman.health.aQuickAddEntry
+import org.branneman.health.aShortcut
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
+import org.branneman.health.db.entities.ShortcutEntity
 import kotlin.test.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -131,5 +133,57 @@ class LogScreenTest {
         compose.onNodeWithTag("label_input").performTextInput("Pasta")
         compose.onNodeWithText("Add").performClick()
         assert(result == "350" to "Pasta")
+    }
+
+    private fun renderWithShortcuts(
+        entries: List<LogEntryEntity> = emptyList(),
+        shortcuts: List<ShortcutEntity> = emptyList(),
+        onAdd: (String, String) -> Unit = { _, _ -> },
+        onDelete: (LogEntryEntity) -> Unit = {},
+        onSetUpDrinkButtons: () -> Unit = {},
+        onLogShortcut: (ShortcutEntity) -> Unit = {},
+    ) {
+        compose.setContent {
+            MaterialTheme {
+                LogContent(
+                    entries             = entries,
+                    shortcuts           = shortcuts,
+                    onAdd               = onAdd,
+                    onDelete            = onDelete,
+                    onSetUpDrinkButtons = onSetUpDrinkButtons,
+                    onLogShortcut       = onLogShortcut,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `empty shortcuts shows setup button`() {
+        renderWithShortcuts(shortcuts = emptyList())
+        compose.onNodeWithText("Set up drink buttons").assertExists()
+    }
+
+    @Test
+    fun `tapping setup button calls onSetUpDrinkButtons`() {
+        var called = false
+        renderWithShortcuts(shortcuts = emptyList(), onSetUpDrinkButtons = { called = true })
+        compose.onNodeWithText("Set up drink buttons").performClick()
+        assertTrue(called)
+    }
+
+    @Test
+    fun `configured shortcuts render a button per shortcut`() {
+        val shortcut = aShortcut(emoji = "🍺", label = "Pils", kcal = 150)
+        renderWithShortcuts(shortcuts = listOf(shortcut))
+        compose.onNodeWithText("🍺 Pils").assertExists()
+    }
+
+    @Test
+    fun `tapping shortcut calls onLogShortcut with correct entity`() {
+        var logged: ShortcutEntity? = null
+        val shortcut = aShortcut(emoji = "🍺", label = "Pils", kcal = 150)
+        renderWithShortcuts(shortcuts = listOf(shortcut), onLogShortcut = { logged = it })
+        compose.onNodeWithText("🍺 Pils").performClick()
+        assertEquals(shortcut, logged)
     }
 }

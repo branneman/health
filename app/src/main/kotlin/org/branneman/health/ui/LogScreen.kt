@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -20,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
+import org.branneman.health.db.entities.ShortcutEntity
 import org.branneman.health.log.LogViewModel
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -82,10 +84,13 @@ private sealed interface LogAction {
 fun LogContent(
     entries: List<LogEntryEntity>,
     pinnedTemplates: List<MealTemplateEntity> = emptyList(),
+    shortcuts: List<ShortcutEntity> = emptyList(),
     onAdd: (kcal: String, label: String) -> Unit,
     onDelete: (LogEntryEntity) -> Unit,
     onSetUpMealButtons: () -> Unit = {},
     onLogTemplate: (MealTemplateEntity) -> Unit = {},
+    onSetUpDrinkButtons: () -> Unit = {},
+    onLogShortcut: (ShortcutEntity) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var kcal by remember { mutableStateOf("") }
@@ -124,6 +129,26 @@ fun LogContent(
                 pinnedTemplates.forEach { template ->
                     Button(onClick = { onLogTemplate(template) }) {
                         Text(template.name)
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Drink shortcuts row
+        if (shortcuts.isEmpty()) {
+            OutlinedButton(
+                onClick  = onSetUpDrinkButtons,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Set up drink buttons")
+            }
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(shortcuts) { shortcut ->
+                    Button(onClick = { onLogShortcut(shortcut) }) {
+                        Text("${shortcut.emoji} ${shortcut.label}")
                     }
                 }
             }
