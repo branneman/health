@@ -30,6 +30,9 @@ import java.time.format.DateTimeFormatter
 fun LogScreen(
     viewModel: LogViewModel = viewModel(),
     onSetUpMealButtons: () -> Unit = {},
+    shortcuts: List<ShortcutEntity> = emptyList(),
+    onSetUpDrinkButtons: () -> Unit = {},
+    onLogShortcut: (ShortcutEntity) -> Unit = {},
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val pinnedTemplates by viewModel.pinnedTemplates.collectAsStateWithLifecycle()
@@ -54,22 +57,25 @@ fun LogScreen(
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         LogContent(
-            entries            = entries,
-            pinnedTemplates    = pinnedTemplates,
-            onAdd              = { kcal, label ->
+            entries             = entries,
+            pinnedTemplates     = pinnedTemplates,
+            shortcuts           = shortcuts,
+            onAdd               = { kcal, label ->
                 viewModel.addEntry(kcal, label)
                 lastAction = LogAction.Added("Logged")
             },
-            onDelete           = { entry ->
+            onDelete            = { entry ->
                 viewModel.deleteEntry(entry)
                 lastAction = LogAction.Deleted("Deleted")
             },
-            onSetUpMealButtons = onSetUpMealButtons,
-            onLogTemplate      = { template ->
+            onSetUpMealButtons  = onSetUpMealButtons,
+            onLogTemplate       = { template ->
                 viewModel.logFromTemplate(template)
                 lastAction = LogAction.Added("Logged")
             },
-            modifier           = Modifier.padding(padding),
+            onSetUpDrinkButtons = onSetUpDrinkButtons,
+            onLogShortcut       = onLogShortcut,
+            modifier            = Modifier.padding(padding),
         )
     }
 }

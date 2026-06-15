@@ -18,8 +18,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.auth.AuthState
 import org.branneman.health.auth.AuthViewModel
+import org.branneman.health.log.LogViewModel
 import org.branneman.health.ui.ConnectPolarScreen
 import org.branneman.health.ui.DashboardScreen
+import org.branneman.health.ui.DrinkButtonsScreen
 import org.branneman.health.ui.LogScreen
 import org.branneman.health.ui.LoginScreen
 import org.branneman.health.ui.MealButtonsScreen
@@ -99,7 +101,7 @@ fun App() {
     }
 }
 
-private enum class SettingsPage { Main, MealButtons }
+private enum class SettingsPage { Main, MealButtons, DrinkButtons }
 
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
@@ -125,20 +127,32 @@ private fun MainNav(authViewModel: AuthViewModel) {
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
+            val logVm: LogViewModel = viewModel()
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
                 Tab.Log -> LogScreen(
+                    viewModel          = logVm,
                     onSetUpMealButtons = {
                         currentTab   = Tab.Settings
                         settingsPage = SettingsPage.MealButtons
-                    }
+                    },
+                    shortcuts          = logVm.shortcuts.collectAsStateWithLifecycle().value,
+                    onSetUpDrinkButtons = {
+                        currentTab   = Tab.Settings
+                        settingsPage = SettingsPage.DrinkButtons
+                    },
+                    onLogShortcut      = { shortcut -> logVm.logFromShortcut(shortcut) },
                 )
                 Tab.Settings -> when (settingsPage) {
                     SettingsPage.Main -> SettingsScreen(
-                        onSignOut             = { authViewModel.logout() },
-                        onNavigateMealButtons = { settingsPage = SettingsPage.MealButtons },
+                        onSignOut              = { authViewModel.logout() },
+                        onNavigateMealButtons  = { settingsPage = SettingsPage.MealButtons },
+                        onNavigateDrinkButtons = { settingsPage = SettingsPage.DrinkButtons },
                     )
                     SettingsPage.MealButtons -> MealButtonsScreen(
+                        onBack = { settingsPage = SettingsPage.Main }
+                    )
+                    SettingsPage.DrinkButtons -> DrinkButtonsScreen(
                         onBack = { settingsPage = SettingsPage.Main }
                     )
                 }

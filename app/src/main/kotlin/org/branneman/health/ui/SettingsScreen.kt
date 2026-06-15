@@ -41,6 +41,7 @@ private val syncTimestampFormatter = DateTimeFormatter.ofPattern("d MMM, HH:mm")
 fun SettingsScreen(
     onSignOut: () -> Unit,
     onNavigateMealButtons: () -> Unit = {},
+    onNavigateDrinkButtons: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var serverReachable by remember { mutableStateOf<Boolean?>(null) }
@@ -62,8 +63,9 @@ fun SettingsScreen(
     }
 
     SettingsContent(
-        onNavigateMealButtons = onNavigateMealButtons,
-        onSignOut             = onSignOut,
+        onNavigateMealButtons  = onNavigateMealButtons,
+        onNavigateDrinkButtons = onNavigateDrinkButtons,
+        onSignOut              = onSignOut,
         serverReachable       = serverReachable,
         lastSyncedAt          = lastSyncedAt,
         polarStatus           = polarStatus,
