@@ -1,15 +1,18 @@
 package org.branneman.health.ui
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.branneman.health.aShortcut
+import org.branneman.health.auth.TokenStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.junit.After
@@ -18,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -25,18 +29,29 @@ import kotlin.test.assertEquals
 @Config(sdk = [28])
 class DrinkButtonsViewModelTest {
 
+    private val testDispatcher = StandardTestDispatcher()
+
     private lateinit var db: HealthDatabase
-    private val userId = "user-abc"
+    private lateinit var tokenStore: TokenStore
     private lateinit var viewModel: DrinkButtonsViewModel
+
+    private val userId = "user-abc"
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(testDispatcher)
         db = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
             HealthDatabase::class.java,
         ).allowMainThreadQueries().build()
-        viewModel = DrinkButtonsViewModel(db)
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(testDispatcher),
+            produceFile = {
+                File.createTempFile("test_auth_drinkvm", ".preferences_pb").also { it.deleteOnExit() }
+            },
+        )
+        tokenStore = TokenStore(dataStore)
+        viewModel = DrinkButtonsViewModel(db, tokenStore)
     }
 
     @After

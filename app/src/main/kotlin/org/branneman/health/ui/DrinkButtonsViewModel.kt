@@ -23,13 +23,10 @@ class DrinkButtonsViewModel(
     private val tokenStore: TokenStore = TokenStore(application.authDataStore),
 ) : AndroidViewModel(application) {
 
-    internal constructor(db: HealthDatabase) : this(
+    internal constructor(db: HealthDatabase, tokenStore: TokenStore) : this(
         application = Application(),
         db = db,
-        tokenStore = TokenStore(androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(
-            scope = kotlinx.coroutines.MainScope(),
-            produceFile = { java.io.File.createTempFile("test_drink_vm", ".preferences_pb").also { it.deleteOnExit() } },
-        )),
+        tokenStore = tokenStore,
     )
 
     private var userId: String? = null
@@ -54,6 +51,3 @@ class DrinkButtonsViewModel(
         }
     }
 }
-
-internal fun List<ShortcutEntity>.reindexed(): List<ShortcutEntity> =
-    mapIndexed { i, e -> e.copy(sortOrder = i) }
