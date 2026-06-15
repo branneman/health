@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-source /home/deploy/health/.env
+ENV_FILE=/home/deploy/health/.env
+get_env() { grep -m1 "^${1}=" "$ENV_FILE" | cut -d= -f2-; }
+POSTGRES_USER=$(get_env POSTGRES_USER)
+POSTGRES_DB=$(get_env POSTGRES_DB)
+STORAGE_BOX_USER=$(get_env STORAGE_BOX_USER)
+STORAGE_BOX_HOST=$(get_env STORAGE_BOX_HOST)
 
 BACKUP_FILE="health_$(date +%Y%m%d_%H%M%S).sql.gz"
 BACKUP_DIR="/home/deploy/backups"
@@ -18,7 +23,6 @@ rsync -e "ssh $SSH_OPTS" \
     "$BACKUP_DIR/$BACKUP_FILE" \
     "${STORAGE_BOX}:backups/"
 
-ssh $SSH_OPTS "$STORAGE_BOX" \
-    "find backups/ -name '*.sql.gz' -mtime +$RETENTION_DAYS -delete"
-
 find "$BACKUP_DIR" -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete
+
+echo "$(date -Iseconds) backup ok: $BACKUP_FILE"

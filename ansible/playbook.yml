@@ -61,6 +61,14 @@
       debug:
         msg: "{{ storagebox_pubkey.stdout }}"
 
+    - name: Create backup log file
+      file:
+        path: /var/log/health-backup.log
+        state: touch
+        owner: deploy
+        group: deploy
+        mode: "0644"
+
     - name: Template backup script
       template:
         src: templates/backup.sh.j2
