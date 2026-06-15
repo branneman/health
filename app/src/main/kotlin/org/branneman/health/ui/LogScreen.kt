@@ -74,7 +74,10 @@ fun LogScreen(
                 lastAction = LogAction.Added("Logged")
             },
             onSetUpDrinkButtons = onSetUpDrinkButtons,
-            onLogShortcut       = onLogShortcut,
+            onLogShortcut       = { shortcut ->
+                onLogShortcut(shortcut)
+                lastAction = LogAction.Added("Logged")
+            },
             modifier            = Modifier.padding(padding),
         )
     }
