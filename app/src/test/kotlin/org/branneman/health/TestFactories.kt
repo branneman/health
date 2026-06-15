@@ -46,9 +46,10 @@ fun aShortcut(
     label: String = "Apple",
     kcal: Int = 52,
     sortOrder: Int = 0,
+    syncStatus: SyncStatus = SyncStatus.SYNCED,
 ) = ShortcutEntity(
     id = id, userId = userId, emoji = emoji, label = label,
-    kcal = kcal, sortOrder = sortOrder, syncStatus = SyncStatus.SYNCED,
+    kcal = kcal, sortOrder = sortOrder, syncStatus = syncStatus,
 )
 
 fun aUserProfile(
