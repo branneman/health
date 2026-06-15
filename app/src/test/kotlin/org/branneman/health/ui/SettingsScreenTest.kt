@@ -30,4 +30,19 @@ class SettingsScreenTest {
         compose.onNodeWithText("Meal buttons", substring = true).performClick()
         assertTrue(tapped)
     }
+
+    @Test fun `drink buttons row is present and tappable`() {
+        var called = false
+        compose.setContent {
+            MaterialTheme {
+                SettingsContent(
+                    onNavigateMealButtons = {},
+                    onNavigateDrinkButtons = { called = true },
+                    onSignOut = {},
+                )
+            }
+        }
+        compose.onNodeWithText("Drink buttons", substring = true).performClick()
+        assertTrue(called)
+    }
 }

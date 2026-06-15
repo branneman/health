@@ -82,6 +82,7 @@ fun SettingsScreen(
 @Composable
 fun SettingsContent(
     onNavigateMealButtons: () -> Unit,
+    onNavigateDrinkButtons: () -> Unit = {},
     onSignOut: () -> Unit,
     serverReachable: Boolean? = null,
     lastSyncedAt: Long? = null,
@@ -143,6 +144,12 @@ fun SettingsContent(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Meal buttons →")
+        }
+        TextButton(
+            onClick  = onNavigateDrinkButtons,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Drink buttons →")
         }
         if (onSyncNow != null) {
             TextButton(
