@@ -15,19 +15,28 @@ import kotlinx.coroutines.launch
 import org.branneman.health.HealthApplication
 import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
+import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
+import org.branneman.health.db.entities.ShortcutEntity
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 
-class LogViewModel(application: Application) : AndroidViewModel(application) {
+class LogViewModel(
+    application: Application,
+    private val db: HealthDatabase = (application as HealthApplication).db,
+    private val tokenStore: TokenStore = TokenStore(application.authDataStore),
+) : AndroidViewModel(application) {
 
-    private val db = (application as HealthApplication).db
-    private val tokenStore = TokenStore(application.authDataStore)
+    internal constructor(db: HealthDatabase, tokenStore: TokenStore) : this(
+        application = Application(),
+        db = db,
+        tokenStore = tokenStore,
+    )
 
     private val _undoPending = MutableStateFlow<Pair<LogEntryEntity, SyncStatus>?>(null)
 
@@ -38,6 +47,9 @@ class LogViewModel(application: Application) : AndroidViewModel(application) {
         combine(db.logEntryDao().observeAll(), dateFlow()) { all, today ->
             all.filter { it.loggedAt.startsWith(today.toString()) }
         }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val shortcuts: StateFlow<List<ShortcutEntity>> = db.shortcutDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun addEntry(kcalStr: String, label: String) {
@@ -66,6 +78,21 @@ class LogViewModel(application: Application) : AndroidViewModel(application) {
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = template.name,
+            )
+            db.logEntryDao().upsert(entity)
+            _undoPending.value = entity to SyncStatus.PENDING_CREATE
+        }
+    }
+
+    fun logFromShortcut(shortcut: ShortcutEntity) {
+        viewModelScope.launch {
+            val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val entity = LogEntryEntity(
+                userId        = userId,
+                loggedAt      = OffsetDateTime.now().toString(),
+                mealType      = "unknown",
+                quickAddKcal  = shortcut.kcal,
+                quickAddLabel = "${shortcut.emoji} ${shortcut.label}",
             )
             db.logEntryDao().upsert(entity)
             _undoPending.value = entity to SyncStatus.PENDING_CREATE
