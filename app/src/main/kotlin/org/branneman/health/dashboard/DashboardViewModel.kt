@@ -103,12 +103,12 @@ fun computeDynamicCaloriesLeft(
         return (todayBurn * eatingFraction - caloriesIn).toInt()
     }
 
-    val burnedSoFarEst = burnedSoFar
-        ?: (expectedToday.toDouble() * elapsed / totalAwake).toInt()
+    val burnedSoFarEst = burnedSoFar?.toDouble()
+        ?: (expectedToday.toDouble() * elapsed / totalAwake)
     val remainingBurn = expectedToday - burnedSoFarEst
     val pastAllowance = burnedSoFarEst * eatingFraction
     val overshoot     = maxOf(0.0, caloriesIn - pastAllowance)
-    return (remainingBurn * eatingFraction - overshoot).toInt()
+    return kotlin.math.floor(remainingBurn * eatingFraction - overshoot).toInt()
 }
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
