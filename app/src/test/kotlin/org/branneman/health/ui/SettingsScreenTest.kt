@@ -45,4 +45,68 @@ class SettingsScreenTest {
         compose.onNodeWithText("Drink buttons", substring = true).performClick()
         assertTrue(called)
     }
+
+    // --- Schedule section ---
+
+    @Test fun `schedule section shows Wake time and Bedtime labels`() {
+        compose.setContent {
+            MaterialTheme {
+                SettingsContent(
+                    onNavigateMealButtons = {},
+                    onSignOut = {},
+                    scheduleState = ScheduleState(wakeTime = "07:00", bedtime = "23:00"),
+                )
+            }
+        }
+        compose.onNodeWithText("Wake time", substring = true, ignoreCase = true).assertExists()
+        compose.onNodeWithText("Bedtime", substring = true, ignoreCase = true).assertExists()
+    }
+
+    @Test fun `tapping wake time plus calls onWakeTimePlus`() {
+        var called = false
+        compose.setContent {
+            MaterialTheme {
+                SettingsContent(
+                    onNavigateMealButtons = {},
+                    onSignOut = {},
+                    scheduleState = ScheduleState(wakeTime = "07:00"),
+                    onWakeTimePlus = { called = true },
+                )
+            }
+        }
+        compose.onAllNodesWithText("+")[0].performClick()
+        assertTrue(called)
+    }
+
+    @Test fun `Save schedule button hidden when schedule not changed`() {
+        compose.setContent {
+            MaterialTheme {
+                SettingsContent(
+                    onNavigateMealButtons = {},
+                    onSignOut = {},
+                    scheduleState = ScheduleState(
+                        wakeTime = "07:00", savedWakeTime = "07:00",
+                        bedtime  = "23:00", savedBedtime  = "23:00",
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithText("Save schedule", substring = true, ignoreCase = true).assertDoesNotExist()
+    }
+
+    @Test fun `Save schedule button disabled while saving`() {
+        compose.setContent {
+            MaterialTheme {
+                SettingsContent(
+                    onNavigateMealButtons = {},
+                    onSignOut = {},
+                    scheduleState = ScheduleState(
+                        wakeTime = "07:30", savedWakeTime = "07:00",
+                        isSaving = true,
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithText("Save schedule", substring = true, ignoreCase = true).assertIsNotEnabled()
+    }
 }

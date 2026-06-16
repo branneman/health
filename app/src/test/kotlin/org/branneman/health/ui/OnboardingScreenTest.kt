@@ -138,4 +138,35 @@ class OnboardingScreenTest {
         ))
         compose.onNodeWithText("Maintain weight", substring = true).assertExists()
     }
+
+    // --- Step 4 ---
+
+    private fun renderStep4(
+        state: OnboardingUiState = OnboardingUiState(wakeTime = "07:00", bedtime = "23:00"),
+        onUpdate: (OnboardingUiState.() -> OnboardingUiState) -> Unit = {},
+        onBack: () -> Unit = {},
+        onSave: () -> Unit = {},
+    ) {
+        compose.setContent {
+            OnboardingStep4(state = state, onUpdate = onUpdate, onBack = onBack, onSave = onSave)
+        }
+    }
+
+    @Test fun `step 4 shows Wake time and Bedtime labels`() {
+        renderStep4()
+        compose.onNodeWithText("Wake time", substring = true, ignoreCase = true).assertExists()
+        compose.onNodeWithText("Bedtime", substring = true, ignoreCase = true).assertExists()
+    }
+
+    @Test fun `step 4 shows current wake time value`() {
+        renderStep4(state = OnboardingUiState(wakeTime = "06:30", bedtime = "22:00"))
+        compose.onNodeWithText("06:30", substring = true).assertExists()
+    }
+
+    @Test fun `step 4 tapping plus on Wake time row calls onUpdate`() {
+        var updateCalled = false
+        renderStep4(onUpdate = { updateCalled = true })
+        compose.onAllNodesWithText("+")[0].performClick()
+        assert(updateCalled)
+    }
 }

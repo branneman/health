@@ -303,7 +303,7 @@ fun OnboardingStep4(
 }
 
 @Composable
-private fun TimeAdjustRow(
+internal fun TimeAdjustRow(
     label: String,
     time: String,
     onMinus: () -> Unit,
