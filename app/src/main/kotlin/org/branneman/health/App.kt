@@ -101,7 +101,7 @@ fun App() {
     }
 }
 
-private enum class SettingsPage { Main, MealButtons, DrinkButtons }
+private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule }
 
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
@@ -148,6 +148,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
                         onSignOut              = { authViewModel.logout() },
                         onNavigateMealButtons  = { settingsPage = SettingsPage.MealButtons },
                         onNavigateDrinkButtons = { settingsPage = SettingsPage.DrinkButtons },
+                        onNavigateProfile      = { settingsPage = SettingsPage.Profile },
+                        onNavigateGoal         = { settingsPage = SettingsPage.Goal },
+                        onNavigateSchedule     = { settingsPage = SettingsPage.Schedule },
                     )
                     SettingsPage.MealButtons -> MealButtonsScreen(
                         onBack = { settingsPage = SettingsPage.Main }
@@ -155,6 +158,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
                     SettingsPage.DrinkButtons -> DrinkButtonsScreen(
                         onBack = { settingsPage = SettingsPage.Main }
                     )
+                    SettingsPage.Profile  -> { /* TODO Task 6 */ }
+                    SettingsPage.Goal     -> { /* TODO Task 6 */ }
+                    SettingsPage.Schedule -> { /* TODO Task 6 */ }
                 }
             }
         }

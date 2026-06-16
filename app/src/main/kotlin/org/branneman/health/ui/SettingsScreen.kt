@@ -2,27 +2,13 @@ package org.branneman.health.ui
 
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -43,6 +29,9 @@ private val syncTimestampFormatter = DateTimeFormatter.ofPattern("d MMM, HH:mm")
 @Composable
 fun SettingsScreen(
     onSignOut: () -> Unit,
+    onNavigateProfile: () -> Unit = {},
+    onNavigateGoal: () -> Unit = {},
+    onNavigateSchedule: () -> Unit = {},
     onNavigateMealButtons: () -> Unit = {},
     onNavigateDrinkButtons: () -> Unit = {},
 ) {
@@ -51,7 +40,6 @@ fun SettingsScreen(
     val lastSyncedAt by context.syncDataStore.lastSyncedAtFlow.collectAsState(initial = null)
     val viewModel: SettingsViewModel = viewModel()
     val polarStatus by viewModel.polarStatus.collectAsState()
-    val scheduleState by viewModel.scheduleState.collectAsState()
     val polarCallbackPending by (context.applicationContext as HealthApplication)
         .polarCallbackPending.collectAsState()
 
@@ -67,34 +55,35 @@ fun SettingsScreen(
     }
 
     SettingsContent(
+        onNavigateProfile      = onNavigateProfile,
+        onNavigateGoal         = onNavigateGoal,
+        onNavigateSchedule     = onNavigateSchedule,
         onNavigateMealButtons  = onNavigateMealButtons,
         onNavigateDrinkButtons = onNavigateDrinkButtons,
         onSignOut              = onSignOut,
-        serverReachable       = serverReachable,
-        lastSyncedAt          = lastSyncedAt,
-        polarStatus           = polarStatus,
-        onConnectPolar        = if (polarStatus == PolarStatus.NotConnected) {
+        serverReachable        = serverReachable,
+        lastSyncedAt           = lastSyncedAt,
+        polarStatus            = polarStatus,
+        onConnectPolar         = if (polarStatus == PolarStatus.NotConnected) {
             {
                 viewModel.connectPolar { url ->
-                    CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+                    CustomTabsIntent.Builder().build()
+                        .launchUrl(context, Uri.parse(url))
                 }
             }
         } else null,
         onSyncNow              = { SyncWorker.syncNow(context) },
         versionName            = BuildConfig.VERSION_NAME,
-        scheduleState          = scheduleState,
-        onWakeTimeMinus        = { viewModel.updateWakeTime(-30) },
-        onWakeTimePlus         = { viewModel.updateWakeTime(+30) },
-        onBedtimeMinus         = { viewModel.updateBedtime(-30) },
-        onBedtimePlus          = { viewModel.updateBedtime(+30) },
-        onSaveSchedule         = { viewModel.saveSchedule() },
     )
 }
 
 @Composable
 fun SettingsContent(
+    onNavigateProfile: () -> Unit,
+    onNavigateGoal: () -> Unit,
+    onNavigateSchedule: () -> Unit,
     onNavigateMealButtons: () -> Unit,
-    onNavigateDrinkButtons: () -> Unit = {},
+    onNavigateDrinkButtons: () -> Unit,
     onSignOut: () -> Unit,
     serverReachable: Boolean? = null,
     lastSyncedAt: Long? = null,
@@ -102,133 +91,61 @@ fun SettingsContent(
     onConnectPolar: (() -> Unit)? = null,
     onSyncNow: (() -> Unit)? = null,
     versionName: String = "",
-    scheduleState: ScheduleState = ScheduleState(),
-    onWakeTimeMinus: () -> Unit = {},
-    onWakeTimePlus: () -> Unit = {},
-    onBedtimeMinus: () -> Unit = {},
-    onBedtimePlus: () -> Unit = {},
-    onSaveSchedule: () -> Unit = {},
 ) {
     var showSignOutConfirm by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 8.dp),
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
+        // Server / Sync section
+        SettingsStatusRow(
+            label = when (serverReachable) {
+                null  -> "Server: Checking…"
+                true  -> "Server: Online${lastSyncedAt?.let {
+                    val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+                    " · synced ${dt.format(syncTimestampFormatter)}"
+                } ?: ""}"
+                false -> "Server: Offline"
+            },
+            action = if (onSyncNow != null) {
+                { TextButton(onClick = onSyncNow) { Text("Sync now") } }
+            } else null,
+        )
+
+        // Polar / Devices section
+        SettingsStatusRow(
+            label = when (polarStatus) {
+                PolarStatus.Connected    -> "Polar: Connected"
+                PolarStatus.NotConnected -> "Polar: Not connected"
+                PolarStatus.Loading      -> "Polar: Checking…"
+                PolarStatus.Unknown      -> "Polar: Unknown"
+            },
+            action = when {
+                polarStatus == PolarStatus.Connected -> {{ Text("✓", color = MaterialTheme.colorScheme.primary) }}
+                onConnectPolar != null               -> {{ OutlinedButton(onClick = onConnectPolar) { Text("Connect") } }}
+                else                                 -> null
+            },
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+        // Navigation rows
+        SettingsNavRow("Profile", "Sex, height, age, goal weight", onNavigateProfile)
+        SettingsNavRow("Goal", "Activity level · calorie deficit", onNavigateGoal)
+        SettingsNavRow("Schedule", "Wake time · Bedtime", onNavigateSchedule)
+        SettingsNavRow("Meal buttons", null, onNavigateMealButtons)
+        SettingsNavRow("Drink buttons", null, onNavigateDrinkButtons)
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         Text(
-            text = "Server: ${
-                when (serverReachable) {
-                    null -> "Checking…"
-                    true -> "Online"
-                    false -> "Offline"
-                }
-            }"
+            text     = "Version: $versionName",
+            style    = MaterialTheme.typography.bodySmall,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Last synced: ${
-                lastSyncedAt?.let {
-                    LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
-                        .format(syncTimestampFormatter)
-                } ?: "Never"
-            }",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Polar: ${when (polarStatus) {
-                PolarStatus.Loading -> "Checking…"
-                PolarStatus.Connected -> "Connected"
-                PolarStatus.NotConnected -> "Not connected"
-                PolarStatus.Unknown -> "Unknown"
-            }}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        if (onConnectPolar != null) {
-            TextButton(
-                onClick  = onConnectPolar,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Connect Polar")
-            }
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        TextButton(
-            onClick  = onNavigateMealButtons,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Meal buttons →")
-        }
-        TextButton(
-            onClick  = onNavigateDrinkButtons,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Drink buttons →")
-        }
-        if (onSyncNow != null) {
-            TextButton(
-                onClick  = onSyncNow,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Sync now")
-            }
-        }
-        // --- Schedule section ---
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Schedule",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        TimeAdjustRow(
-            label   = "Wake time",
-            time    = scheduleState.wakeTime,
-            onMinus = onWakeTimeMinus,
-            onPlus  = onWakeTimePlus,
-        )
-        TimeAdjustRow(
-            label   = "Bedtime",
-            time    = scheduleState.bedtime,
-            onMinus = onBedtimeMinus,
-            onPlus  = onBedtimePlus,
-        )
-        if (scheduleState.changed) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Button(
-                onClick  = onSaveSchedule,
-                enabled  = !scheduleState.isSaving,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (scheduleState.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp))
-                }
-                Text("Save schedule")
-            }
-        }
-        scheduleState.saveError?.let { error ->
-            Text(
-                text  = error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        // --- End schedule section ---
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text  = "Version: $versionName",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(8.dp))
         TextButton(
             onClick  = { showSignOutConfirm = true },
             modifier = Modifier.fillMaxWidth(),
@@ -240,17 +157,64 @@ fun SettingsContent(
     if (showSignOutConfirm) {
         AlertDialog(
             onDismissRequest = { showSignOutConfirm = false },
-            title = { Text("Sign out?") },
-            text  = { Text("Your data will be removed from this device. It's all saved on the server.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSignOutConfirm = false
-                    onSignOut()
-                }) { Text("Sign out") }
+            title            = { Text("Sign out?") },
+            text             = { Text("Your data will be removed from this device. It's all saved on the server.") },
+            confirmButton    = {
+                TextButton(onClick = { showSignOutConfirm = false; onSignOut() }) {
+                    Text("Sign out")
+                }
             },
-            dismissButton = {
+            dismissButton    = {
                 TextButton(onClick = { showSignOutConfirm = false }) { Text("Cancel") }
             },
+        )
+    }
+}
+
+@Composable
+private fun SettingsStatusRow(
+    label: String,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text     = label,
+            style    = MaterialTheme.typography.bodyMedium,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (action != null) action()
+    }
+}
+
+@Composable
+private fun SettingsNavRow(title: String, subtitle: String?, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Text(
+                    text  = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Text(
+            text  = "›",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
