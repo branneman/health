@@ -18,8 +18,9 @@ import org.branneman.health.db.entities.*
         ShortcutEntity::class,
         UserProfileEntity::class,
         SportTonightEntity::class,
+        DynamicBudgetParamsEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class HealthDatabase : RoomDatabase() {
@@ -32,4 +33,5 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun shortcutDao(): ShortcutDao
     abstract fun userProfileDao(): UserProfileDao
     abstract fun sportTonightDao(): SportTonightDao
+    abstract fun dynamicBudgetParamsDao(): DynamicBudgetParamsDao
 }

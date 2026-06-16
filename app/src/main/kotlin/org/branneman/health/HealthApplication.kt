@@ -33,6 +33,21 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+private val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS dynamic_budget_params (" +
+            "date TEXT NOT NULL PRIMARY KEY, " +
+            "expectedTodaySport INTEGER, " +
+            "expectedTodayNonSport INTEGER, " +
+            "eatingFractionSport REAL, " +
+            "eatingFractionNonSport REAL, " +
+            "postWorkoutModeSport INTEGER NOT NULL, " +
+            "postWorkoutModeNonSport INTEGER NOT NULL)"
+        )
+    }
+}
+
 class HealthApplication : Application() {
 
     lateinit var db: HealthDatabase
@@ -51,7 +66,7 @@ class HealthApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         db = Room.databaseBuilder(this, HealthDatabase::class.java, "health.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
     }
 }
