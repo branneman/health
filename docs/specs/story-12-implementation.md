@@ -2,7 +2,7 @@
 
 **Scope:** What needs to be built to complete story 12. The math model and
 dynamic budget formula are already specified in `docs/specs/dynamic-budget.md`
-and `docs/specs/math-model.md`. This document is the implementation guide: what
+and `docs/math-model.md`. This document is the implementation guide: what
 files to create or change, in what order, and what the tests look like.
 
 ---
@@ -87,7 +87,7 @@ insert). Claims slot #10 in the testing-manifesto UUID registry.
 | `wakeTime`/`bedtime` in response | Profile with `wakeTime='06:30'`, `bedtime='22:30'` | Response has `"wakeTime":"06:30"` and `"bedtime":"22:30"` |
 | Profile `PUT` round-trip | `PUT /profile` with new times; `GET /profile` | Values match |
 
-Update `docs/specs/testing-manifesto.md` UUID registry table to add row #10.
+Update `docs/testing-manifesto.md` UUID registry table to add row #10.
 
 ---
 
@@ -557,7 +557,7 @@ fun aUserProfile(
 
 ## 7. Testing-manifesto update
 
-Add row #10 to the UUID registry in `docs/specs/testing-manifesto.md`:
+Add row #10 to the UUID registry in `docs/testing-manifesto.md`:
 
 | 10 | `...000010` | `DynamicBudgetIntegrationTest` | `dynamic-budget-test@test.local` |
 
