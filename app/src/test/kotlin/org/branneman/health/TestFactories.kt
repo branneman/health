@@ -54,10 +54,13 @@ fun aShortcut(
 
 fun aUserProfile(
     userId: String = uuid(),
+    wakeTime: String = "07:00",
+    bedtime: String = "23:00",
 ) = UserProfileEntity(
     userId = userId, heightCm = 177, birthYear = 1986, sex = "male",
     goalWeightKg = 74.0, activityLevel = "lightly_active", targetDeficit = 300,
     phase = "loss", vacationMode = false, syncStatus = SyncStatus.SYNCED,
+    wakeTime = wakeTime, bedtime = bedtime,
 )
 
 fun aLogEntry(

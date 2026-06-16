@@ -84,4 +84,13 @@ class UserProfileDaoTest {
         dao.deleteForUser(userId)
         assertFalse(dao.existsFlow().first())
     }
+
+    @Test
+    fun `wakeTime and bedtime round-trip correctly`() = runTest {
+        dao.upsert(aUserProfile(userId = uuid(), wakeTime = "06:30", bedtime = "22:00"))
+        val result = dao.get()
+        assertNotNull(result)
+        assertEquals("06:30", result.wakeTime)
+        assertEquals("22:00", result.bedtime)
+    }
 }
