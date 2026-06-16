@@ -31,7 +31,7 @@ class E2ESmokeTest {
             .performTextInput(email)
         compose.onNodeWithText("Password", substring = true, ignoreCase = true)
             .performTextInput(password)
-        compose.onNodeWithText("Sign in", substring = true, ignoreCase = true)
+        compose.onNodeWithText("Sign in", ignoreCase = true)
             .performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Today", substring = true).fetchSemanticsNodes().isNotEmpty()
