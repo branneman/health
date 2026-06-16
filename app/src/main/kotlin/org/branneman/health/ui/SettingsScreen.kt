@@ -110,67 +110,49 @@ fun SettingsContent(
 
         HorizontalDivider()
         SettingsSectionHeader("Connections")
-        Row(
-            modifier          = Modifier.fillMaxWidth(),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        ) {
-            ListItem(
-                modifier          = Modifier.weight(1f),
-                headlineContent   = { Text("Polar watch") },
-                supportingContent = {
-                    Text(
-                        text  = when (polarStatus) {
-                            PolarStatus.Connected    -> "Connected"
-                            PolarStatus.NotConnected -> "Not connected"
-                            PolarStatus.Loading      -> "Checking…"
-                            PolarStatus.Unknown      -> "Unknown"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-            )
-            when {
-                polarStatus == PolarStatus.Connected ->
-                    Text("✓", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 16.dp))
-                onConnectPolar != null -> {
-                    val cb = onConnectPolar
-                    OutlinedButton(onClick = cb, modifier = Modifier.padding(end = 8.dp)) {
-                        Text("Connect")
-                    }
-                }
-            }
-        }
+        ListItem(
+            headlineContent   = { Text("Polar watch") },
+            supportingContent = {
+                Text(
+                    text  = when (polarStatus) {
+                        PolarStatus.Connected    -> "Connected"
+                        PolarStatus.NotConnected -> "Not connected"
+                        PolarStatus.Loading      -> "Checking…"
+                        PolarStatus.Unknown      -> "Unknown"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingContent = when {
+                polarStatus == PolarStatus.Connected -> {{ Text("✓", color = MaterialTheme.colorScheme.primary) }}
+                onConnectPolar != null               -> {{ OutlinedButton(onClick = onConnectPolar) { Text("Connect") } }}
+                else                                 -> null
+            },
+        )
 
         HorizontalDivider()
         SettingsSectionHeader("Sync")
-        Row(
-            modifier          = Modifier.fillMaxWidth(),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        ) {
-            ListItem(
-                modifier          = Modifier.weight(1f),
-                headlineContent   = { Text("Server") },
-                supportingContent = {
-                    Text(
-                        text  = when (serverReachable) {
-                            null  -> "Checking…"
-                            true  -> "Online${lastSyncedAt?.let {
-                                val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
-                                " · synced ${dt.format(syncTimestampFormatter)}"
-                            } ?: ""}"
-                            false -> "Offline"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-            )
-            if (onSyncNow != null) {
-                val cb = onSyncNow
-                TextButton(onClick = cb) { Text("Sync now") }
-            }
-        }
+        ListItem(
+            headlineContent   = { Text("Server") },
+            supportingContent = {
+                Text(
+                    text  = when (serverReachable) {
+                        null  -> "Checking…"
+                        true  -> "Online${lastSyncedAt?.let {
+                            val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+                            " · synced ${dt.format(syncTimestampFormatter)}"
+                        } ?: ""}"
+                        false -> "Offline"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingContent = if (onSyncNow != null) {{
+                TextButton(onClick = onSyncNow) { Text("Sync now") }
+            }} else null,
+        )
 
         Spacer(Modifier.height(16.dp))
         Text(
