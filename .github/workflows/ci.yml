@@ -156,16 +156,21 @@ jobs:
             -H "Authorization: Bearer $E2E_PASSWORD" \
             "$SERVER_URL/internal/e2e/reset"
 
+      - name: Write E2E credentials to gradle.properties
+        env:
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: |
+          printf 'e2eEmail=test+e2e@bran.name\n' >> gradle.properties
+          printf 'e2ePassword=%s\n' "$E2E_PASSWORD" >> gradle.properties
+
       - name: Run E2E tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
         env:
           SERVER_BASE_URL: ${{ secrets.API_TEST_SERVER_URL }}
-          E2E_EMAIL: test+e2e@bran.name
-          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         with:
           api-level: 34
           target: default
           arch: x86_64
           profile: pixel_6a
           disable-animations: true
-          script: ./gradlew :app:connectedAndroidTest -Pe2eEmail=$E2E_EMAIL -Pe2ePassword=$E2E_PASSWORD
+          script: ./gradlew :app:connectedAndroidTest
