@@ -90,35 +90,33 @@ class ProfileSettingsViewModel private constructor(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, saveError = null) }
-            val stored = tokenStore.tokenFlow.first() ?: return@launch
-            runCatching {
-                val dto = apiClient.getProfile(stored.token) ?: return@launch
-                val age = (LocalDate.now().year - dto.birthYear).toString()
-                _state.value = ProfileSettingsUiState(
-                    isLoading          = false,
-                    sex                = dto.sex,
-                    heightCm           = dto.heightCm.toString(),
-                    age                = age,
-                    goalWeightKg       = dto.goalWeightKg.toString(),
-                    activityLevel      = dto.activityLevel,
-                    targetDeficit      = dto.targetDeficit,
-                    wakeTime           = dto.wakeTime,
-                    bedtime            = dto.bedtime,
-                    phase              = dto.phase,
-                    vacationMode       = dto.vacationMode,
-                    userId             = stored.userId,
-                    savedSex           = dto.sex,
-                    savedHeightCm      = dto.heightCm.toString(),
-                    savedAge           = age,
-                    savedGoalWeightKg  = dto.goalWeightKg.toString(),
-                    savedActivityLevel = dto.activityLevel,
-                    savedTargetDeficit = dto.targetDeficit,
-                    savedWakeTime      = dto.wakeTime,
-                    savedBedtime       = dto.bedtime,
-                )
-            }.onFailure {
-                _state.update { it.copy(isLoading = false, saveError = "Couldn't load profile.") }
+            val entity = db.userProfileDao().get() ?: run {
+                _state.update { it.copy(isLoading = false, saveError = "Profile not found in local cache.") }
+                return@launch
             }
+            val age = (LocalDate.now().year - entity.birthYear).toString()
+            _state.value = ProfileSettingsUiState(
+                isLoading          = false,
+                sex                = entity.sex,
+                heightCm           = entity.heightCm.toString(),
+                age                = age,
+                goalWeightKg       = entity.goalWeightKg.toString(),
+                activityLevel      = entity.activityLevel,
+                targetDeficit      = entity.targetDeficit,
+                wakeTime           = entity.wakeTime,
+                bedtime            = entity.bedtime,
+                phase              = entity.phase,
+                vacationMode       = entity.vacationMode,
+                userId             = entity.userId,
+                savedSex           = entity.sex,
+                savedHeightCm      = entity.heightCm.toString(),
+                savedAge           = age,
+                savedGoalWeightKg  = entity.goalWeightKg.toString(),
+                savedActivityLevel = entity.activityLevel,
+                savedTargetDeficit = entity.targetDeficit,
+                savedWakeTime      = entity.wakeTime,
+                savedBedtime       = entity.bedtime,
+            )
         }
     }
 

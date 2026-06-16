@@ -8,7 +8,6 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,9 +17,6 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import org.branneman.health.UserProfileDto
 import org.branneman.health.aUserProfile
 import org.branneman.health.auth.TokenStore
 import org.branneman.health.db.HealthDatabase
@@ -49,19 +45,6 @@ class ProfileSettingsViewModelTest {
     private lateinit var db: HealthDatabase
     private lateinit var tokenStore: TokenStore
 
-    private val profileDto = UserProfileDto(
-        heightCm      = 182,
-        birthYear     = 1990,
-        sex           = "male",
-        goalWeightKg  = 78.0,
-        activityLevel = "lightly_active",
-        targetDeficit = 300,
-        phase         = "loss",
-        vacationMode  = false,
-        wakeTime      = "07:00",
-        bedtime       = "23:00",
-    )
-
     @Before fun setUp() {
         Dispatchers.setMain(testDispatcher)
         db = Room.inMemoryDatabaseBuilder(
@@ -80,10 +63,13 @@ class ProfileSettingsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun apiClient(dto: UserProfileDto? = profileDto): HealthApiClient {
-        val body   = if (dto != null) Json.encodeToString(dto) else ""
-        val status = if (dto != null) HttpStatusCode.OK else HttpStatusCode.NotFound
-        val engine = MockEngine { respond(body, status, headersOf("Content-Type", "application/json")) }
+    private fun noopApiClient(): HealthApiClient {
+        val engine = MockEngine { respond("", HttpStatusCode.OK) }
+        return HealthApiClient("http://test", HttpClient(engine) { install(ContentNegotiation) { json() } })
+    }
+
+    private fun saveApiClient(putStatus: HttpStatusCode = HttpStatusCode.OK): HealthApiClient {
+        val engine = MockEngine { respond("", putStatus) }
         return HealthApiClient("http://test", HttpClient(engine) { install(ContentNegotiation) { json() } })
     }
 
@@ -92,18 +78,25 @@ class ProfileSettingsViewModelTest {
         tokenStore.save("test-token", farFuture, userId)
     }
 
-    private fun viewModel(apiClient: HealthApiClient = apiClient()) =
+    private suspend fun seedProfile() {
+        db.userProfileDao().upsert(aUserProfile(userId = userId))
+    }
+
+    private fun viewModel(apiClient: HealthApiClient = noopApiClient()) =
         ProfileSettingsViewModel(db, tokenStore, apiClient)
 
-    @Test fun `load populates state from server`() = runTest {
-        signIn()
+    // aUserProfile defaults: heightCm=177, birthYear=1986, sex=male, goalWeightKg=74.0,
+    // activityLevel=lightly_active, targetDeficit=300, wakeTime=07:00, bedtime=23:00
+
+    @Test fun `load populates state from Room cache`() = runTest {
+        seedProfile()
         val vm = viewModel()
         vm.load()
         val s = vm.uiState.first { !it.isLoading }
         assertEquals("male", s.sex)
-        assertEquals("182", s.heightCm)
-        assertEquals((LocalDate.now().year - 1990).toString(), s.age)
-        assertEquals("78.0", s.goalWeightKg)
+        assertEquals("177", s.heightCm)
+        assertEquals((LocalDate.now().year - 1986).toString(), s.age)
+        assertEquals("74.0", s.goalWeightKg)
         assertEquals("lightly_active", s.activityLevel)
         assertEquals(300, s.targetDeficit)
         assertEquals("07:00", s.wakeTime)
@@ -112,7 +105,7 @@ class ProfileSettingsViewModelTest {
     }
 
     @Test fun `profileDirty is false after load`() = runTest {
-        signIn()
+        seedProfile()
         val vm = viewModel()
         vm.load()
         vm.uiState.first { !it.isLoading }
@@ -120,7 +113,7 @@ class ProfileSettingsViewModelTest {
     }
 
     @Test fun `profileDirty is true after editing a profile field`() = runTest {
-        signIn()
+        seedProfile()
         val vm = viewModel()
         vm.load()
         vm.uiState.first { !it.isLoading }
@@ -129,7 +122,7 @@ class ProfileSettingsViewModelTest {
     }
 
     @Test fun `goalDirty is false after load, true after editing deficit`() = runTest {
-        signIn()
+        seedProfile()
         val vm = viewModel()
         vm.load()
         vm.uiState.first { !it.isLoading }
@@ -139,7 +132,7 @@ class ProfileSettingsViewModelTest {
     }
 
     @Test fun `scheduleDirty is false after load, true after editing wake time`() = runTest {
-        signIn()
+        seedProfile()
         val vm = viewModel()
         vm.load()
         vm.uiState.first { !it.isLoading }
@@ -150,16 +143,12 @@ class ProfileSettingsViewModelTest {
 
     @Test fun `save calls onSuccess and resets dirty flag`() = runTest {
         signIn()
+        seedProfile()
         var putCalled = false
-        val engine = MockEngine { request ->
-            if (request.method.value == "GET")
-                respond(Json.encodeToString(profileDto), HttpStatusCode.OK, headersOf("Content-Type", "application/json"))
-            else {
-                putCalled = true
-                respond("", HttpStatusCode.OK)
-            }
-        }
-        val client = HealthApiClient("http://test", HttpClient(engine) { install(ContentNegotiation) { json() } })
+        val client = HealthApiClient("http://test", HttpClient(MockEngine { request ->
+            putCalled = true
+            respond("", HttpStatusCode.OK)
+        }) { install(ContentNegotiation) { json() } })
         val vm = ProfileSettingsViewModel(db, tokenStore, client)
         vm.load()
         vm.uiState.first { !it.isLoading }
@@ -177,14 +166,8 @@ class ProfileSettingsViewModelTest {
 
     @Test fun `save sets saveError on API failure`() = runTest {
         signIn()
-        val engine = MockEngine { request ->
-            if (request.method.value == "GET")
-                respond(Json.encodeToString(profileDto), HttpStatusCode.OK, headersOf("Content-Type", "application/json"))
-            else
-                respond("", HttpStatusCode.InternalServerError)
-        }
-        val client = HealthApiClient("http://test", HttpClient(engine) { install(ContentNegotiation) { json() } })
-        val vm = ProfileSettingsViewModel(db, tokenStore, client)
+        seedProfile()
+        val vm = ProfileSettingsViewModel(db, tokenStore, saveApiClient(HttpStatusCode.InternalServerError))
         vm.load()
         vm.uiState.first { !it.isLoading }
         vm.update { copy(age = "35") }
@@ -199,15 +182,8 @@ class ProfileSettingsViewModelTest {
 
     @Test fun `save upserts Room cache on success`() = runTest {
         signIn()
-        db.userProfileDao().upsert(aUserProfile(userId = userId))
-        val engine = MockEngine { request ->
-            if (request.method.value == "GET")
-                respond(Json.encodeToString(profileDto), HttpStatusCode.OK, headersOf("Content-Type", "application/json"))
-            else
-                respond("", HttpStatusCode.OK)
-        }
-        val client = HealthApiClient("http://test", HttpClient(engine) { install(ContentNegotiation) { json() } })
-        val vm = ProfileSettingsViewModel(db, tokenStore, client)
+        seedProfile()
+        val vm = ProfileSettingsViewModel(db, tokenStore, saveApiClient())
         vm.load()
         vm.uiState.first { !it.isLoading }
         vm.update { copy(targetDeficit = 400) }
