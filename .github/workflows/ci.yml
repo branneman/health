@@ -160,8 +160,7 @@ jobs:
         env:
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         run: |
-          printf 'e2eEmail=test+e2e@bran.name\n' >> gradle.properties
-          printf 'e2ePassword=%s\n' "$E2E_PASSWORD" >> gradle.properties
+          printf '\ne2eEmail=test+e2e@bran.name\ne2ePassword=%s\n' "$E2E_PASSWORD" >> gradle.properties
 
       - name: Run E2E tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
