@@ -1,8 +1,9 @@
 package org.branneman.health
 
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -13,8 +14,10 @@ class E2ESmokeTest {
 
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    private val email    = System.getenv("E2E_EMAIL")    ?: "test+e2e@bran.name"
-    private val password = System.getenv("E2E_PASSWORD") ?: error("E2E_PASSWORD not set")
+    private val args     = InstrumentationRegistry.getArguments()
+    private val email    = args.getString("E2E_EMAIL")    ?: "test+e2e@bran.name"
+    private val password = args.getString("E2E_PASSWORD").takeIf { !it.isNullOrEmpty() }
+        ?: error("E2E_PASSWORD not set")
 
     @After fun cleanup() {
         runCatching {

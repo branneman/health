@@ -168,4 +168,4 @@ jobs:
           arch: x86_64
           profile: pixel_6a
           disable-animations: true
-          script: ./gradlew :app:connectedAndroidTest
+          script: ./gradlew :app:connectedAndroidTest -Pe2eEmail=$E2E_EMAIL -Pe2ePassword=$E2E_PASSWORD
