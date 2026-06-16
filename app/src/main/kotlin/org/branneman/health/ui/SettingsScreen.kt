@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -96,56 +95,91 @@ fun SettingsContent(
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 8.dp),
     ) {
-        // Server / Sync section
-        SettingsStatusRow(
-            label = when (serverReachable) {
-                null  -> "Server: Checking…"
-                true  -> "Server: Online${lastSyncedAt?.let {
-                    val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
-                    " · synced ${dt.format(syncTimestampFormatter)}"
-                } ?: ""}"
-                false -> "Server: Offline"
-            },
-            action = if (onSyncNow != null) {
-                { TextButton(onClick = onSyncNow) { Text("Sync now") } }
-            } else null,
-        )
-
-        // Polar / Devices section
-        SettingsStatusRow(
-            label = when (polarStatus) {
-                PolarStatus.Connected    -> "Polar: Connected"
-                PolarStatus.NotConnected -> "Polar: Not connected"
-                PolarStatus.Loading      -> "Polar: Checking…"
-                PolarStatus.Unknown      -> "Polar: Unknown"
-            },
-            action = when {
-                polarStatus == PolarStatus.Connected -> {{ Text("✓", color = MaterialTheme.colorScheme.primary) }}
-                onConnectPolar != null               -> {{ OutlinedButton(onClick = onConnectPolar) { Text("Connect") } }}
-                else                                 -> null
-            },
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        // Navigation rows
+        SettingsSectionHeader("Profile")
         SettingsNavRow("Profile", "Sex, height, age, goal weight", onNavigateProfile)
         SettingsNavRow("Goal", "Activity level · calorie deficit", onNavigateGoal)
         SettingsNavRow("Schedule", "Wake time · Bedtime", onNavigateSchedule)
+
+        HorizontalDivider()
+        SettingsSectionHeader("Quick buttons")
         SettingsNavRow("Meal buttons", null, onNavigateMealButtons)
         SettingsNavRow("Drink buttons", null, onNavigateDrinkButtons)
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        HorizontalDivider()
+        SettingsSectionHeader("Connections")
+        Row(
+            modifier          = Modifier.fillMaxWidth(),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            ListItem(
+                modifier          = Modifier.weight(1f),
+                headlineContent   = { Text("Polar watch") },
+                supportingContent = {
+                    Text(
+                        text  = when (polarStatus) {
+                            PolarStatus.Connected    -> "Connected"
+                            PolarStatus.NotConnected -> "Not connected"
+                            PolarStatus.Loading      -> "Checking…"
+                            PolarStatus.Unknown      -> "Unknown"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+            )
+            when {
+                polarStatus == PolarStatus.Connected ->
+                    Text("✓", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 16.dp))
+                onConnectPolar != null -> {
+                    val cb = onConnectPolar
+                    OutlinedButton(onClick = cb, modifier = Modifier.padding(end = 8.dp)) {
+                        Text("Connect")
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+        SettingsSectionHeader("Sync")
+        Row(
+            modifier          = Modifier.fillMaxWidth(),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            ListItem(
+                modifier          = Modifier.weight(1f),
+                headlineContent   = { Text("Server") },
+                supportingContent = {
+                    Text(
+                        text  = when (serverReachable) {
+                            null  -> "Checking…"
+                            true  -> "Online${lastSyncedAt?.let {
+                                val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+                                " · synced ${dt.format(syncTimestampFormatter)}"
+                            } ?: ""}"
+                            false -> "Offline"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+            )
+            if (onSyncNow != null) {
+                val cb = onSyncNow
+                TextButton(onClick = cb) { Text("Sync now") }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
         Text(
             text     = "Version: $versionName",
             style    = MaterialTheme.typography.bodySmall,
             color    = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
         TextButton(
             onClick  = { showSignOutConfirm = true },
             modifier = Modifier.fillMaxWidth(),
@@ -172,49 +206,21 @@ fun SettingsContent(
 }
 
 @Composable
-private fun SettingsStatusRow(
-    label: String,
-    action: (@Composable () -> Unit)? = null,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text     = label,
-            style    = MaterialTheme.typography.bodyMedium,
-            color    = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        if (action != null) action()
-    }
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        text     = title,
+        style    = MaterialTheme.typography.labelLarge,
+        color    = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+    )
 }
 
 @Composable
 private fun SettingsNavRow(title: String, subtitle: String?, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(
-                    text  = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Text(
-            text  = "›",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    ListItem(
+        headlineContent   = { Text(title) },
+        supportingContent = subtitle?.let { sub -> { Text(sub) } },
+        trailingContent   = { Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        modifier          = Modifier.clickable(onClick = onClick),
+    )
 }

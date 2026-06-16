@@ -50,7 +50,7 @@ class SettingsScreenTest {
     @Test fun `Profile row is present and navigates`() {
         var tapped = false
         render(onNavigateProfile = { tapped = true })
-        compose.onNodeWithText("Profile", substring = true).performClick()
+        compose.onAllNodesWithText("Profile", substring = true).filterToOne(hasClickAction()).performClick()
         assertTrue(tapped)
     }
 
@@ -85,7 +85,8 @@ class SettingsScreenTest {
     @Test fun `shows Connect button when Polar not connected`() {
         var tapped = false
         render(polarStatus = PolarStatus.NotConnected, onConnectPolar = { tapped = true })
-        compose.onNodeWithText("Connect", substring = true).performClick()
+        compose.onAllNodesWithText("Connect", substring = true).filterToOne(hasClickAction())
+            .performScrollTo().performClick()
         assertTrue(tapped)
     }
 
@@ -97,7 +98,7 @@ class SettingsScreenTest {
     @Test fun `Sync now button is present and calls onSyncNow`() {
         var tapped = false
         render(onSyncNow = { tapped = true })
-        compose.onNodeWithText("Sync now", substring = true).performClick()
+        compose.onNodeWithText("Sync now", substring = true).performScrollTo().performClick()
         assertTrue(tapped)
     }
 
