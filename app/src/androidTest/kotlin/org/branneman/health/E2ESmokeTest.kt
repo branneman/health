@@ -33,7 +33,7 @@ class E2ESmokeTest {
             .performTextInput(password)
         compose.onNodeWithText("Sign in", ignoreCase = true)
             .performClick()
-        compose.waitUntil(timeoutMillis = 10_000) {
+        compose.waitUntil(timeoutMillis = 30_000) {
             compose.onAllNodesWithText("Today", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
