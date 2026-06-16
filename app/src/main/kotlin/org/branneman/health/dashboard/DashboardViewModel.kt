@@ -69,6 +69,38 @@ fun isValidWeightInput(input: String): Boolean {
     return true
 }
 
+fun computeDynamicCaloriesLeft(
+    wakeTimeStr: String,
+    bedtimeStr: String,
+    expectedToday: Int,
+    eatingFraction: Double,
+    burnedSoFar: Int?,
+    caloriesIn: Int,
+    postWorkoutMode: Boolean,
+    nowMinutes: Int,
+): Int {
+    fun parseMinutes(s: String): Int {
+        val (h, m) = s.split(":").map { it.toInt() }
+        return h * 60 + m
+    }
+    val wakeMinutes = parseMinutes(wakeTimeStr)
+    val bedMinutes  = parseMinutes(bedtimeStr)
+    val totalAwake  = maxOf(1, bedMinutes - wakeMinutes)
+    val elapsed     = (nowMinutes - wakeMinutes).coerceIn(0, totalAwake)
+
+    if (postWorkoutMode) {
+        val todayBurn = burnedSoFar ?: expectedToday
+        return (todayBurn * eatingFraction - caloriesIn).toInt()
+    }
+
+    val burnedSoFarEst = burnedSoFar
+        ?: (expectedToday.toDouble() * elapsed / totalAwake).toInt()
+    val remainingBurn = expectedToday - burnedSoFarEst
+    val pastAllowance = burnedSoFarEst * eatingFraction
+    val overshoot     = maxOf(0.0, caloriesIn - pastAllowance)
+    return (remainingBurn * eatingFraction - overshoot).toInt()
+}
+
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app = application as HealthApplication
