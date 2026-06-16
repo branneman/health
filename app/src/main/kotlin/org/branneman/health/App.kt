@@ -26,6 +26,9 @@ import org.branneman.health.ui.LogScreen
 import org.branneman.health.ui.LoginScreen
 import org.branneman.health.ui.MealButtonsScreen
 import org.branneman.health.ui.OnboardingScreen
+import org.branneman.health.ui.GoalSettingsScreen
+import org.branneman.health.ui.ProfileSettingsScreen
+import org.branneman.health.ui.ScheduleSettingsScreen
 import org.branneman.health.ui.SettingsScreen
 
 private enum class Tab(val label: String, val emoji: String) {
@@ -158,9 +161,15 @@ private fun MainNav(authViewModel: AuthViewModel) {
                     SettingsPage.DrinkButtons -> DrinkButtonsScreen(
                         onBack = { settingsPage = SettingsPage.Main }
                     )
-                    SettingsPage.Profile  -> { /* TODO Task 6 */ }
-                    SettingsPage.Goal     -> { /* TODO Task 6 */ }
-                    SettingsPage.Schedule -> { /* TODO Task 6 */ }
+                    SettingsPage.Profile  -> ProfileSettingsScreen(
+                        onBack = { settingsPage = SettingsPage.Main }
+                    )
+                    SettingsPage.Goal     -> GoalSettingsScreen(
+                        onBack = { settingsPage = SettingsPage.Main }
+                    )
+                    SettingsPage.Schedule -> ScheduleSettingsScreen(
+                        onBack = { settingsPage = SettingsPage.Main }
+                    )
                 }
             }
         }
