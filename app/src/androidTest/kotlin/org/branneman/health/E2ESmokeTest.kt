@@ -1,9 +1,8 @@
 package org.branneman.health
 
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -14,19 +13,46 @@ class E2ESmokeTest {
 
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    private val args     = InstrumentationRegistry.getArguments()
-    private val email    = args.getString("E2E_EMAIL")    ?: "test+e2e@bran.name"
-    private val password = args.getString("E2E_PASSWORD").takeIf { !it.isNullOrEmpty() }
+    private val email    = "test+e2e@bran.name"
+    private val password = BuildConfig.E2E_PASSWORD.takeIf { it.isNotEmpty() }
         ?: error("E2E_PASSWORD not set")
 
     @After fun cleanup() {
-        runCatching {
-            compose.onNodeWithText("Settings", substring = true).performClick()
-            compose.onNodeWithText("Sign out", substring = true, ignoreCase = true).performClick()
+        runCatching { signOut() }
+    }
+
+    private fun signOut() {
+        compose.onAllNodesWithText("Settings").filterToOne(hasClickAction()).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Sign out", ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithText("Sign out", ignoreCase = true).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Sign out?").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onAllNodesWithText("Sign out", ignoreCase = true).onLast().performClick()
     }
 
     private fun signIn() {
+        // Wait for the loading splash to resolve to any known state.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Email", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty() ||
+            compose.onAllNodesWithText("Skip for now").fetchSemanticsNodes().isNotEmpty() ||
+            compose.onAllNodesWithText("Dashboard").fetchSemanticsNodes().isNotEmpty()
+        }
+        // If already authenticated (previous test's cleanup didn't sign out), do it now.
+        if (compose.onAllNodesWithText("Email", substring = true, ignoreCase = true).fetchSemanticsNodes().isEmpty()) {
+            if (compose.onAllNodesWithText("Skip for now").fetchSemanticsNodes().isNotEmpty()) {
+                compose.onNodeWithText("Skip for now").performClick()
+                compose.waitUntil(timeoutMillis = 5_000) {
+                    compose.onAllNodesWithText("Dashboard").fetchSemanticsNodes().isNotEmpty()
+                }
+            }
+            signOut()
+            compose.waitUntil(timeoutMillis = 15_000) {
+                compose.onAllNodesWithText("Email", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
         compose.onNodeWithText("Email", substring = true, ignoreCase = true)
             .performTextInput(email)
         compose.onNodeWithText("Password", substring = true, ignoreCase = true)
@@ -34,7 +60,14 @@ class E2ESmokeTest {
         compose.onNodeWithText("Sign in", ignoreCase = true)
             .performClick()
         compose.waitUntil(timeoutMillis = 30_000) {
-            compose.onAllNodesWithText("Today", substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Today", substring = true).fetchSemanticsNodes().isNotEmpty() ||
+            compose.onAllNodesWithText("Skip for now").fetchSemanticsNodes().isNotEmpty()
+        }
+        if (compose.onAllNodesWithText("Skip for now").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithText("Skip for now").performClick()
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.onAllNodesWithText("Today", substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
         }
     }
 

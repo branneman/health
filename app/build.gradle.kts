@@ -76,10 +76,10 @@ android {
             "String", "SERVER_BASE_URL",
             "\"${System.getenv("SERVER_BASE_URL") ?: localProps.getProperty("server.baseUrl") ?: error("SERVER_BASE_URL env var or server.baseUrl in local.properties must be set")}\""
         )
-        val e2eEmail    = (project.findProperty("e2eEmail")    as String?) ?: "test+e2e@bran.name"
-        val e2ePassword = (project.findProperty("e2ePassword") as String?) ?: ""
-        testInstrumentationRunnerArguments["E2E_EMAIL"]    = e2eEmail
-        testInstrumentationRunnerArguments["E2E_PASSWORD"] = e2ePassword
+        val e2ePassword = (project.findProperty("e2ePassword") as String?)
+            ?: System.getenv("E2E_PASSWORD")
+            ?: ""
+        buildConfigField("String", "E2E_PASSWORD", "\"$e2ePassword\"")
     }
     packaging {
         resources {

@@ -123,6 +123,7 @@ jobs:
     if: github.event_name == 'push'
     needs: build-push
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 

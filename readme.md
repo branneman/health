@@ -108,9 +108,14 @@ E2E_EMAIL=test+e2e@bran.name E2E_PASSWORD=... ./gradlew :app:connectedAndroidTes
 - Install Android Studio via JetBrains Toolbox.
 - Install the `Claude Code [Beta]` plugin in Android Studio.
 - Add `$HOME/Library/Android/sdk/platform-tools` to your path.
-- Create the development AVD (Pixel 6a, API 34 AOSP):
+- Create the development AVD (Pixel 6a, API 34 AOSP) — requires Android SDK Command-line
+  Tools installed via Android Studio → SDK Manager → SDK Tools → Android SDK Command-line Tools:
   ```bash
   scripts/create-dev-avd.sh
+  ```
+- Start the emulator:
+  ```bash
+  ~/Library/Android/sdk/emulator/emulator -avd Pixel_6a -no-snapshot &
   ```
 - Add to `local.properties` to point the app at the local server instead of production:  
   `server.baseUrl=http://10.0.2.2:8080`  
