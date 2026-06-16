@@ -40,14 +40,14 @@ class DashboardScreenTest {
         render(state = DashboardUiState(
             isLoading = false,
             caloriesIn = 0, caloriesOut = 2147, caloriesOutSource = "estimate",
-            targetDeficit = 300, budgetRemaining = 1847, adjustedBudgetRemaining = 1847,
+            targetDeficit = 300, caloriesLeft = 1847,
         ))
         compose.onNodeWithText("1847", substring = true).assertExists()
     }
 
     @Test fun `shows estimated source label`() {
         render(state = DashboardUiState(
-            isLoading = false, caloriesOutSource = "estimate", adjustedBudgetRemaining = 1847,
+            isLoading = false, caloriesOutSource = "estimate", caloriesLeft = 1847, budgetLabel = "left (estimated)",
         ))
         compose.onNodeWithText("estimated", substring = true, ignoreCase = true).assertExists()
     }
@@ -56,20 +56,20 @@ class DashboardScreenTest {
         render(state = DashboardUiState(
             isLoading = false,
             caloriesIn = 520, caloriesOut = 2147, caloriesOutSource = "estimate",
-            adjustedBudgetRemaining = 1327,
+            caloriesLeft = 1327,
         ))
         compose.onNodeWithText("520", substring = true).assertExists()
         compose.onNodeWithText("2147", substring = true).assertExists()
     }
 
     @Test fun `shows in and out labels`() {
-        render(state = DashboardUiState(isLoading = false, adjustedBudgetRemaining = 1847))
+        render(state = DashboardUiState(isLoading = false, caloriesLeft = 1847))
         compose.onNodeWithText("in", substring = true, ignoreCase = true).assertExists()
         compose.onNodeWithText("out", substring = true, ignoreCase = true).assertExists()
     }
 
     @Test fun `sport tonight inactive shows set button`() {
-        render(state = DashboardUiState(isLoading = false, sportTonight = null, adjustedBudgetRemaining = 1847))
+        render(state = DashboardUiState(isLoading = false, sportTonight = null, caloriesLeft = 1847))
         compose.onNodeWithText("sport tonight", substring = true, ignoreCase = true).assertExists()
     }
 
@@ -77,7 +77,7 @@ class DashboardScreenTest {
         render(state = DashboardUiState(
             isLoading = false,
             sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-            adjustedBudgetRemaining = 2447,
+            caloriesLeft = 2447,
         ))
         compose.onNodeWithText("Climbing", substring = true, ignoreCase = true).assertExists()
     }
@@ -86,7 +86,7 @@ class DashboardScreenTest {
         render(state = DashboardUiState(
             isLoading = false,
             sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-            adjustedBudgetRemaining = 2447,
+            caloriesLeft = 2447,
         ))
         compose.onNodeWithText("600", substring = true).assertExists()
     }
@@ -95,7 +95,7 @@ class DashboardScreenTest {
         render(state = DashboardUiState(
             isLoading = false,
             sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-            adjustedBudgetRemaining = 2447,
+            caloriesLeft = 2447,
         ))
         compose.onNodeWithText("Normal").assertExists()
     }
@@ -106,7 +106,7 @@ class DashboardScreenTest {
             state = DashboardUiState(
                 isLoading = false,
                 sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-                adjustedBudgetRemaining = 2447,
+                caloriesLeft = 2447,
             ),
             onSetSportTonight = { a, i -> called = a to i },
         )
@@ -120,7 +120,7 @@ class DashboardScreenTest {
             state = DashboardUiState(
                 isLoading = false,
                 sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "rowing", intensity = "normal", estimatedKcal = 600),
-                adjustedBudgetRemaining = 2447,
+                caloriesLeft = 2447,
             ),
             onClearSportTonight = { cleared = true },
         )
@@ -188,5 +188,23 @@ class DashboardScreenTest {
         render(state = DashboardUiState(isLoading = false, weightKgToday = 82.5))
         compose.onNodeWithText("82.5 kg", substring = true).performClick()
         compose.onNode(hasSetTextAction()).assertTextContains("82.5")
+    }
+
+    // --- budgetLabel ---
+
+    @Test fun `shows left label when budgetLabel is left`() {
+        render(state = DashboardUiState(isLoading = false, caloriesLeft = 1847, budgetLabel = "left"))
+        compose.onNodeWithText("left", substring = false, ignoreCase = true).assertExists()
+    }
+
+    @Test fun `shows kcal over and negative number when over budget`() {
+        render(state = DashboardUiState(isLoading = false, caloriesLeft = -200, budgetLabel = "kcal over"))
+        compose.onNodeWithText("-200", substring = true).assertExists()
+        compose.onNodeWithText("kcal over", substring = true, ignoreCase = true).assertExists()
+    }
+
+    @Test fun `shows left balance label`() {
+        render(state = DashboardUiState(isLoading = false, caloriesLeft = 2100, budgetLabel = "left (balance)"))
+        compose.onNodeWithText("left (balance)", substring = true, ignoreCase = true).assertExists()
     }
 }

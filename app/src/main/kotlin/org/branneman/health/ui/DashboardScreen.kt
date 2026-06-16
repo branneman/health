@@ -64,18 +64,13 @@ fun DashboardContent(
 
 @Composable
 private fun BudgetSection(state: DashboardUiState) {
-    val sourceLabel = when (state.caloriesOutSource) {
-        "polar_today"     -> "left"
-        "polar_yesterday" -> "left (based on yesterday)"
-        else              -> "left (estimated)"
-    }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = state.adjustedBudgetRemaining.toString(),
+            text = state.caloriesLeft.toString(),
             style = MaterialTheme.typography.displayMedium,
         )
         Text(
-            text = sourceLabel,
+            text = state.budgetLabel,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
