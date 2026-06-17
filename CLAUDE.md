@@ -39,6 +39,8 @@ implication for every implementation session:
   build config changes).
 - **Run `git` directly, never `git -C <path>`.** The working directory is always the repo root,
   so `git -C` is never needed and triggers unnecessary permission prompts.
+- **Merge via rebase + fast-forward only.** Never create merge commits. Before merging a
+  feature branch: `git rebase main`, then `git checkout main && git merge --ff-only <branch>`.
 - **IDs are always UUIDs** — no auto-incrementing integers anywhere (database columns,
   Kotlin data classes, DTOs, Room entities). Postgres: `UUID DEFAULT gen_random_uuid()`.
   Kotlin: `java.util.UUID`. Never `Int`, `Long`, or `BIGSERIAL` for an identifier.
