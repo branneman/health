@@ -119,9 +119,22 @@ jobs:
           API_TEST_PASSWORD: ${{ secrets.API_TEST_PASSWORD }}
         run: ./gradlew :server:apiTest
 
+      - name: Clear rate limits for API test user
+        if: always()
+        env:
+          SERVER_URL: ${{ secrets.API_TEST_SERVER_URL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          API_TEST_EMAIL: ${{ secrets.API_TEST_EMAIL }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer $E2E_PASSWORD" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"$API_TEST_EMAIL\"}" \
+            "$SERVER_URL/internal/clear-rate-limits" || true
+
   e2e-tests:
     if: github.event_name == 'push'
-    needs: build-push
+    needs: [build-push, api-tests]
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -174,3 +187,15 @@ jobs:
           profile: pixel_6a
           disable-animations: true
           script: ./gradlew :app:connectedAndroidTest
+
+      - name: Clear rate limits for E2E user
+        if: always()
+        env:
+          SERVER_URL: ${{ secrets.API_TEST_SERVER_URL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer $E2E_PASSWORD" \
+            -H "Content-Type: application/json" \
+            -d '{"username":"test+e2e@bran.name"}' \
+            "$SERVER_URL/internal/clear-rate-limits" || true

@@ -58,14 +58,17 @@ tasks.register<Test>("apiTest") {
     group = "verification"
     testClassesDirs = sourceSets["apiTest"].output.classesDirs
     classpath = sourceSets["apiTest"].runtimeClasspath
+    outputs.upToDateWhen { false }
     val envFile = rootProject.file(".env")
     if (envFile.exists()) {
         envFile.readLines()
             .filter { it.isNotBlank() && !it.startsWith("#") && it.contains("=") }
             .forEach { line ->
                 val (key, raw) = line.split("=", limit = 2)
+                val trimmedKey = key.trim()
                 val value = raw.trim().removeSurrounding("\"").removeSurrounding("'")
-                environment(key.trim(), value)
+                // Shell env overrides .env so `API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest` works
+                if (System.getenv(trimmedKey) == null) environment(trimmedKey, value)
             }
     }
 }

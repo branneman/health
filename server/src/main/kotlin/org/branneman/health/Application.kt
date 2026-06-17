@@ -48,6 +48,7 @@ import org.branneman.health.polar.HttpPolarApiClient
 import org.branneman.health.polar.PolarApiClient
 import org.branneman.health.polar.PolarSyncService
 import org.branneman.health.polar.TokenCipher
+import org.branneman.health.e2e.clearRateLimitsRoute
 import org.branneman.health.e2e.e2eSeedRoute
 import org.branneman.health.polar.polarRoutes
 import org.flywaydb.core.Flyway
@@ -112,7 +113,8 @@ fun Application.module(
 
     install(XForwardedHeaders)
     install(StatusPages) {
-        exception<Throwable> { call, _ ->
+        exception<Throwable> { call, cause ->
+            call.application.log.error("Unhandled exception on ${call.request.httpMethod.value} ${call.request.uri}", cause)
             call.respond(HttpStatusCode.InternalServerError)
         }
     }
@@ -692,7 +694,10 @@ fun Application.module(
             polarRoutes(polarApiClient, polarCipher, polarSyncService)
         }
 
-        System.getenv("E2E_PASSWORD")?.let { e2eSeedRoute(it) }
+        System.getenv("E2E_PASSWORD")?.let { pwd ->
+            e2eSeedRoute(pwd)
+            clearRateLimitsRoute(pwd, usernameRateLimiter, ipRateLimiter)
+        }
     }
 
     if (polarSyncService != null) {
