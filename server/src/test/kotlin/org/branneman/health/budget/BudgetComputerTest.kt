@@ -96,8 +96,8 @@ class BudgetComputerTest {
 
     // --- computeDynamic ---
 
-    private fun day(i: Int, out: Int, isSport: Boolean, caloriesIn: Int? = null) =
-        HistoricalDay(date = today.minusDays(i.toLong()), caloriesOut = out, caloriesIn = caloriesIn, isSportDay = isSport)
+    private fun day(i: Int, out: Int, isSport: Boolean) =
+        HistoricalDay(date = today.minusDays(i.toLong()), caloriesOut = out, isSportDay = isSport)
 
     @Test fun `no history returns expectedTodaySport and expectedTodayNonSport are null`() {
         val r = BudgetComputer.computeDynamic(emptyList(), actualBurnedToday = null)

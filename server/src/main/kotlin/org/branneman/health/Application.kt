@@ -627,46 +627,10 @@ fun Application.module(
                         .map { it[Workout.date] }
                         .toSet()
 
-                    val histWindowStart = historyStart.atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
-                    val histWindowEnd   = today.atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
-
-                    val quickAddByDate = mutableMapOf<java.time.LocalDate, Int>()
-                    LogEntry.selectAll()
-                        .where {
-                            (LogEntry.userId eq userId) and
-                            (LogEntry.quickAddKcal.isNotNull()) and
-                            (LogEntry.loggedAt greaterEq histWindowStart) and
-                            (LogEntry.loggedAt less histWindowEnd)
-                        }
-                        .forEach { row ->
-                            val d = row[LogEntry.loggedAt].toLocalDate()
-                            quickAddByDate[d] = (quickAddByDate[d] ?: 0) + (row[LogEntry.quickAddKcal] ?: 0)
-                        }
-
-                    val itemKcalByDate = mutableMapOf<java.time.LocalDate, Int>()
-                    LogEntry
-                        .join(LogEntryItem, JoinType.INNER, LogEntry.id, LogEntryItem.logEntryId)
-                        .selectAll()
-                        .where {
-                            (LogEntry.userId eq userId) and
-                            (LogEntry.quickAddKcal.isNull()) and
-                            (LogEntry.loggedAt greaterEq histWindowStart) and
-                            (LogEntry.loggedAt less histWindowEnd)
-                        }
-                        .forEach { row ->
-                            val d = row[LogEntry.loggedAt].toLocalDate()
-                            val k = (row[LogEntryItem.kcalPer100g].toDouble() * row[LogEntryItem.grams].toDouble() / 100.0).toInt()
-                            itemKcalByDate[d] = (itemKcalByDate[d] ?: 0) + k
-                        }
-
                     val history = historyEnergy.map { (date, out) ->
-                        val quickAdd = quickAddByDate[date] ?: 0
-                        val items    = itemKcalByDate[date] ?: 0
-                        val totalIn  = quickAdd + items
                         HistoricalDay(
-                            date       = date,
+                            date        = date,
                             caloriesOut = out,
-                            caloriesIn  = if (totalIn > 0) totalIn else null,
                             isSportDay  = date in sportDates,
                         )
                     }

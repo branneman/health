@@ -16,7 +16,6 @@ data class EnergyRow(val date: LocalDate, val totalKcal: Int)
 data class HistoricalDay(
     val date: LocalDate,
     val caloriesOut: Int,
-    val caloriesIn: Int?,   // null if not food-logged that day
     val isSportDay: Boolean,
 )
 

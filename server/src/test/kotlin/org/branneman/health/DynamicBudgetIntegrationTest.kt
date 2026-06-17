@@ -21,10 +21,10 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
 import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 class DynamicBudgetIntegrationTest {
@@ -105,14 +105,6 @@ class DynamicBudgetIntegrationTest {
         }
     }
 
-    private fun insertQuickAdd(date: LocalDate, kcal: Int) = transaction {
-        exec(
-            "INSERT INTO log_entry (id, user_id, logged_at, meal_type, quick_add_kcal, created_at) " +
-            "VALUES (gen_random_uuid(), '$testUserId', '${date.atTime(12, 0).atOffset(ZoneOffset.UTC)}', " +
-            "'unknown'::meal_type, $kcal, NOW())"
-        )
-    }
-
     @Test fun `no history - dynamic params are null`() = appTest {
         val token = login()
         val today = LocalDate.now().toString()
@@ -124,6 +116,13 @@ class DynamicBudgetIntegrationTest {
         assertEquals(JsonNull, body["expectedTodaySport"])
         assertEquals(JsonNull, body["expectedTodayNonSport"])
         assertEquals(JsonNull, body["actualBurnedSoFar"])
+        // removed fields must be absent from the JSON entirely
+        assertFalse(body.containsKey("eatingFractionSport"))
+        assertFalse(body.containsKey("eatingFractionNonSport"))
+        assertFalse(body.containsKey("postWorkoutModeSport"))
+        assertFalse(body.containsKey("postWorkoutModeNonSport"))
+        assertFalse(body.containsKey("wakeTime"))
+        assertFalse(body.containsKey("bedtime"))
     }
 
     @Test fun `sport history - expectedTodaySport is average of sport-day calories-out`() = appTest {
@@ -133,7 +132,6 @@ class DynamicBudgetIntegrationTest {
             val d = today.minusDays(i.toLong())
             insertEnergy(d, totalKcal = 2400)
             insertWorkout(d)
-            insertQuickAdd(d, kcal = 2000)
         }
         val r = client.get("/summary/today?date=$today") {
             header(HttpHeaders.Authorization, "Bearer $token")
