@@ -35,20 +35,12 @@ class DynamicBudgetParamsDaoTest {
             date = "2026-06-15",
             expectedTodaySport = 2400,
             expectedTodayNonSport = 2000,
-            eatingFractionSport = 0.833,
-            eatingFractionNonSport = 0.875,
-            postWorkoutModeSport = true,
-            postWorkoutModeNonSport = false,
         )
         db.dynamicBudgetParamsDao().upsert(entity)
         val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
         assertNotNull(result)
         assertEquals(2400, result.expectedTodaySport)
         assertEquals(2000, result.expectedTodayNonSport)
-        assertEquals(0.833, result.eatingFractionSport)
-        assertEquals(0.875, result.eatingFractionNonSport)
-        assertEquals(true, result.postWorkoutModeSport)
-        assertEquals(false, result.postWorkoutModeNonSport)
     }
 
     @Test fun `getForDate returns null for missing date`() = runTest {
@@ -57,10 +49,6 @@ class DynamicBudgetParamsDaoTest {
                 date = "2026-06-15",
                 expectedTodaySport = 2400,
                 expectedTodayNonSport = null,
-                eatingFractionSport = null,
-                eatingFractionNonSport = null,
-                postWorkoutModeSport = false,
-                postWorkoutModeNonSport = false,
             )
         )
         assertNull(db.dynamicBudgetParamsDao().getForDate("2026-06-14"))
@@ -72,27 +60,19 @@ class DynamicBudgetParamsDaoTest {
                 date = "2026-06-15",
                 expectedTodaySport = 2400,
                 expectedTodayNonSport = null,
-                eatingFractionSport = 0.8,
-                eatingFractionNonSport = null,
-                postWorkoutModeSport = false,
-                postWorkoutModeNonSport = false,
             )
         )
         db.dynamicBudgetParamsDao().upsert(
             DynamicBudgetParamsEntity(
                 date = "2026-06-15",
-                expectedTodaySport = 2400,
-                expectedTodayNonSport = null,
-                eatingFractionSport = 0.875,
-                eatingFractionNonSport = null,
-                postWorkoutModeSport = true,
-                postWorkoutModeNonSport = false,
+                expectedTodaySport = 2600,
+                expectedTodayNonSport = 2000,
             )
         )
         val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
         assertNotNull(result)
-        assertEquals(0.875, result.eatingFractionSport)
-        assertEquals(true, result.postWorkoutModeSport)
+        assertEquals(2600, result.expectedTodaySport)
+        assertEquals(2000, result.expectedTodayNonSport)
     }
 
     @Test fun `nullable fields stored as null when no history`() = runTest {
@@ -101,16 +81,12 @@ class DynamicBudgetParamsDaoTest {
                 date = "2026-06-15",
                 expectedTodaySport = null,
                 expectedTodayNonSport = null,
-                eatingFractionSport = null,
-                eatingFractionNonSport = null,
-                postWorkoutModeSport = false,
-                postWorkoutModeNonSport = false,
             )
         )
         val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
         assertNotNull(result)
         assertNull(result.expectedTodaySport)
-        assertNull(result.eatingFractionSport)
+        assertNull(result.expectedTodayNonSport)
     }
 
     @Test fun `sport and non-sport fields are stored independently`() = runTest {
@@ -119,19 +95,11 @@ class DynamicBudgetParamsDaoTest {
                 date = "2026-06-15",
                 expectedTodaySport = 2400,
                 expectedTodayNonSport = 2000,
-                eatingFractionSport = 0.833,
-                eatingFractionNonSport = 0.875,
-                postWorkoutModeSport = true,
-                postWorkoutModeNonSport = false,
             )
         )
         val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
         assertNotNull(result)
         assertEquals(2400, result.expectedTodaySport)
         assertEquals(2000, result.expectedTodayNonSport)
-        assertEquals(0.833, result.eatingFractionSport)
-        assertEquals(0.875, result.eatingFractionNonSport)
-        assertEquals(true, result.postWorkoutModeSport)
-        assertEquals(false, result.postWorkoutModeNonSport)
     }
 }

@@ -8,8 +8,4 @@ data class DynamicBudgetParamsEntity(
     @PrimaryKey val date: String,
     val expectedTodaySport: Int?,
     val expectedTodayNonSport: Int?,
-    val eatingFractionSport: Double?,
-    val eatingFractionNonSport: Double?,
-    val postWorkoutModeSport: Boolean,
-    val postWorkoutModeNonSport: Boolean,
 )
