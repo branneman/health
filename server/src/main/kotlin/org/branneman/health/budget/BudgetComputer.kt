@@ -31,11 +31,7 @@ data class BudgetResult(
 data class DynamicBudgetParams(
     val expectedTodaySport: Int?,
     val expectedTodayNonSport: Int?,
-    val eatingFractionSport: Double?,
-    val eatingFractionNonSport: Double?,
     val actualBurnedSoFar: Int?,
-    val postWorkoutModeSport: Boolean,
-    val postWorkoutModeNonSport: Boolean,
 )
 
 fun computeBmr(sex: String, weightKg: Double, heightCm: Int, age: Int): Double {
@@ -71,28 +67,12 @@ object BudgetComputer {
 
     fun computeDynamic(
         history: List<HistoricalDay>,
-        targetDeficit: Int,
         actualBurnedToday: Int?,
     ): DynamicBudgetParams {
-        val expectedSport    = computeExpected(history, isSport = true)
-        val expectedNonSport = computeExpected(history, isSport = false)
-
-        val fractionSport    = computeFraction(history, isSport = true,  targetDeficit, expectedSport)
-        val fractionNonSport = computeFraction(history, isSport = false, targetDeficit, expectedNonSport)
-
-        val postWorkoutSport = actualBurnedToday != null && expectedSport != null &&
-            actualBurnedToday >= (expectedSport * 0.9).toInt()
-        val postWorkoutNonSport = actualBurnedToday != null && expectedNonSport != null &&
-            actualBurnedToday >= (expectedNonSport * 0.9).toInt()
-
         return DynamicBudgetParams(
-            expectedTodaySport      = expectedSport,
-            expectedTodayNonSport   = expectedNonSport,
-            eatingFractionSport     = fractionSport,
-            eatingFractionNonSport  = fractionNonSport,
-            actualBurnedSoFar       = actualBurnedToday,
-            postWorkoutModeSport    = postWorkoutSport,
-            postWorkoutModeNonSport = postWorkoutNonSport,
+            expectedTodaySport    = computeExpected(history, isSport = true),
+            expectedTodayNonSport = computeExpected(history, isSport = false),
+            actualBurnedSoFar     = actualBurnedToday,
         )
     }
 
@@ -100,39 +80,6 @@ object BudgetComputer {
         val days = history.filter { it.isSportDay == isSport }
         if (days.isEmpty()) return null
         return days.sumOf { it.caloriesOut } / days.size
-    }
-
-    internal fun computeFraction(
-        history: List<HistoricalDay>,
-        isSport: Boolean,
-        targetDeficit: Int,
-        expected: Int?,
-    ): Double? {
-        val logged = history.filter { it.isSportDay == isSport && it.caloriesIn != null }
-
-        // Approach 3 — qualifying days (≥10 logged days with ≥10 qualifying)
-        if (expected != null && logged.size >= 10) {
-            val qualifying = logged.filter { (it.caloriesIn ?: Int.MAX_VALUE) <= expected - targetDeficit + 100 }
-            if (qualifying.size >= 10) {
-                val avgIn  = qualifying.sumOf { it.caloriesIn!! }.toDouble() / qualifying.size
-                val avgOut = qualifying.sumOf { it.caloriesOut }.toDouble() / qualifying.size
-                if (avgOut > 0) return avgIn / avgOut
-            }
-        }
-
-        // Approach 2 — any logged days (≥5)
-        if (logged.size >= 5) {
-            val avgIn  = logged.sumOf { it.caloriesIn!! }.toDouble() / logged.size
-            val avgOut = logged.sumOf { it.caloriesOut }.toDouble() / logged.size
-            if (avgOut > 0) return avgIn / avgOut
-        }
-
-        // Approach 1 — target-derived fallback
-        if (expected != null && expected > 0) {
-            return maxOf(0.0, (expected - targetDeficit).toDouble() / expected)
-        }
-
-        return null
     }
 
     private fun resolveCaloriesOut(

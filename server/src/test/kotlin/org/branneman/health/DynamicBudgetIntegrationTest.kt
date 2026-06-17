@@ -18,19 +18,14 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
 import org.mindrot.jbcrypt.BCrypt
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
-import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class DynamicBudgetIntegrationTest {
 
@@ -127,14 +122,13 @@ class DynamicBudgetIntegrationTest {
         assertEquals(HttpStatusCode.OK, r.status)
         val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
         assertEquals(JsonNull, body["expectedTodaySport"])
-        assertEquals(JsonNull, body["eatingFractionSport"])
-        assertFalse(body["postWorkoutModeSport"]!!.jsonPrimitive.content.toBoolean())
+        assertEquals(JsonNull, body["expectedTodayNonSport"])
+        assertEquals(JsonNull, body["actualBurnedSoFar"])
     }
 
-    @Test fun `5 logged sport days - Approach 2 fraction in response`() = appTest {
+    @Test fun `sport history - expectedTodaySport is average of sport-day calories-out`() = appTest {
         val token = login()
         val today = LocalDate.now()
-        // Insert 5 sport days with food logs (yesterday through 5 days ago)
         for (i in 1..5) {
             val d = today.minusDays(i.toLong())
             insertEnergy(d, totalKcal = 2400)
@@ -148,77 +142,17 @@ class DynamicBudgetIntegrationTest {
         val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
         assertNotNull(body["expectedTodaySport"])
         assertEquals(2400, body["expectedTodaySport"]!!.jsonPrimitive.content.toInt())
-        // Approach 2: avg_in / avg_out = 2000 / 2400
-        val fraction = body["eatingFractionSport"]!!.jsonPrimitive.content.toDouble()
-        assertTrue(abs(fraction - (2000.0 / 2400.0)) < 0.001)
     }
 
-    @Test fun `10 qualifying sport days - Approach 3 fraction in response`() = appTest {
+    @Test fun `actualBurnedSoFar reflects today Polar reading`() = appTest {
         val token = login()
         val today = LocalDate.now()
-        // 10 qualifying days (caloriesIn = 2100 ≤ 2400-300+100=2200) + 2 non-qualifying (caloriesIn = 2500)
-        for (i in 1..10) {
-            val d = today.minusDays(i.toLong())
-            insertEnergy(d, totalKcal = 2400)
-            insertWorkout(d)
-            insertQuickAdd(d, kcal = 2100)
-        }
-        for (i in 11..12) {
-            val d = today.minusDays(i.toLong())
-            insertEnergy(d, totalKcal = 2400)
-            insertWorkout(d)
-            insertQuickAdd(d, kcal = 2500)
-        }
-        val r = client.get("/summary/today?date=$today") {
-            header(HttpHeaders.Authorization, "Bearer $token")
-        }
-        assertEquals(HttpStatusCode.OK, r.status)
-        val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
-        // Approach 3: filters to 10 qualifying days → avg_in=2100, avg_out=2400
-        val fraction = body["eatingFractionSport"]!!.jsonPrimitive.content.toDouble()
-        assertTrue(abs(fraction - (2100.0 / 2400.0)) < 0.001)
-        // Confirm it differs from Approach 2 (2500 non-qualifying days would shift it)
-        assertTrue(abs(fraction - (2167.0 / 2400.0)) > 0.001)
-    }
-
-    @Test fun `post-workout mode triggers when today burn is at least 90 percent of expected`() = appTest {
-        val token = login()
-        val today = LocalDate.now()
-        // Establish sport history (5 logged days, expectedSport = 2400)
-        for (i in 1..5) {
-            val d = today.minusDays(i.toLong())
-            insertEnergy(d, totalKcal = 2400)
-            insertWorkout(d)
-            insertQuickAdd(d, kcal = 2000)
-        }
-        // Today's burn = 2160 = 90% of 2400
         insertEnergy(today, totalKcal = 2160)
-
         val r = client.get("/summary/today?date=$today") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
         assertEquals(HttpStatusCode.OK, r.status)
         val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
         assertEquals(2160, body["actualBurnedSoFar"]!!.jsonPrimitive.content.toInt())
-        assertTrue(body["postWorkoutModeSport"]!!.jsonPrimitive.content.toBoolean())
-    }
-
-    @Test fun `wakeTime and bedtime from user profile appear in response`() = appTest {
-        // Override profile with non-default times
-        transaction {
-            UserProfile.update({ UserProfile.userId eq testUserId }) {
-                it[wakeTime] = LocalTime.of(6, 30)
-                it[bedtime]  = LocalTime.of(22, 0)
-            }
-        }
-        val token = login()
-        val today = LocalDate.now().toString()
-        val r = client.get("/summary/today?date=$today") {
-            header(HttpHeaders.Authorization, "Bearer $token")
-        }
-        assertEquals(HttpStatusCode.OK, r.status)
-        val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
-        assertEquals("06:30", body["wakeTime"]!!.jsonPrimitive.content)
-        assertEquals("22:00", body["bedtime"]!!.jsonPrimitive.content)
     }
 }

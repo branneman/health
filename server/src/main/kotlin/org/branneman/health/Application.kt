@@ -588,10 +588,6 @@ fun Application.module(
                         targetDeficit = profileRow[UserProfile.targetDeficit],
                         goalWeightKg  = profileRow[UserProfile.goalWeightKg].toDouble(),
                     )
-                    val timeFmt  = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-                    val wakeTime = profileRow[UserProfile.wakeTime].format(timeFmt)
-                    val bedtime  = profileRow[UserProfile.bedtime].format(timeFmt)
-
                     val latestWeightKg = BodyWeight.selectAll()
                         .where { BodyWeight.userId eq userId }
                         .orderBy(BodyWeight.date, SortOrder.DESC)
@@ -707,26 +703,19 @@ fun Application.module(
 
                     val dynamic = BudgetComputer.computeDynamic(
                         history           = history,
-                        targetDeficit     = profileInput.targetDeficit,
                         actualBurnedToday = actualBurnedToday,
                     )
 
                     TodaySummaryDto(
-                        date                    = today.toString(),
-                        caloriesIn              = budget.caloriesIn,
-                        caloriesOut             = budget.caloriesOut,
-                        budgetRemaining         = budget.budgetRemaining,
-                        targetDeficit           = budget.targetDeficit,
-                        caloriesOutSource       = budget.caloriesOutSource,
-                        expectedTodaySport      = dynamic.expectedTodaySport,
-                        expectedTodayNonSport   = dynamic.expectedTodayNonSport,
-                        eatingFractionSport     = dynamic.eatingFractionSport,
-                        eatingFractionNonSport  = dynamic.eatingFractionNonSport,
-                        actualBurnedSoFar       = dynamic.actualBurnedSoFar,
-                        postWorkoutModeSport    = dynamic.postWorkoutModeSport,
-                        postWorkoutModeNonSport = dynamic.postWorkoutModeNonSport,
-                        wakeTime                = wakeTime,
-                        bedtime                 = bedtime,
+                        date                  = today.toString(),
+                        caloriesIn            = budget.caloriesIn,
+                        caloriesOut           = budget.caloriesOut,
+                        budgetRemaining       = budget.budgetRemaining,
+                        targetDeficit         = budget.targetDeficit,
+                        caloriesOutSource     = budget.caloriesOutSource,
+                        expectedTodaySport    = dynamic.expectedTodaySport,
+                        expectedTodayNonSport = dynamic.expectedTodayNonSport,
+                        actualBurnedSoFar     = dynamic.actualBurnedSoFar,
                     )
                 }
 
