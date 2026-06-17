@@ -316,7 +316,10 @@ All totals and per-item values are computed server-side from snapshotted nutriti
   "caloriesOut": 2200,
   "budgetRemaining": 50,
   "targetDeficit": 300,
-  "caloriesOutSource": "estimate"
+  "caloriesOutSource": "estimate",
+  "expectedTodaySport": 2387,
+  "expectedTodayNonSport": 2100,
+  "actualBurnedSoFar": null
 }
 ```
 
@@ -324,6 +327,15 @@ All totals and per-item values are computed server-side from snapshotted nutriti
 `caloriesIn` reflects all log entries synced to the server for the date. The Android
 app computes `caloriesIn` locally from Room (reactive) and ignores this field; it is
 retained for completeness and future multi-client use.
+
+`expectedTodaySport` / `expectedTodayNonSport`: 30-day rolling average of Polar
+`total_kcal` for sport and non-sport days respectively. Null if fewer than 1 day of
+Polar history exists for that bucket. Used by the client as the stable daily burn
+proxy for the budget formula.
+
+`actualBurnedSoFar`: today's Polar `total_kcal` if synced, else null. When this value
+reaches ≥ 90% of the active bucket's expected, the client uses it directly instead of
+the historical average.
 
 **`GET /summary/week`:**
 

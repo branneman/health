@@ -234,4 +234,7 @@ How the bounded contexts integrate with each other:
   Energy Balance but owns no persistent state of its own.
 - **No math on the client.** All values in the context map are computed server-side.
   The Android app reads computed results and renders them; it does not re-implement
-  budget or verdict logic.
+  budget or verdict logic. **Narrow exception:** `computeCaloriesLeft()` runs on the
+  client to avoid a per-event server round-trip. The business logic inputs
+  (`expectedTodaySport/NonSport`, `actualBurnedSoFar`) are server-computed and
+  server-owned; only the final arithmetic runs locally. See `docs/math-model.md §2.5`.
