@@ -184,113 +184,57 @@ class DashboardLogicTest {
         assertTrue(isValidWeightInput("20,0"))
     }
 
-    // --- computeDynamicCaloriesLeft ---
-    //
-    // Base values for all formula tests:
-    //   wakeTime = "07:00" (420 min)
-    //   bedtime  = "23:00" (1380 min)
-    //   totalAwake = 960 min
-    //   expectedToday = 2400
-    //   eatingFraction = 0.875  →  eating budget = 2400 × 0.875 = 2100  (D=300 baked in)
+    // --- computeCaloriesLeft ---
 
-    @Test fun `formula - post-workout with actual burnedSoFar`() {
-        // burnedSoFar=2160 (90% of expected), caloriesIn=1500
-        // caloriesLeft = (2160 × 0.875 - 1500).toInt() = 390
-        assertEquals(390, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = 2160, caloriesIn = 1500,
-            postWorkoutMode = true, nowMinutes = 720,
+    @Test fun `under budget returns positive`() {
+        // caloriesOut = expected=2387 (actual=null, below threshold), D=300
+        // caloriesLeft = 2387 - 300 - 1773 = 314
+        assertEquals(314, computeCaloriesLeft(
+            expectedToday = 2387, targetDeficit = 300,
+            actualBurnedToday = null, caloriesIn = 1773,
         ))
     }
 
-    @Test fun `formula - post-workout with null burnedSoFar uses expectedToday`() {
-        // caloriesLeft = (2400 × 0.875 - 0).toInt() = 2100
-        assertEquals(2100, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 0,
-            postWorkoutMode = true, nowMinutes = 720,
+    @Test fun `on budget returns zero`() {
+        // caloriesLeft = 2387 - 300 - 2087 = 0
+        assertEquals(0, computeCaloriesLeft(
+            expectedToday = 2387, targetDeficit = 300,
+            actualBurnedToday = null, caloriesIn = 2087,
         ))
     }
 
-    @Test fun `formula - start of day (elapsed 0) full budget available`() {
-        // elapsed=0, burnedSoFarEst=0, pastAllowance=0, overshoot=0
-        // caloriesLeft = (2400 × 0.875 - 0).toInt() = 2100
-        assertEquals(2100, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 0,
-            postWorkoutMode = false, nowMinutes = 420,
+    @Test fun `over budget returns negative`() {
+        // caloriesLeft = 2387 - 300 - 2200 = -113
+        assertEquals(-113, computeCaloriesLeft(
+            expectedToday = 2387, targetDeficit = 300,
+            actualBurnedToday = null, caloriesIn = 2200,
         ))
     }
 
-    @Test fun `formula - mid-day on pace no penalty`() {
-        // nowMinutes=660 (11am), elapsed=240, totalAwake=960
-        // burnedSoFarEst = (2400 × 240 / 960).toInt() = 600
-        // pastAllowance = 600 × 0.875 = 525.0
-        // caloriesIn = 525 (on pace), overshoot = 0
-        // remainingBurn = 1800
-        // caloriesLeft = (1800 × 0.875 - 0).toInt() = 1575
-        assertEquals(1575, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 525,
-            postWorkoutMode = false, nowMinutes = 660,
+    @Test fun `uses actual when actual is at least 90 percent of expected`() {
+        // actual=2160 >= 2400*0.9=2160 → caloriesOut=2160
+        // caloriesLeft = 2160 - 300 - 1500 = 360
+        assertEquals(360, computeCaloriesLeft(
+            expectedToday = 2400, targetDeficit = 300,
+            actualBurnedToday = 2160, caloriesIn = 1500,
         ))
     }
 
-    @Test fun `formula - mid-day over pace penalised by overshoot`() {
-        // caloriesIn = 725 (200 over pastAllowance of 525)
-        // overshoot = 200
-        // caloriesLeft = (1800 × 0.875 - 200).toInt() = 1375
-        assertEquals(1375, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 725,
-            postWorkoutMode = false, nowMinutes = 660,
+    @Test fun `uses expected when actual is below 90 percent of expected`() {
+        // actual=2159 < 2400*0.9=2160 → caloriesOut=2400
+        // caloriesLeft = 2400 - 300 - 1500 = 600
+        assertEquals(600, computeCaloriesLeft(
+            expectedToday = 2400, targetDeficit = 300,
+            actualBurnedToday = 2159, caloriesIn = 1500,
         ))
     }
 
-    @Test fun `formula - end of day on budget returns 0`() {
-        // elapsed=960 (bedtime), burnedSoFarEst=2400, remainingBurn=0
-        // pastAllowance = 2400 × 0.875 = 2100, caloriesIn=2100, overshoot=0
-        // caloriesLeft = 0
-        assertEquals(0, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 2100,
-            postWorkoutMode = false, nowMinutes = 1380,
-        ))
-    }
-
-    @Test fun `formula - end of day over budget returns negative`() {
-        // caloriesIn=2300, overshoot=200, caloriesLeft = -200
-        assertEquals(-200, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 2300,
-            postWorkoutMode = false, nowMinutes = 1380,
-        ))
-    }
-
-    @Test fun `formula - nowMinutes before wakeTime clamps to wakeTime`() {
-        // nowMinutes=300 (5am) → clamped to elapsed=0 → same as start of day
-        assertEquals(2100, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 0,
-            postWorkoutMode = false, nowMinutes = 300,
-        ))
-    }
-
-    @Test fun `formula - nowMinutes after bedtime clamps to bedtime`() {
-        // nowMinutes=1440 (midnight) → clamped to elapsed=960 → same as end of day
-        assertEquals(0, computeDynamicCaloriesLeft(
-            wakeTimeStr = "07:00", bedtimeStr = "23:00",
-            expectedToday = 2400, eatingFraction = 0.875,
-            burnedSoFar = null, caloriesIn = 2100,
-            postWorkoutMode = false, nowMinutes = 1440,
+    @Test fun `uses expected when actual is null`() {
+        // actual=null → caloriesOut=2400
+        // caloriesLeft = 2400 - 300 - 1500 = 600
+        assertEquals(600, computeCaloriesLeft(
+            expectedToday = 2400, targetDeficit = 300,
+            actualBurnedToday = null, caloriesIn = 1500,
         ))
     }
 }

@@ -7,7 +7,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,12 +38,6 @@ data class DashboardUiState(
     val weightKgToday: Double? = null,
     val expectedTodaySport: Int? = null,
     val expectedTodayNonSport: Int? = null,
-    val eatingFractionSport: Double? = null,
-    val eatingFractionNonSport: Double? = null,
-    val postWorkoutModeSport: Boolean = false,
-    val postWorkoutModeNonSport: Boolean = false,
-    val wakeTime: String = "07:00",
-    val bedtime: String = "23:00",
     val actualBurnedSoFar: Int? = null,
 )
 
@@ -79,36 +72,18 @@ fun isValidWeightInput(input: String): Boolean {
     return true
 }
 
-fun computeDynamicCaloriesLeft(
-    wakeTimeStr: String,
-    bedtimeStr: String,
+fun computeCaloriesLeft(
     expectedToday: Int,
-    eatingFraction: Double,
-    burnedSoFar: Int?,
+    targetDeficit: Int,
+    actualBurnedToday: Int?,
     caloriesIn: Int,
-    postWorkoutMode: Boolean,
-    nowMinutes: Int,
 ): Int {
-    fun parseMinutes(s: String): Int {
-        val (h, m) = s.split(":").map { it.toInt() }
-        return h * 60 + m
+    val caloriesOut = if (actualBurnedToday != null && actualBurnedToday >= expectedToday * 0.9) {
+        actualBurnedToday
+    } else {
+        expectedToday
     }
-    val wakeMinutes = parseMinutes(wakeTimeStr)
-    val bedMinutes  = parseMinutes(bedtimeStr)
-    val totalAwake  = maxOf(1, bedMinutes - wakeMinutes)
-    val elapsed     = (nowMinutes - wakeMinutes).coerceIn(0, totalAwake)
-
-    if (postWorkoutMode) {
-        val todayBurn = burnedSoFar ?: expectedToday
-        return (todayBurn * eatingFraction - caloriesIn).toInt()
-    }
-
-    val burnedSoFarEst = burnedSoFar?.toDouble()
-        ?: (expectedToday.toDouble() * elapsed / totalAwake)
-    val remainingBurn = expectedToday - burnedSoFarEst
-    val pastAllowance = burnedSoFarEst * eatingFraction
-    val overshoot     = maxOf(0.0, caloriesIn - pastAllowance)
-    return kotlin.math.floor(remainingBurn * eatingFraction - overshoot).toInt()
+    return caloriesOut - targetDeficit - caloriesIn
 }
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -126,7 +101,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     init {
         viewModelScope.launch { observeLogEntries() }
         viewModelScope.launch { load() }
-        viewModelScope.launch { tickBudget() }
     }
 
     private fun refreshCaloriesLeft() {
@@ -139,45 +113,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             state.expectedTodayNonSport ?: state.caloriesOut
         }
 
-        val eatingFraction = if (isSportTonight) {
-            state.eatingFractionSport
-                ?: if (expectedToday > 0) maxOf(0.0, (expectedToday - state.targetDeficit).toDouble() / expectedToday) else 0.0
-        } else {
-            state.eatingFractionNonSport
-                ?: if (expectedToday > 0) maxOf(0.0, (expectedToday - state.targetDeficit).toDouble() / expectedToday) else 0.0
-        }
-
-        val postWorkoutMode = if (isSportTonight) state.postWorkoutModeSport else state.postWorkoutModeNonSport
-
-        val now = java.time.LocalTime.now()
-        val nowMinutes = now.hour * 60 + now.minute
-
-        val caloriesLeft = computeDynamicCaloriesLeft(
-            wakeTimeStr     = state.wakeTime,
-            bedtimeStr      = state.bedtime,
-            expectedToday   = expectedToday,
-            eatingFraction  = eatingFraction,
-            burnedSoFar     = state.actualBurnedSoFar,
-            caloriesIn      = state.caloriesIn,
-            postWorkoutMode = postWorkoutMode,
-            nowMinutes      = nowMinutes,
+        val caloriesLeft = computeCaloriesLeft(
+            expectedToday      = expectedToday,
+            targetDeficit      = state.targetDeficit,
+            actualBurnedToday  = state.actualBurnedSoFar,
+            caloriesIn         = state.caloriesIn,
         )
 
+        val usingFallback = (isSportTonight && state.expectedTodaySport == null) ||
+                            (!isSportTonight && state.expectedTodayNonSport == null)
         val budgetLabel = when {
-            caloriesLeft < 0                      -> "kcal over"
-            state.targetDeficit == 0              -> "left (balance)"
-            state.caloriesOutSource == "estimate" -> "left (estimated)"
-            else                                  -> "left"
+            caloriesLeft < 0         -> "kcal over"
+            state.targetDeficit == 0 -> "left (balance)"
+            usingFallback            -> "left (estimated)"
+            else                     -> "left"
         }
 
         _uiState.update { it.copy(caloriesLeft = caloriesLeft, budgetLabel = budgetLabel) }
-    }
-
-    private suspend fun tickBudget() {
-        while (true) {
-            delay(60_000L)
-            refreshCaloriesLeft()
-        }
     }
 
     private suspend fun observeLogEntries() {
@@ -204,30 +156,20 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             .onSuccess { dto ->
                 app.db.dynamicBudgetParamsDao().upsert(
                     org.branneman.health.db.entities.DynamicBudgetParamsEntity(
-                        date                    = today,
-                        expectedTodaySport      = dto.expectedTodaySport,
-                        expectedTodayNonSport   = dto.expectedTodayNonSport,
-                        eatingFractionSport     = dto.eatingFractionSport,
-                        eatingFractionNonSport  = dto.eatingFractionNonSport,
-                        postWorkoutModeSport    = dto.postWorkoutModeSport,
-                        postWorkoutModeNonSport = dto.postWorkoutModeNonSport,
+                        date                  = today,
+                        expectedTodaySport    = dto.expectedTodaySport,
+                        expectedTodayNonSport = dto.expectedTodayNonSport,
                     )
                 )
                 _uiState.update { state ->
                     state.copy(
-                        isLoading               = false,
-                        caloriesOut             = dto.caloriesOut,
-                        caloriesOutSource       = dto.caloriesOutSource,
-                        targetDeficit           = dto.targetDeficit,
-                        expectedTodaySport      = dto.expectedTodaySport,
-                        expectedTodayNonSport   = dto.expectedTodayNonSport,
-                        eatingFractionSport     = dto.eatingFractionSport,
-                        eatingFractionNonSport  = dto.eatingFractionNonSport,
-                        postWorkoutModeSport    = dto.postWorkoutModeSport,
-                        postWorkoutModeNonSport = dto.postWorkoutModeNonSport,
-                        wakeTime                = dto.wakeTime,
-                        bedtime                 = dto.bedtime,
-                        actualBurnedSoFar       = dto.actualBurnedSoFar,
+                        isLoading             = false,
+                        caloriesOut           = dto.caloriesOut,
+                        caloriesOutSource     = dto.caloriesOutSource,
+                        targetDeficit         = dto.targetDeficit,
+                        expectedTodaySport    = dto.expectedTodaySport,
+                        expectedTodayNonSport = dto.expectedTodayNonSport,
+                        actualBurnedSoFar     = dto.actualBurnedSoFar,
                     )
                 }
                 refreshCaloriesLeft()
@@ -254,22 +196,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         return DashboardUiState(
-            isLoading               = false,
-            caloriesIn              = caloriesIn,
-            caloriesOut             = caloriesOut,
-            caloriesOutSource       = source,
-            targetDeficit           = profile.targetDeficit,
-            sportTonight            = sport,
-            weightKgToday           = weightToday,
-            expectedTodaySport      = params?.expectedTodaySport,
-            expectedTodayNonSport   = params?.expectedTodayNonSport,
-            eatingFractionSport     = params?.eatingFractionSport,
-            eatingFractionNonSport  = params?.eatingFractionNonSport,
-            postWorkoutModeSport    = params?.postWorkoutModeSport ?: false,
-            postWorkoutModeNonSport = params?.postWorkoutModeNonSport ?: false,
-            wakeTime                = profile.wakeTime,
-            bedtime                 = profile.bedtime,
-            actualBurnedSoFar       = energy?.totalKcal,
+            isLoading             = false,
+            caloriesIn            = caloriesIn,
+            caloriesOut           = caloriesOut,
+            caloriesOutSource     = source,
+            targetDeficit         = profile.targetDeficit,
+            sportTonight          = sport,
+            weightKgToday         = weightToday,
+            expectedTodaySport    = params?.expectedTodaySport,
+            expectedTodayNonSport = params?.expectedTodayNonSport,
+            actualBurnedSoFar     = energy?.totalKcal,
         )
         // caloriesLeft and budgetLabel are set by refreshCaloriesLeft() called after this
     }
