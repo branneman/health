@@ -152,36 +152,37 @@ private fun MainNav(authViewModel: AuthViewModel) {
         Box(modifier = Modifier.padding(padding)) {
             val logVm: LogViewModel = viewModel()
 
-            if (showLogSheet) {
-                LogFlowSheet(
-                    onFromTemplate = { showLogSheet = false; logPage = LogPage.TemplateList },
-                    onQuickAdd     = { showLogSheet = false; logPage = LogPage.QuickAdd },
-                    onDismiss      = { showLogSheet = false },
-                )
-            }
-
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
-                Tab.Log -> when (logPage) {
-                    LogPage.Main -> LogScreen(
-                        viewModel          = logVm,
-                        onSetUpMealButtons = {
-                            currentTab   = Tab.Settings
-                            settingsPage = SettingsPage.MealButtons
-                        },
-                        shortcuts          = logVm.shortcuts.collectAsStateWithLifecycle().value,
-                        onSetUpDrinkButtons = {
-                            currentTab   = Tab.Settings
-                            settingsPage = SettingsPage.DrinkButtons
-                        },
-                        onLogShortcut      = { shortcut -> logVm.logFromShortcut(shortcut) },
-                        onOpenLogFlow      = { showLogSheet = true },
-                    )
-                    LogPage.TemplateList -> TemplateListScreen(onBack = { logPage = LogPage.Main })
-                    LogPage.QuickAdd -> QuickAddScreen(
-                        onBack   = { logPage = LogPage.Main },
-                        onLogged = { logPage = LogPage.Main },
-                    )
+                Tab.Log -> {
+                    when (logPage) {
+                        LogPage.Main -> LogScreen(
+                            viewModel          = logVm,
+                            onSetUpMealButtons = {
+                                currentTab   = Tab.Settings
+                                settingsPage = SettingsPage.MealButtons
+                            },
+                            shortcuts          = logVm.shortcuts.collectAsStateWithLifecycle().value,
+                            onSetUpDrinkButtons = {
+                                currentTab   = Tab.Settings
+                                settingsPage = SettingsPage.DrinkButtons
+                            },
+                            onLogShortcut      = { shortcut -> logVm.logFromShortcut(shortcut) },
+                            onOpenLogFlow      = { showLogSheet = true },
+                        )
+                        LogPage.TemplateList -> TemplateListScreen(onBack = { logPage = LogPage.Main })
+                        LogPage.QuickAdd -> QuickAddScreen(
+                            onBack   = { logPage = LogPage.Main },
+                            onLogged = { logPage = LogPage.Main },
+                        )
+                    }
+                    if (showLogSheet) {
+                        LogFlowSheet(
+                            onFromTemplate = { showLogSheet = false; logPage = LogPage.TemplateList },
+                            onQuickAdd     = { showLogSheet = false; logPage = LogPage.QuickAdd },
+                            onDismiss      = { showLogSheet = false },
+                        )
+                    }
                 }
                 Tab.Settings -> when (settingsPage) {
                     SettingsPage.Main -> SettingsScreen(
