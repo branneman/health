@@ -11,16 +11,16 @@ class MealTemplateSyncService(
     private val db: HealthDatabase,
 ) {
     suspend fun pushPending(token: String, userId: String) {
-        val pending = db.mealTemplateDao().getByStatus(SyncStatus.PENDING_CREATE)
-        if (pending.isEmpty()) return
+        val pendingCreate = db.mealTemplateDao().getByStatus(SyncStatus.PENDING_CREATE)
+        val pendingDelete = db.mealTemplateDao().getByStatus(SyncStatus.PENDING_DELETE)
+        if (pendingCreate.isEmpty() && pendingDelete.isEmpty()) return
 
-        val allActive = pending +
-                        db.mealTemplateDao().getByStatus(SyncStatus.SYNCED)
-
+        val allActive = pendingCreate + db.mealTemplateDao().getByStatus(SyncStatus.SYNCED)
         runCatching {
             api.putTemplates(token, allActive.map { it.toDto() })
         }.onSuccess {
             allActive.forEach { db.mealTemplateDao().updateSyncStatus(it.id, SyncStatus.SYNCED) }
+            pendingDelete.forEach { db.mealTemplateDao().deleteById(it.id) }
         }
     }
 

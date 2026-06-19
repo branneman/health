@@ -10,6 +10,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.branneman.health.aMealTemplate
+import org.branneman.health.uuid
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.network.HealthApiClient
@@ -114,5 +115,47 @@ class MealTemplateSyncServiceTest {
         runCatching { MealTemplateSyncService(api, db).pushPending("token", userId) }
 
         assertEquals(1, db.mealTemplateDao().getByStatus(SyncStatus.PENDING_CREATE).size)
+    }
+
+    @Test
+    fun `pushPending triggers on PENDING_DELETE only and hard-deletes after success`() = runTest {
+        val userId = "u1"
+        val id = uuid()
+        db.mealTemplateDao().upsert(aMealTemplate(id = id, userId = userId, quickAddKcal = 500,
+            syncStatus = SyncStatus.SYNCED))
+        db.mealTemplateDao().updateSyncStatus(id, SyncStatus.PENDING_DELETE)
+
+        val api = mockApi { _ ->
+            respond("[]", HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+        }
+
+        MealTemplateSyncService(api, db).pushPending("token", userId)
+
+        assertTrue(db.mealTemplateDao().observeAll().first().isEmpty())
+        assertTrue(db.mealTemplateDao().getByStatus(SyncStatus.PENDING_DELETE).isEmpty())
+    }
+
+    @Test
+    fun `pushPending sends active set excluding PENDING_DELETE`() = runTest {
+        val userId = "u1"
+        val keepId = uuid()
+        val deleteId = uuid()
+        db.mealTemplateDao().upsert(aMealTemplate(id = keepId, userId = userId, name = "Keep",
+            quickAddKcal = 500, syncStatus = SyncStatus.SYNCED))
+        db.mealTemplateDao().upsert(aMealTemplate(id = deleteId, userId = userId, name = "Delete",
+            quickAddKcal = 300, syncStatus = SyncStatus.PENDING_DELETE))
+
+        var sentBody = ""
+        val api = mockApi { req ->
+            sentBody = req.body.toByteArray().toString(Charsets.UTF_8)
+            respond("[]", HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+        }
+
+        MealTemplateSyncService(api, db).pushPending("token", userId)
+
+        assertTrue(sentBody.contains("Keep"))
+        assertTrue(!sentBody.contains("Delete"))
     }
 }
