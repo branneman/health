@@ -1,12 +1,15 @@
 package org.branneman.health.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -17,30 +20,17 @@ import org.branneman.health.db.entities.MealTemplateEntity
 @Composable
 fun TemplateListScreen(
     onBack: () -> Unit,
+    onLogged: (undoAction: () -> Unit) -> Unit = {},
     viewModel: TemplateListViewModel = viewModel(),
 ) {
     val templates by viewModel.templates.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    var pendingUndo by remember { mutableStateOf(false) }
 
-    LaunchedEffect(pendingUndo) {
-        if (!pendingUndo) return@LaunchedEffect
-        val result = snackbarHostState.showSnackbar(
-            message     = "Logged",
-            actionLabel = "Undo",
-            duration    = SnackbarDuration.Short,
-        )
-        if (result == SnackbarResult.ActionPerformed) viewModel.undoLog()
-        pendingUndo = false
-        onBack()
-    }
-
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+    Scaffold { padding ->
         TemplateListContent(
             templates     = templates,
             onLogTemplate = { template, multiplier ->
                 viewModel.logFromTemplate(template, multiplier)
-                pendingUndo = true
+                onLogged { viewModel.undoLog() }
             },
             onBack   = onBack,
             modifier = Modifier.padding(padding),
@@ -93,14 +83,27 @@ fun TemplateListContent(
     }
 
     selectedTemplate?.let { template ->
-        PortionAdjusterContent(
-            template = template,
-            onLog    = { multiplier ->
-                onLogTemplate(template, multiplier)
-                selectedTemplate = null
-            },
-            onDismiss = { selectedTemplate = null },
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.32f))
+                .clickable { selectedTemplate = null },
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Surface(
+                modifier    = Modifier.fillMaxWidth(),
+                onClick     = {},
+                tonalElevation = 3.dp,
+            ) {
+                PortionAdjusterContent(
+                    template = template,
+                    onLog    = { multiplier ->
+                        onLogTemplate(template, multiplier)
+                        selectedTemplate = null
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -111,7 +114,6 @@ private val portionLabels      = listOf("Lighter", "Normal", "Heavier")
 private fun PortionAdjusterContent(
     template: MealTemplateEntity,
     onLog: (Float) -> Unit,
-    onDismiss: () -> Unit,
 ) {
     var selectedIndex by remember { mutableIntStateOf(1) }
     val baseKcal = template.quickAddKcal ?: 0

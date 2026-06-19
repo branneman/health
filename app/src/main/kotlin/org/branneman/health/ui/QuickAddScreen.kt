@@ -16,32 +16,14 @@ import org.branneman.health.log.QuickAddViewModel
 @Composable
 fun QuickAddScreen(
     onBack: () -> Unit,
-    onLogged: () -> Unit = {},
+    onLogged: (undoAction: () -> Unit) -> Unit = {},
     viewModel: QuickAddViewModel = viewModel(),
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    var pendingUndo by remember { mutableStateOf(false) }
-
-    LaunchedEffect(pendingUndo) {
-        if (!pendingUndo) return@LaunchedEffect
-        val result = snackbarHostState.showSnackbar(
-            message     = "Logged",
-            actionLabel = "Undo",
-            duration    = SnackbarDuration.Short,
-        )
-        if (result == SnackbarResult.ActionPerformed) {
-            viewModel.undoLog()
-        } else {
-            onLogged()
-        }
-        pendingUndo = false
-    }
-
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+    Scaffold { padding ->
         QuickAddContent(
             onLog    = { kcal, label ->
                 viewModel.log(kcal, label)
-                pendingUndo = true
+                onLogged { viewModel.undoLog() }
             },
             onBack   = onBack,
             modifier = Modifier.padding(padding),

@@ -126,12 +126,14 @@ private fun MainNav(authViewModel: AuthViewModel) {
     var settingsPage by remember { mutableStateOf(SettingsPage.Main) }
     var logPage by remember { mutableStateOf(LogPage.Main) }
     var showLogSheet by remember { mutableStateOf(false) }
+    var pendingLogUndoAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     LaunchedEffect(currentTab) {
         if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
         if (currentTab != Tab.Log) {
             logPage = LogPage.Main
             showLogSheet = false
+            pendingLogUndoAction = null
         }
     }
 
@@ -167,13 +169,24 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                 currentTab   = Tab.Settings
                                 settingsPage = SettingsPage.DrinkButtons
                             },
-                            onLogShortcut      = { shortcut -> logVm.logFromShortcut(shortcut) },
-                            onOpenLogFlow      = { showLogSheet = true },
+                            onLogShortcut           = { shortcut -> logVm.logFromShortcut(shortcut) },
+                            onOpenLogFlow           = { showLogSheet = true },
+                            externalUndo            = pendingLogUndoAction,
+                            onExternalUndoConsumed  = { pendingLogUndoAction = null },
                         )
-                        LogPage.TemplateList -> TemplateListScreen(onBack = { logPage = LogPage.Main })
+                        LogPage.TemplateList -> TemplateListScreen(
+                            onBack   = { logPage = LogPage.Main },
+                            onLogged = { undoAction ->
+                                pendingLogUndoAction = undoAction
+                                logPage = LogPage.Main
+                            },
+                        )
                         LogPage.QuickAdd -> QuickAddScreen(
                             onBack   = { logPage = LogPage.Main },
-                            onLogged = { logPage = LogPage.Main },
+                            onLogged = { undoAction ->
+                                pendingLogUndoAction = undoAction
+                                logPage = LogPage.Main
+                            },
                         )
                     }
                     if (showLogSheet) {

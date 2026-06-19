@@ -30,6 +30,8 @@ fun LogScreen(
     onSetUpDrinkButtons: () -> Unit = {},
     onLogShortcut: (ShortcutEntity) -> Unit = {},
     onOpenLogFlow: () -> Unit = {},
+    externalUndo: (() -> Unit)? = null,
+    onExternalUndoConsumed: () -> Unit = {},
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val pinnedTemplates by viewModel.pinnedTemplates.collectAsStateWithLifecycle()
@@ -50,6 +52,17 @@ fun LogScreen(
             }
         }
         lastAction = null
+    }
+
+    LaunchedEffect(externalUndo) {
+        val undoAction = externalUndo ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message     = "Logged",
+            actionLabel = "Undo",
+            duration    = SnackbarDuration.Short,
+        )
+        if (result == SnackbarResult.ActionPerformed) undoAction()
+        onExternalUndoConsumed()
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
