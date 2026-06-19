@@ -20,12 +20,10 @@ fun QuickAddScreen(
     viewModel: QuickAddViewModel = viewModel(),
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    var pendingLog by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var pendingUndo by remember { mutableStateOf(false) }
 
-    LaunchedEffect(pendingLog) {
-        val (kcal, label) = pendingLog ?: return@LaunchedEffect
-        viewModel.log(kcal, label)
-        onLogged()
+    LaunchedEffect(pendingUndo) {
+        if (!pendingUndo) return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
             message     = "Logged",
             actionLabel = "Undo",
@@ -33,13 +31,18 @@ fun QuickAddScreen(
         )
         if (result == SnackbarResult.ActionPerformed) {
             viewModel.undoLog()
+        } else {
+            onLogged()
         }
-        pendingLog = null
+        pendingUndo = false
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         QuickAddContent(
-            onLog    = { kcal, label -> pendingLog = kcal to label },
+            onLog    = { kcal, label ->
+                viewModel.log(kcal, label)
+                pendingUndo = true
+            },
             onBack   = onBack,
             modifier = Modifier.padding(padding),
         )
@@ -54,7 +57,7 @@ fun QuickAddContent(
 ) {
     var kcal by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
-    val logEnabled = kcal.toIntOrNull() ?: 0 > 0
+    val logEnabled = (kcal.toIntOrNull() ?: 0) > 0
     val kcalFocus = remember { FocusRequester() }
 
     LaunchedEffect(Unit) { kcalFocus.requestFocus() }
