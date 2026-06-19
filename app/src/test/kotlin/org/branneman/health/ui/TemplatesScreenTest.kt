@@ -51,6 +51,12 @@ class TemplatesScreenTest {
         compose.onNodeWithText("720 kcal").assertExists()
     }
 
+    @Test fun `pinned template shows pin indicator`() {
+        val t = aMealTemplate(name = "Breakfast", sortOrder = 0, quickAddKcal = 450)
+        render(templates = listOf(t))
+        compose.onNodeWithText("📌 Breakfast").assertExists()
+    }
+
     @Test fun `add dialog Save is disabled when name is blank`() {
         render()
         compose.onNodeWithTag("add_template_button").performClick()
