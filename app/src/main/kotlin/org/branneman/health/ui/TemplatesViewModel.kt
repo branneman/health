@@ -35,7 +35,11 @@ class TemplatesViewModel private constructor(
     )
 
     val templates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observeAll()
-        .map { list -> list.sortedBy { it.name } }
+        .map { list ->
+            val pinned   = list.filter { it.sortOrder != null }.sortedBy { it.sortOrder }
+            val unpinned = list.filter { it.sortOrder == null }.sortedBy { it.name }
+            pinned + unpinned
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun create(name: String, kcal: Int) {
