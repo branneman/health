@@ -32,6 +32,7 @@ fun TemplateListScreen(
         )
         if (result == SnackbarResult.ActionPerformed) viewModel.undoLog()
         pendingUndo = false
+        onBack()
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
@@ -40,7 +41,6 @@ fun TemplateListScreen(
             onLogTemplate = { template, multiplier ->
                 viewModel.logFromTemplate(template, multiplier)
                 pendingUndo = true
-                onBack()
             },
             onBack   = onBack,
             modifier = Modifier.padding(padding),

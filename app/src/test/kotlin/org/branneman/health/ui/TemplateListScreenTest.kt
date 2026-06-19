@@ -94,4 +94,16 @@ class TemplateListScreenTest {
         compose.onNodeWithText("← Back").performClick()
         assertTrue(called)
     }
+
+    @Test fun `Normal is default selection in portion adjuster`() {
+        var logged: Float? = null
+        val t = aMealTemplate(name = "Soup", quickAddKcal = 400)
+        render(
+            templates = listOf(t),
+            onLogTemplate = { _, mult -> logged = mult },
+        )
+        compose.onNodeWithText("Soup").performClick()
+        compose.onNodeWithTag("portion_log_button").performClick()
+        assertEquals(1.0f, logged) // Default selection = Normal = 1.0f
+    }
 }
