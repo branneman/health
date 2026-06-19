@@ -77,8 +77,17 @@ class E2ESmokeTest {
 
         compose.onNodeWithText("Log").performClick()
 
-        compose.onNodeWithTag("kcal_input").performTextInput("123")
-        compose.onNodeWithText("Add").performClick()
+        // Open log flow sheet
+        compose.onNodeWithTag("log_flow_button").performClick()
+
+        // Tap "Quick-add calories" in the bottom sheet
+        compose.onNodeWithTag("log_quick_add").performClick()
+
+        // Enter kcal on the quick-add screen
+        compose.onNodeWithTag("quick_add_kcal").performTextInput("123")
+
+        // Tap Log
+        compose.onNodeWithTag("quick_add_log_button").performClick()
 
         compose.waitUntil(timeoutMillis = 3_000) {
             compose.onAllNodesWithText("123 kcal").fetchSemanticsNodes().isNotEmpty()
