@@ -66,9 +66,9 @@
 
 | Method   | Path                    | Auth | Description                              |
 |----------|-------------------------|------|------------------------------------------|
-| `POST`   | `/in/log/quick-add`     | Yes  | Log kcal + optional label (story 7)      |
-| `POST`   | `/in/log/food`          | Yes  | Log a custom meal (story 15)             |
-| `POST`   | `/in/log/template`      | Yes  | Log from a meal template (story 13)      |
+| `POST`   | `/in/log/quick-add`     | Yes  | Log kcal + optional label (7 (Quick-add logging))      |
+| `POST`   | `/in/log/food`          | Yes  | Log a custom meal (15 (Build from scratch))             |
+| `POST`   | `/in/log/template`      | Yes  | Log from a meal template (13 (Meal templates))      |
 | `GET`    | `/in/log`               | Yes  | List entries for `?date=YYYY-MM-DD`      |
 | `GET`    | `/in/log/{id}`          | Yes  | Get single log entry                     |
 | `DELETE` | `/in/log/{id}`          | Yes  | Delete entry (correction mechanism)      |

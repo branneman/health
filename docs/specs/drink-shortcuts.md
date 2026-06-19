@@ -1,4 +1,4 @@
-# Spec — Drink shortcuts (story 10)
+# Spec — 10 (Drink shortcuts)
 
 One-tap drink buttons on the log screen. Each button shows an emoji + short label (e.g.
 🍺 Pils, 🍷 Wine) and logs a preset kcal in one tap. Buttons are user-configured via a
@@ -19,7 +19,7 @@ Settings sub-page.
 - Log entry label is `"${emoji} ${label}"` (e.g. "🍺 Pils").
 
 Out of scope: emoji picker widget (free-text emoji field is sufficient), widget integration
-(story 21).
+(21 (Widget (medium))).
 
 ---
 

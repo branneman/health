@@ -1,4 +1,4 @@
-# Polar Sync — Story 11
+# Spec — 11 (Polar sync)
 
 **Date:** 2026-06-12
 **Scope:** Server-side Polar OAuth flow, hourly cron pull of daily energy and workouts,

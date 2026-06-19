@@ -119,7 +119,7 @@ occasionally apt/systemctl for maintenance. The unrestricted sudo is retained fo
 with a comment in `cloud-config.yml`. Change it before provisioning any additional
 servers or granting third-party access.
 
-**[HIGH] In-memory rate limiter resets on server restart — backlog story #3**  
+**[HIGH] In-memory rate limiter resets on server restart — backlog story 3 (Persist rate-limit state)**  
 File: `server/src/main/kotlin/org/branneman/health/auth/RateLimiter.kt`  
 The `RateLimiter` uses `ConcurrentHashMap`. A restart wipes all lockout state. An
 attacker can deliberately trigger OOM restarts — flooding `/auth/token` with concurrent
@@ -128,7 +128,7 @@ requests spikes the JVM heap; `restart: unless-stopped` brings the container bac
 (~250 ms/attempt) caps throughput at ~32 attempts/second even with full parallelism, so
 a strong password is safe in practice. But this is not acceptable once more than one
 user exists: both real users and the e2e test account become targets.  
-**Fix (story #3):** `V3__login_attempts.sql` adds a `login_attempts` table; `RateLimiter`
+**Fix (3 (Persist rate-limit state)):** `V3__login_attempts.sql` adds a `login_attempts` table; `RateLimiter`
 loads state on startup and writes through on every failure and reset. The extra Postgres
 round-trip is negligible against BCrypt's 250 ms. See backlog for scope.
 
@@ -207,13 +207,13 @@ and deploys the new image automatically.
 
 ---
 
-### Auto-update story (story #19) — security requirements and risks
+### Auto-update story (22 (Auto update)) — security requirements and risks
 
 The auto-update spec (`auto-update.md`) is pending implementation and
 introduces several security-relevant concerns.
 
 **[CRITICAL] APK signing keystore must never be committed**  
-The spec defers signing config to "a deployment concern." Before implementing story #19:
+The spec defers signing config to "a deployment concern." Before implementing 22 (Auto update):
 - Generate a release keystore (`keytool -genkey -v -keystore release.jks ...`).
 - **Never commit the keystore file or its password anywhere in the repo.** Store:
   - `KEYSTORE_FILE` — base64-encoded `.jks` file → GitHub Actions secret
@@ -259,7 +259,7 @@ URL. This is intentional and necessary for the update flow. But it means:
 This is accepted. Add `/api/update` to the canonical list of unauthenticated endpoints.
 
 **CI/CD deploy model stays Docker/Watchtower — no SSH deploy key needed**  
-Story #19 keeps the existing model: GitHub Actions pushes a Docker image to `ghcr.io`
+22 (Auto update) keeps the existing model: GitHub Actions pushes a Docker image to `ghcr.io`
 using the ephemeral `GITHUB_TOKEN`; Watchtower on the VPS polls and deploys. The
 `publish-apk` job adds a new step before `deploy-server` (the Docker image build). No
 SSH private key is needed in CI; the pseudo-code in the spec showing `scp`/`ssh` is not
@@ -333,7 +333,7 @@ separate from any real user's credentials.
 - Use the `authenticate("api") { ... }` block in Ktor routing. Unauthenticated endpoints
   require an explicit deliberate exception.
 - Currently unauthenticated (and must stay that way): `GET /`, `GET /server-health`,
-  `POST /auth/token`, `GET /api/update` (once story #19 lands).
+  `POST /auth/token`, `GET /api/update` (once 22 (Auto update) lands).
 - Never add unauthenticated read endpoints for user data, even "harmless" summary data.
 
 ### Input validation at all API boundaries
@@ -387,7 +387,7 @@ log.info("Token issued, expires: $expiresAt")
   edit a migration that has already been applied to production.
 - Migrations run automatically on Ktor startup (Flyway). Test them locally against a
   fresh DB with `docker compose down -v && docker compose up -d postgres && ./gradlew :server:run`.
-- Multi-user migration (`V3__multi_user.sql`, story #5) must include backfill logic for
+- Multi-user migration (`V3__multi_user.sql`, 4 (Multi-user)) must include backfill logic for
   existing rows before adding `NOT NULL` constraints. See the migration design in
   `docs/specs/multi-user-sync-design.md`.
 

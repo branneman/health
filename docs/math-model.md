@@ -171,7 +171,7 @@ The formula works without modification: `calories_left = calories_out_today − 
 
 ### 2.7 Wake/bedtime in profile
 
-Wake time and bedtime are stored in the user profile but are **not used in the budget formula**. They serve other features: the late-night snacking insight (§5.1) and the end-of-day notification (story 23).
+Wake time and bedtime are stored in the user profile but are **not used in the budget formula**. They serve other features: the late-night snacking insight (§5.1) and the end-of-day notification (23 (End-of-day notification)).
 
 ### 2.8 Note on Polar calibration
 

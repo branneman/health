@@ -4,7 +4,7 @@
 
 **Goal:** Add one-tap drink shortcut buttons to the log screen — configurable via Settings, synced offline-first via `ShortcutSyncService`.
 
-**Architecture:** Mirror story 9's meal buttons pattern exactly. `ShortcutEntity`/`ShortcutDto`/server endpoints already exist; this story wires them into the UI and adds the push-sync path that was missing. No schema changes, no Room migration.
+**Architecture:** Mirror 9 (One-tap meal buttons)'s pattern exactly. `ShortcutEntity`/`ShortcutDto`/server endpoints already exist; this story wires them into the UI and adds the push-sync path that was missing. No schema changes, no Room migration.
 
 **Tech Stack:** Kotlin, Jetpack Compose, Room (in-memory for tests), Ktor `MockEngine`, Robolectric.
 

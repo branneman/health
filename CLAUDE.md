@@ -45,6 +45,9 @@ implication for every implementation session:
   (hits live server via `.env`) and confirm all tests pass first. To test against a local
   server instead: `API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest`
   (shell env takes precedence over `.env`; start the server first with `./gradlew :server:run`).
+- **Story references in docs:** When citing a backlog story from any markdown file, use
+  inline format `N (Short-name)`, e.g. `13 (Meal templates)`. Never a bare number — the
+  short name makes stale references immediately obvious.
 - **IDs are always UUIDs** — no auto-incrementing integers anywhere (database columns,
   Kotlin data classes, DTOs, Room entities). Postgres: `UUID DEFAULT gen_random_uuid()`.
   Kotlin: `java.util.UUID`. Never `Int`, `Long`, or `BIGSERIAL` for an identifier.

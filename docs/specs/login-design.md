@@ -1,7 +1,7 @@
 # Login Design
 
 **Date:** 2026-06-05
-**Story:** #2 — Login: sign-in screen calls auth endpoint, token stored securely
+**Story:** 2 (Login)
 **Scope:** Android login screen, secure token storage, token refresh, session expiry
 handling, and server-side auth endpoint refactor (`/auth/` prefix, 30-day tokens,
 refresh + logout endpoints).
@@ -10,9 +10,9 @@ refresh + logout endpoints).
 
 ## Context
 
-Story 1 (walking skeleton) proved the CI/CD pipeline and established the 3-tab nav.
+1 (Walking skeleton) proved the CI/CD pipeline and established the 3-tab nav.
 The server already has a fully working `POST /token` endpoint with BCrypt, rate
-limiting, and session management. Story 2 adds the Android auth gate: the app checks
+limiting, and session management. 2 (Login) adds the Android auth gate: the app checks
 for a stored token on launch and routes to either the login screen or the main nav.
 
 Token refresh is included in this story because the security context is fresh and the
@@ -184,8 +184,8 @@ A Ktor `HttpClientPlugin` installed on `HealthApiClient`. Intercepts every respo
 - On any other status: pass through unchanged
 - No retry loop — one refresh attempt per failed request
 
-The plugin is wired and fully implemented in story 2. It will not be triggered until
-story 4 introduces the first authenticated app endpoint.
+The plugin is wired and fully implemented in 2 (Login). It will not be triggered until
+4 (Multi-user) introduces the first authenticated app endpoint.
 
 ### `AuthViewModel`
 
@@ -195,7 +195,7 @@ the state and routes accordingly:
 
 - `LoggedOut` → `LoginScreen` (no message)
 - `Expired` → `LoginScreen` with "Session expired" message
-- `LoggedIn` → 3-tab nav (unchanged from story 1)
+- `LoggedIn` → 3-tab nav (unchanged from 1 (Walking skeleton))
 
 ### `HealthApiClient` updates
 
@@ -250,7 +250,7 @@ Notes:
   stored username is an email address (seeded via Ansible), so the label is accurate
   from the user's perspective.
 - No "create account" option — account is pre-provisioned; this is a personal app.
-- Sign in requires a network connection. All subsequent app use (story 3 onwards) works
+- Sign in requires a network connection. All subsequent app use (3 (Persist rate-limit state) onwards) works
   offline once logged in.
 - Error responses from the server are deliberately non-specific (wrong username and
   wrong password return the same 401 — see `token-auth-design.md`). The inline error
@@ -301,7 +301,7 @@ Notes:
 ### What is not tested
 
 - `TokenStore` — no logic; testing it would test DataStore itself
-- `LoginScreen` UI — no instrumented tests for story 2; the repository and client
+- `LoginScreen` UI — no instrumented tests for 2 (Login); the repository and client
   tests cover the real risk surface
 
 ---

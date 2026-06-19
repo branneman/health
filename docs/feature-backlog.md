@@ -30,7 +30,7 @@ the user something immediately usable, however thin. No waterfall gate.
 | ✓ | 10 | **Drink shortcuts** — configure + use one-tap drink buttons on log screen                                                                                                       | Drinks logged in one tap                                             | [drink-shortcuts](drink-shortcuts.md)     |
 | ✓ | 11 | **Polar sync** — OAuth callback + cron pull → real calories-out replaces estimate                                                                                               | Budget is real, not guessed                                          |                                           |
 | ✓ | 12 | **Budget model swap** — replace time-decay + eating-fraction with simple running balance (`calories_out − D − calories_in`); remove per-minute tick; simplify DTO + Room entity  | Budget correctly shows remaining headroom at any time of day                 |                                                 |
-|   | 13 | **Log from template** — browse saved templates + portion adjuster (Lighter / Normal / Heavier)                                                                                  | Dinner costs 2–3 taps                                                |                                           |
+|   | 13 | **Meal templates** — create named kcal-total templates (save-as from quick-add or manual entry); browse template list; log with portion adjuster (Lighter / Normal / Heavier)   | Any meal can be saved and reused; dinner costs 2–3 taps              |                                           |
 |   | 14 | **OFD import pipeline** — weekly sync of NL subset (EU fallback) into `product` table; full-text index; `/food/search` and `/food/barcode` server endpoints                     | Fast food search with no OFD rate-limit exposure                     |                                           |
 |   | 15 | **Build from scratch** — ingredient builder UI, calls server food search, barcode scan, save as template into `food_item`                                                       | Any new dish can be logged precisely                                 |                                           |
 |   | 16 | **Past-day view** — browse history, swipe between days, delete entries                                                                                                          | Corrections and history visible                                      |                                           |
@@ -63,9 +63,10 @@ per-search rate-limit exposure and fast autocomplete via Postgres full-text inde
 
 **Core loop needs no OFD**
 
-Stories 1–11 are self-contained. Quick-add is a kcal number; one-tap button setup
-is a kcal field; drink shortcuts are emoji + label + kcal. OFD first appears in
-story 13 (import pipeline), used by story 14 (build from scratch).
+Stories 1–13 are self-contained. Quick-add is a kcal number; one-tap button setup
+is a kcal field; drink shortcuts are emoji + label + kcal; meal templates are kcal
+totals. OFD first appears in story 14 (import pipeline), used by story 15 (build
+from scratch).
 
 **Polar is early but not first**
 
@@ -76,8 +77,10 @@ until Polar is connected.
 **One-tap button templates vs full ingredient templates**
 
 Story 9 sets up usual breakfast/lunch/snack as simple kcal totals — no ingredients,
-no OFD. Once story 13 exists, the user can rebuild any template from ingredients for
-macro detail. The one-tap button mechanism is the same either way.
+no OFD. Story 13 extends that: any meal can be saved as a named kcal-total template
+(via save-as from quick-add or manual entry) and logged with a portion adjuster.
+Once story 15 exists, the user can rebuild any template from ingredients for macro
+detail. The one-tap button mechanism is the same either way.
 
 **Multi-user before onboarding**
 
@@ -90,5 +93,5 @@ more important once multiple users exist.
 **Vertical slices throughout**
 
 Each story ships server + Room/local + app UI together. No separate server-track or
-app-track stories. The one exception is story 13 (OFD pipeline) which is pure server
-infrastructure, but it directly unblocks story 14 and has no app component.
+app-track stories. The one exception is story 14 (OFD pipeline) which is pure server
+infrastructure, but it directly unblocks story 15 and has no app component.

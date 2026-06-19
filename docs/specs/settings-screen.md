@@ -145,6 +145,6 @@ loading state while fetching; show an error with a retry option if the fetch fai
 ## Out of scope
 
 - Disconnect Polar (tokens don't expire; no user need identified).
-- Notification settings (story 23, not yet built).
-- Vacation / maintenance mode toggles (stories 25–26, not yet built).
+- Notification settings (23 (End-of-day notification), not yet built).
+- Vacation / maintenance mode toggles (25 (Vacation mode) and 26 (Maintenance mode), not yet built).
 - Any change to Meal buttons or Drink buttons sub-pages.
