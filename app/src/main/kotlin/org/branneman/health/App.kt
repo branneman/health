@@ -1,8 +1,15 @@
 package org.branneman.health
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -14,6 +21,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.auth.AuthState
@@ -28,8 +37,11 @@ import org.branneman.health.ui.MealButtonsScreen
 import org.branneman.health.ui.OnboardingScreen
 import org.branneman.health.ui.GoalSettingsScreen
 import org.branneman.health.ui.ProfileSettingsScreen
+import org.branneman.health.ui.QuickAddScreen
 import org.branneman.health.ui.ScheduleSettingsScreen
 import org.branneman.health.ui.SettingsScreen
+import org.branneman.health.ui.TemplateListScreen
+import org.branneman.health.ui.TemplatesScreen
 
 private enum class Tab(val label: String, val emoji: String) {
     Dashboard("Dashboard", "📊"),
@@ -104,15 +116,23 @@ fun App() {
     }
 }
 
-private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule }
+private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule, Templates }
+
+private enum class LogPage { Main, TemplateList, QuickAdd }
 
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
     var currentTab by remember { mutableStateOf(Tab.Dashboard) }
     var settingsPage by remember { mutableStateOf(SettingsPage.Main) }
+    var logPage by remember { mutableStateOf(LogPage.Main) }
+    var showLogSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentTab) {
         if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
+        if (currentTab != Tab.Log) {
+            logPage = LogPage.Main
+            showLogSheet = false
+        }
     }
 
     Scaffold(
@@ -131,21 +151,38 @@ private fun MainNav(authViewModel: AuthViewModel) {
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             val logVm: LogViewModel = viewModel()
+
+            if (showLogSheet) {
+                LogFlowSheet(
+                    onFromTemplate = { showLogSheet = false; logPage = LogPage.TemplateList },
+                    onQuickAdd     = { showLogSheet = false; logPage = LogPage.QuickAdd },
+                    onDismiss      = { showLogSheet = false },
+                )
+            }
+
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
-                Tab.Log -> LogScreen(
-                    viewModel          = logVm,
-                    onSetUpMealButtons = {
-                        currentTab   = Tab.Settings
-                        settingsPage = SettingsPage.MealButtons
-                    },
-                    shortcuts          = logVm.shortcuts.collectAsStateWithLifecycle().value,
-                    onSetUpDrinkButtons = {
-                        currentTab   = Tab.Settings
-                        settingsPage = SettingsPage.DrinkButtons
-                    },
-                    onLogShortcut      = { shortcut -> logVm.logFromShortcut(shortcut) },
-                )
+                Tab.Log -> when (logPage) {
+                    LogPage.Main -> LogScreen(
+                        viewModel          = logVm,
+                        onSetUpMealButtons = {
+                            currentTab   = Tab.Settings
+                            settingsPage = SettingsPage.MealButtons
+                        },
+                        shortcuts          = logVm.shortcuts.collectAsStateWithLifecycle().value,
+                        onSetUpDrinkButtons = {
+                            currentTab   = Tab.Settings
+                            settingsPage = SettingsPage.DrinkButtons
+                        },
+                        onLogShortcut      = { shortcut -> logVm.logFromShortcut(shortcut) },
+                        onOpenLogFlow      = { showLogSheet = true },
+                    )
+                    LogPage.TemplateList -> TemplateListScreen(onBack = { logPage = LogPage.Main })
+                    LogPage.QuickAdd -> QuickAddScreen(
+                        onBack   = { logPage = LogPage.Main },
+                        onLogged = { logPage = LogPage.Main },
+                    )
+                }
                 Tab.Settings -> when (settingsPage) {
                     SettingsPage.Main -> SettingsScreen(
                         onSignOut              = { authViewModel.logout() },
@@ -154,6 +191,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                         onNavigateProfile      = { settingsPage = SettingsPage.Profile },
                         onNavigateGoal         = { settingsPage = SettingsPage.Goal },
                         onNavigateSchedule     = { settingsPage = SettingsPage.Schedule },
+                        onNavigateTemplates    = { settingsPage = SettingsPage.Templates },
                     )
                     SettingsPage.MealButtons -> MealButtonsScreen(
                         onBack = { settingsPage = SettingsPage.Main }
@@ -170,8 +208,44 @@ private fun MainNav(authViewModel: AuthViewModel) {
                     SettingsPage.Schedule -> ScheduleSettingsScreen(
                         onBack = { settingsPage = SettingsPage.Main }
                     )
+                    SettingsPage.Templates -> TemplatesScreen(
+                        onBack = { settingsPage = SettingsPage.Main }
+                    )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LogFlowSheet(
+    onFromTemplate: () -> Unit,
+    onQuickAdd: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            ListItem(
+                headlineContent = { Text("From template") },
+                trailingContent = { Text("›", style = MaterialTheme.typography.titleLarge) },
+                modifier = Modifier
+                    .clickable(onClick = onFromTemplate)
+                    .testTag("log_from_template"),
+            )
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text("Quick-add calories") },
+                trailingContent = { Text("›", style = MaterialTheme.typography.titleLarge) },
+                modifier = Modifier
+                    .clickable(onClick = onQuickAdd)
+                    .testTag("log_quick_add"),
+            )
         }
     }
 }

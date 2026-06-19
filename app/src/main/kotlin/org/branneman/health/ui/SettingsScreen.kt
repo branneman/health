@@ -33,6 +33,7 @@ fun SettingsScreen(
     onNavigateSchedule: () -> Unit = {},
     onNavigateMealButtons: () -> Unit = {},
     onNavigateDrinkButtons: () -> Unit = {},
+    onNavigateTemplates: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var serverReachable by remember { mutableStateOf<Boolean?>(null) }
@@ -59,6 +60,7 @@ fun SettingsScreen(
         onNavigateSchedule     = onNavigateSchedule,
         onNavigateMealButtons  = onNavigateMealButtons,
         onNavigateDrinkButtons = onNavigateDrinkButtons,
+        onNavigateTemplates    = onNavigateTemplates,
         onSignOut              = onSignOut,
         serverReachable        = serverReachable,
         lastSyncedAt           = lastSyncedAt,
@@ -83,6 +85,7 @@ fun SettingsContent(
     onNavigateSchedule: () -> Unit,
     onNavigateMealButtons: () -> Unit,
     onNavigateDrinkButtons: () -> Unit,
+    onNavigateTemplates: () -> Unit = {},
     onSignOut: () -> Unit,
     serverReachable: Boolean? = null,
     lastSyncedAt: Long? = null,
@@ -107,6 +110,7 @@ fun SettingsContent(
         SettingsSectionHeader("Quick buttons")
         SettingsNavRow("Meal buttons", null, onNavigateMealButtons)
         SettingsNavRow("Drink buttons", null, onNavigateDrinkButtons)
+        SettingsNavRow("Templates", "Manage saved meals", onNavigateTemplates)
 
         HorizontalDivider()
         SettingsSectionHeader("Connections")
