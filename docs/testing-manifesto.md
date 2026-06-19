@@ -137,7 +137,8 @@ screenshot tests — they assert on what the user sees and can interact with, no
 **What currently meets the bar:** all nine DAO tests (`BodyWeightDaoTest`, `DailyEnergyDaoTest`,
 `FoodItemDaoTest`, `LogEntryDaoTest`, `MealTemplateDaoTest`, `ShortcutDaoTest`, `UserProfileDaoTest`,
 `WorkoutDaoTest`, `SportTonightDaoTest`), `LoginSyncServiceTest`, `LogEntrySyncServiceTest`,
-`LoginScreenTest`, `OnboardingScreenTest`, `DashboardScreenTest`, `LogScreenTest`.
+`LoginScreenTest`, `OnboardingScreenTest`, `DashboardScreenTest`, `LogScreenTest`,
+`TemplateListScreenTest`, `TemplatesScreenTest`, `QuickAddScreenTest`.
 
 **What is still missing:** UI tests for `SettingsScreen` — to be written alongside 16 (Past-day view).
 

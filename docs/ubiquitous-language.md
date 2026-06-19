@@ -62,9 +62,17 @@ count is known but ingredient detail is not wanted or not available.
 
 ### Meal template
 
-A saved, named composition of food items with per-item gram quantities. Used to log a
-recurring meal in 2–3 taps. Templates are replaced atomically — there is no partial
-patch.
+A saved, named recurring meal used to log in 2–3 taps. Exists in two variants that
+share the same entity and sync mechanism:
+
+- **Kcal-total template** (13 (Meal templates)): a name and a fixed kcal value, no
+  ingredient detail. Logged via the portion adjuster (Lighter ×0.8 / Normal ×1.0 /
+  Heavier ×1.2). Created and edited in Settings → Templates.
+- **Ingredient template** (15 (Build from scratch)): a name plus per-item food item
+  references and gram quantities. Nutrition is computed server-side. Not yet built.
+
+Both variants are synced to the server via a full-replacement `PUT /in/templates`.
+There is no partial patch.
 
 ### Meal type
 
