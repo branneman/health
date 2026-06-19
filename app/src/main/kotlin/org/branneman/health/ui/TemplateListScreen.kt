@@ -114,44 +114,50 @@ private fun PortionAdjusterContent(
     onDismiss: () -> Unit,
 ) {
     var selectedIndex by remember { mutableIntStateOf(1) }
+    val baseKcal = template.quickAddKcal ?: 0
+    val previewKcal = (baseKcal * portionMultipliers[selectedIndex]).toInt()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(template.name) },
-        text  = {
-            Column {
-                portionMultipliers.forEachIndexed { index, multiplier ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier          = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedIndex = index }
-                            .testTag("portion_option_$index"),
-                    ) {
-                        RadioButton(
-                            selected = selectedIndex == index,
-                            onClick  = { selectedIndex = index },
-                        )
-                        val kcal = template.quickAddKcal?.let { (it * multiplier).toInt() }
-                        val label = portionLabels[index]
-                        Text(
-                            text     = if (kcal != null) "$label (~$kcal kcal)" else label,
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick  = { onLog(portionMultipliers[selectedIndex]) },
-                modifier = Modifier.testTag("portion_log_button"),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+    ) {
+        Text(text = template.name, style = MaterialTheme.typography.titleLarge)
+        Text(
+            text  = "$previewKcal kcal · ${portionLabels[selectedIndex].lowercase()} portion",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 16.dp),
+        )
+        portionMultipliers.forEachIndexed { index, multiplier ->
+            val adjustedKcal = (baseKcal * multiplier).toInt()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier          = Modifier
+                    .fillMaxWidth()
+                    .clickable { selectedIndex = index }
+                    .padding(vertical = 4.dp)
+                    .testTag("portion_option_$index"),
             ) {
-                Text("Log")
+                RadioButton(
+                    selected = selectedIndex == index,
+                    onClick  = { selectedIndex = index },
+                )
+                Text(
+                    text     = "${portionLabels[index]}  ×${"%.1f".format(multiplier)}  $adjustedKcal kcal",
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
+        }
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick  = { onLog(portionMultipliers[selectedIndex]) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("portion_log_button"),
+        ) {
+            Text("Log")
+        }
+    }
 }
