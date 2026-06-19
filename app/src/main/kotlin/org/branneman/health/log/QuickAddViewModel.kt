@@ -3,6 +3,7 @@ package org.branneman.health.log
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.branneman.health.HealthApplication
@@ -30,7 +31,7 @@ class QuickAddViewModel private constructor(
         tokenStore = tokenStore,
     )
 
-    private var _lastAdded: LogEntryEntity? = null
+    private val _lastAdded = MutableStateFlow<LogEntryEntity?>(null)
 
     fun log(kcalStr: String, label: String) {
         val kcal = kcalStr.trim().toIntOrNull()?.takeIf { it > 0 } ?: return
@@ -44,15 +45,15 @@ class QuickAddViewModel private constructor(
                 quickAddLabel = label.trim().ifEmpty { null },
             )
             db.logEntryDao().upsert(entity)
-            _lastAdded = entity
+            _lastAdded.value = entity
         }
     }
 
     fun undoLog() {
         viewModelScope.launch {
-            _lastAdded?.let { entity ->
+            _lastAdded.value?.let { entity ->
                 db.logEntryDao().deleteById(entity.id)
-                _lastAdded = null
+                _lastAdded.value = null
             }
         }
     }
