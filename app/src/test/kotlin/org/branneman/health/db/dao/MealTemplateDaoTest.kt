@@ -16,6 +16,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -103,5 +104,28 @@ class MealTemplateDaoTest {
         dao.deleteAllForUser(userId)
         assertTrue(dao.observeAll().first().isEmpty())
         assertTrue(dao.getItems(templateId).isEmpty())
+    }
+
+    @Test
+    fun `getById returns entity for known id`() = runTest {
+        val id = uuid()
+        dao.upsert(aMealTemplate(id = id, userId = uuid(), name = "Pasta", quickAddKcal = 700))
+        val result = dao.getById(id)
+        assertEquals("Pasta", result?.name)
+        assertEquals(700, result?.quickAddKcal)
+    }
+
+    @Test
+    fun `getById returns null for unknown id`() = runTest {
+        assertNull(dao.getById("nonexistent"))
+    }
+
+    @Test
+    fun `deleteById removes the row`() = runTest {
+        val id = uuid()
+        dao.upsert(aMealTemplate(id = id, userId = uuid(), quickAddKcal = 500))
+        dao.deleteById(id)
+        assertNull(dao.getById(id))
+        assertTrue(dao.observeAll().first().isEmpty())
     }
 }

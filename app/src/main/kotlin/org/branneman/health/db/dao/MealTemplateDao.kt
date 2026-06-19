@@ -17,6 +17,12 @@ interface MealTemplateDao {
     @Query("SELECT * FROM meal_template WHERE syncStatus = :status")
     suspend fun getByStatus(status: SyncStatus): List<MealTemplateEntity>
 
+    @Query("SELECT * FROM meal_template WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): MealTemplateEntity?
+
+    @Query("DELETE FROM meal_template WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     @Query("SELECT * FROM meal_template_item WHERE templateId = :templateId")
     suspend fun getItems(templateId: String): List<MealTemplateItemEntity>
 
