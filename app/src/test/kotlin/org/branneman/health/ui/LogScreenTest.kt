@@ -25,31 +25,31 @@ class LogScreenTest {
 
     private fun render(
         entries: List<LogEntryEntity> = emptyList(),
-        onAdd: (String, String) -> Unit = { _, _ -> },
         onDelete: (LogEntryEntity) -> Unit = {},
+        onOpenLogFlow: () -> Unit = {},
     ) {
         compose.setContent {
             MaterialTheme {
-                LogContent(entries = entries, onAdd = onAdd, onDelete = onDelete)
+                LogContent(entries = entries, onDelete = onDelete, onOpenLogFlow = onOpenLogFlow)
             }
         }
     }
 
-    @Test fun `Add button is disabled when kcal field is empty`() {
+    @Test fun `Log button is present`() {
         render()
-        compose.onNodeWithText("Add").assertIsNotEnabled()
+        compose.onNodeWithTag("log_flow_button").assertExists()
     }
 
-    @Test fun `Add button is enabled when positive kcal is entered`() {
-        render()
-        compose.onNodeWithTag("kcal_input").performTextInput("350")
-        compose.onNodeWithText("Add").assertIsEnabled()
+    @Test fun `tapping Log button calls onOpenLogFlow`() {
+        var called = false
+        render(onOpenLogFlow = { called = true })
+        compose.onNodeWithTag("log_flow_button").performClick()
+        assertTrue(called)
     }
 
-    @Test fun `Add button is disabled when kcal is zero`() {
+    @Test fun `inline kcal input does not exist`() {
         render()
-        compose.onNodeWithTag("kcal_input").performTextInput("0")
-        compose.onNodeWithText("Add").assertIsNotEnabled()
+        compose.onNodeWithTag("kcal_input").assertDoesNotExist()
     }
 
     @Test fun `entries appear in list`() {
@@ -78,20 +78,20 @@ class LogScreenTest {
     private fun renderWithTemplates(
         entries: List<LogEntryEntity> = emptyList(),
         pinned: List<MealTemplateEntity> = emptyList(),
-        onAdd: (String, String) -> Unit = { _, _ -> },
         onDelete: (LogEntryEntity) -> Unit = {},
         onSetUpMealButtons: () -> Unit = {},
         onLogTemplate: (MealTemplateEntity) -> Unit = {},
+        onOpenLogFlow: () -> Unit = {},
     ) {
         compose.setContent {
             MaterialTheme {
                 LogContent(
                     entries            = entries,
                     pinnedTemplates    = pinned,
-                    onAdd              = onAdd,
                     onDelete           = onDelete,
                     onSetUpMealButtons = onSetUpMealButtons,
                     onLogTemplate      = onLogTemplate,
+                    onOpenLogFlow      = onOpenLogFlow,
                 )
             }
         }
@@ -126,32 +126,23 @@ class LogScreenTest {
         assertTrue(tapped)
     }
 
-    @Test fun `tapping Add calls onAdd with kcal and label`() {
-        var result: Pair<String, String>? = null
-        render(onAdd = { kcal, label -> result = kcal to label })
-        compose.onNodeWithTag("kcal_input").performTextInput("350")
-        compose.onNodeWithTag("label_input").performTextInput("Pasta")
-        compose.onNodeWithText("Add").performClick()
-        assert(result == "350" to "Pasta")
-    }
-
     private fun renderWithShortcuts(
         entries: List<LogEntryEntity> = emptyList(),
         shortcuts: List<ShortcutEntity> = emptyList(),
-        onAdd: (String, String) -> Unit = { _, _ -> },
         onDelete: (LogEntryEntity) -> Unit = {},
         onSetUpDrinkButtons: () -> Unit = {},
         onLogShortcut: (ShortcutEntity) -> Unit = {},
+        onOpenLogFlow: () -> Unit = {},
     ) {
         compose.setContent {
             MaterialTheme {
                 LogContent(
                     entries             = entries,
                     shortcuts           = shortcuts,
-                    onAdd               = onAdd,
                     onDelete            = onDelete,
                     onSetUpDrinkButtons = onSetUpDrinkButtons,
                     onLogShortcut       = onLogShortcut,
+                    onOpenLogFlow       = onOpenLogFlow,
                 )
             }
         }

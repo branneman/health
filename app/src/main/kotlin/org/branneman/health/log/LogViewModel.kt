@@ -58,22 +58,6 @@ class LogViewModel private constructor(
     val shortcuts: StateFlow<List<ShortcutEntity>> = db.shortcutDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun addEntry(kcalStr: String, label: String) {
-        val kcal = kcalStr.trim().toIntOrNull()?.takeIf { it > 0 } ?: return
-        viewModelScope.launch {
-            val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
-            val entity = LogEntryEntity(
-                userId        = userId,
-                loggedAt      = OffsetDateTime.now().toString(),
-                mealType      = "unknown",
-                quickAddKcal  = kcal,
-                quickAddLabel = label.trim().ifEmpty { null },
-            )
-            db.logEntryDao().upsert(entity)
-            _undoPending.value = entity to SyncStatus.PENDING_CREATE
-        }
-    }
-
     fun logFromTemplate(template: MealTemplateEntity) {
         val kcal = template.quickAddKcal ?: return
         viewModelScope.launch {

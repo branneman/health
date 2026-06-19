@@ -7,15 +7,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,6 +29,7 @@ fun LogScreen(
     shortcuts: List<ShortcutEntity> = emptyList(),
     onSetUpDrinkButtons: () -> Unit = {},
     onLogShortcut: (ShortcutEntity) -> Unit = {},
+    onOpenLogFlow: () -> Unit = {},
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val pinnedTemplates by viewModel.pinnedTemplates.collectAsStateWithLifecycle()
@@ -60,10 +57,6 @@ fun LogScreen(
             entries             = entries,
             pinnedTemplates     = pinnedTemplates,
             shortcuts           = shortcuts,
-            onAdd               = { kcal, label ->
-                viewModel.addEntry(kcal, label)
-                lastAction = LogAction.Added("Logged")
-            },
             onDelete            = { entry ->
                 viewModel.deleteEntry(entry)
                 lastAction = LogAction.Deleted("Deleted")
@@ -78,6 +71,7 @@ fun LogScreen(
                 onLogShortcut(shortcut)
                 lastAction = LogAction.Added("Logged")
             },
+            onOpenLogFlow       = onOpenLogFlow,
             modifier            = Modifier.padding(padding),
         )
     }
@@ -94,18 +88,15 @@ fun LogContent(
     entries: List<LogEntryEntity>,
     pinnedTemplates: List<MealTemplateEntity> = emptyList(),
     shortcuts: List<ShortcutEntity> = emptyList(),
-    onAdd: (kcal: String, label: String) -> Unit,
     onDelete: (LogEntryEntity) -> Unit,
     onSetUpMealButtons: () -> Unit = {},
     onLogTemplate: (MealTemplateEntity) -> Unit = {},
     onSetUpDrinkButtons: () -> Unit = {},
     onLogShortcut: (ShortcutEntity) -> Unit = {},
+    onOpenLogFlow: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var kcal by remember { mutableStateOf("") }
-    var label by remember { mutableStateOf("") }
     var entryToDelete by remember { mutableStateOf<LogEntryEntity?>(null) }
-    val addEnabled = kcal.isNotEmpty() && (kcal.toIntOrNull() ?: 0) > 0
 
     entryToDelete?.let { entry ->
         DeleteConfirmDialog(
@@ -165,40 +156,13 @@ fun LogContent(
 
         Spacer(Modifier.height(12.dp))
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment     = Alignment.CenterVertically,
+        Button(
+            onClick  = onOpenLogFlow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("log_flow_button"),
         ) {
-            OutlinedTextField(
-                value         = kcal,
-                onValueChange = { kcal = it.filter(Char::isDigit) },
-                label         = { Text("kcal") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction    = ImeAction.Next,
-                ),
-                singleLine = true,
-                modifier   = Modifier
-                    .width(90.dp)
-                    .testTag("kcal_input"),
-            )
-            OutlinedTextField(
-                value         = label,
-                onValueChange = { label = it },
-                label         = { Text("label (optional)") },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = {
-                    if (addEnabled) { onAdd(kcal, label); kcal = ""; label = "" }
-                }),
-                singleLine = true,
-                modifier   = Modifier
-                    .weight(1f)
-                    .testTag("label_input"),
-            )
-            Button(
-                onClick = { onAdd(kcal, label); kcal = ""; label = "" },
-                enabled = addEnabled,
-            ) { Text("Add") }
+            Text("Log  ›")
         }
 
         Spacer(Modifier.height(16.dp))
