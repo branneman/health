@@ -10,7 +10,7 @@ class ShortcutSyncService(
     private val api: HealthApiClient,
     private val db: HealthDatabase,
 ) {
-    suspend fun pushPending(token: String, userId: String) {
+    suspend fun pushPending(token: String) {
         val pending = db.shortcutDao().getByStatus(SyncStatus.PENDING_CREATE)
         if (pending.isEmpty()) return
         val allActive = pending + db.shortcutDao().getByStatus(SyncStatus.SYNCED)

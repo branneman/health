@@ -99,15 +99,15 @@ private sealed interface LogAction {
 @Composable
 fun LogContent(
     entries: List<LogEntryEntity>,
+    onDelete: (LogEntryEntity) -> Unit,
+    modifier: Modifier = Modifier,
     pinnedTemplates: List<MealTemplateEntity> = emptyList(),
     shortcuts: List<ShortcutEntity> = emptyList(),
-    onDelete: (LogEntryEntity) -> Unit,
     onSetUpMealButtons: () -> Unit = {},
     onLogTemplate: (MealTemplateEntity) -> Unit = {},
     onSetUpDrinkButtons: () -> Unit = {},
     onLogShortcut: (ShortcutEntity) -> Unit = {},
     onOpenLogFlow: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     var entryToDelete by remember { mutableStateOf<LogEntryEntity?>(null) }
 

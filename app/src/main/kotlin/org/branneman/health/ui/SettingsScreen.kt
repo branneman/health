@@ -1,6 +1,6 @@
 package org.branneman.health.ui
 
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -69,7 +69,7 @@ fun SettingsScreen(
             {
                 viewModel.connectPolar { url ->
                     CustomTabsIntent.Builder().build()
-                        .launchUrl(context, Uri.parse(url))
+                        .launchUrl(context, url.toUri())
                 }
             }
         } else null,

@@ -10,7 +10,7 @@ class MealTemplateSyncService(
     private val api: HealthApiClient,
     private val db: HealthDatabase,
 ) {
-    suspend fun pushPending(token: String, userId: String) {
+    suspend fun pushPending(token: String) {
         val pendingCreate = db.mealTemplateDao().getByStatus(SyncStatus.PENDING_CREATE)
         val pendingDelete = db.mealTemplateDao().getByStatus(SyncStatus.PENDING_DELETE)
         if (pendingCreate.isEmpty() && pendingDelete.isEmpty()) return
