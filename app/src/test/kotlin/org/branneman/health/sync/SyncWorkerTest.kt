@@ -101,7 +101,7 @@ class SyncWorkerTest {
             aShortcut(userId = userId, label = "Pils", sortOrder = 0,
                 syncStatus = SyncStatus.PENDING_CREATE)
         ))
-        ShortcutSyncService(api, db).pushPending(token, userId)
+        ShortcutSyncService(api, db).pushPending(token)
         assertEquals(SyncStatus.SYNCED,
             db.shortcutDao().getByStatus(SyncStatus.SYNCED).single().syncStatus)
     }

@@ -59,7 +59,7 @@ class MealTemplateSyncServiceTest {
             )
         }
 
-        MealTemplateSyncService(api, db).pushPending("token", userId)
+        MealTemplateSyncService(api, db).pushPending("token")
 
         assertEquals(1, db.mealTemplateDao().getByStatus(SyncStatus.SYNCED).size)
         assertTrue(body.contains("Usual breakfast"))
@@ -78,7 +78,7 @@ class MealTemplateSyncServiceTest {
                 headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
         }
 
-        MealTemplateSyncService(api, db).pushPending("token", userId)
+        MealTemplateSyncService(api, db).pushPending("token")
 
         assertTrue(!called)
     }
@@ -112,7 +112,7 @@ class MealTemplateSyncServiceTest {
         val api = HealthApiClient("http://test",
             HttpClient(MockEngine { error("network error") }) { install(ContentNegotiation) { json() } })
 
-        runCatching { MealTemplateSyncService(api, db).pushPending("token", userId) }
+        runCatching { MealTemplateSyncService(api, db).pushPending("token") }
 
         assertEquals(1, db.mealTemplateDao().getByStatus(SyncStatus.PENDING_CREATE).size)
     }
@@ -130,7 +130,7 @@ class MealTemplateSyncServiceTest {
                 headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
         }
 
-        MealTemplateSyncService(api, db).pushPending("token", userId)
+        MealTemplateSyncService(api, db).pushPending("token")
 
         assertTrue(db.mealTemplateDao().observeAll().first().isEmpty())
         assertTrue(db.mealTemplateDao().getByStatus(SyncStatus.PENDING_DELETE).isEmpty())
@@ -153,7 +153,7 @@ class MealTemplateSyncServiceTest {
                 headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
         }
 
-        MealTemplateSyncService(api, db).pushPending("token", userId)
+        MealTemplateSyncService(api, db).pushPending("token")
 
         assertTrue(sentBody.contains("Keep"))
         assertTrue(!sentBody.contains("Delete"))

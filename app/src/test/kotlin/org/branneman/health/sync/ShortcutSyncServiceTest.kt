@@ -54,7 +54,7 @@ class ShortcutSyncServiceTest {
             respond("", HttpStatusCode.OK, headersOf())
         }
 
-        ShortcutSyncService(api, db).pushPending("token", userId)
+        ShortcutSyncService(api, db).pushPending("token")
 
         assertEquals(1, db.shortcutDao().getByStatus(SyncStatus.SYNCED).size)
         assertTrue(body.contains("Pils"))
@@ -70,7 +70,7 @@ class ShortcutSyncServiceTest {
         var called = false
         val api = mockApi { _ -> called = true; respond("", HttpStatusCode.OK, headersOf()) }
 
-        ShortcutSyncService(api, db).pushPending("token", userId)
+        ShortcutSyncService(api, db).pushPending("token")
 
         assertTrue(!called)
     }
@@ -106,7 +106,7 @@ class ShortcutSyncServiceTest {
         val api = HealthApiClient("http://test",
             HttpClient(MockEngine { error("network error") }) { install(ContentNegotiation) { json() } })
 
-        runCatching { ShortcutSyncService(api, db).pushPending("token", userId) }
+        runCatching { ShortcutSyncService(api, db).pushPending("token") }
 
         assertEquals(1, db.shortcutDao().getByStatus(SyncStatus.PENDING_CREATE).size)
     }
