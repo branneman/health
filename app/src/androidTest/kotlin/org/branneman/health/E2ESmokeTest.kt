@@ -36,7 +36,7 @@ class E2ESmokeTest {
     private fun signOut() {
         compose.onAllNodesWithText("Settings").filterToOne(hasClickAction()).performClick()
         waitForText("Sign out", ignoreCase = true)
-        compose.onNodeWithText("Sign out", ignoreCase = true).performClick()
+        compose.onNodeWithText("Sign out", ignoreCase = true).performScrollTo().performClick()
         waitForText("Sign out?")
         compose.onAllNodesWithText("Sign out", ignoreCase = true).onLast().performClick()
     }
