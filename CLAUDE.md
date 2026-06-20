@@ -41,10 +41,16 @@ implication for every implementation session:
   so `git -C` is never needed and triggers unnecessary permission prompts.
 - **Merge via rebase + fast-forward only.** Never create merge commits. Before merging a
   feature branch: `git rebase main`, then `git checkout main && git merge --ff-only <branch>`.
-- **Run api tests locally before pushing any server change.** Run `./gradlew :server:apiTest`
-  (hits live server via `.env`) and confirm all tests pass first. To test against a local
-  server instead: `API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest`
-  (shell env takes precedence over `.env`; start the server first with `./gradlew :server:run`).
+- **How to run all test tiers:**
+  - **Unit + app component (Robolectric):** `./gradlew :app:test` — no device needed, runs in seconds.
+  - **Server unit + integration:** `./gradlew :server:test` — needs local `health_test` Postgres DB.
+  - **API tests (live server):** `./gradlew :server:apiTest` (reads `.env`). Against local server:
+    `API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest` (start server first with
+    `./gradlew :server:run`). **Run before pushing any server change.**
+  - **E2E smoke (Android device):** `set -a; source .env; set +a`, then
+    `./scripts/create-dev-avd.sh` (first run — creates AVD, boots emulator, seeds test account,
+    runs tests, tears down) or `./scripts/create-dev-avd.sh --no-create` (AVD already exists).
+    Requires `E2E_PASSWORD` in `.env` and `server.baseUrl` in `local.properties`.
 - **Story references in docs:** When citing a backlog story from any markdown file, use
   inline format `N (Short-name)`, e.g. `13 (Meal templates)`. Never a bare number — the
   short name makes stale references immediately obvious.

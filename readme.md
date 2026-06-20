@@ -82,17 +82,20 @@ API_TEST_SERVER_URL=http://localhost:8080 ./gradlew :server:apiTest
 ./gradlew :server:apiTest   # picks up API_TEST_* vars from .env automatically
 ```
 
-**E2E smoke tests** (requires emulator running and production server):
+**E2E smoke tests** (Android emulator + real server):
 
 ```bash
-# Reset E2E account to known state (calls the server's seed endpoint):
 set -a; source .env; set +a
-curl -sf -X POST -H "Authorization: Bearer $E2E_PASSWORD" \
-  "$API_TEST_SERVER_URL/internal/e2e/reset"
 
-# Then run with the emulator booted:
-E2E_EMAIL=test+e2e@bran.name E2E_PASSWORD=... ./gradlew :app:connectedAndroidTest
+# First run — creates the health-dev AVD, boots emulator, seeds E2E account, runs tests:
+./scripts/create-dev-avd.sh
+
+# Subsequent runs — AVD already exists, skip creation:
+./scripts/create-dev-avd.sh --no-create
 ```
+
+The script matches CI exactly (Pixel 6a, API 34, animations disabled, same seed endpoint).
+Requires `E2E_PASSWORD` in `.env` and `server.baseUrl` in `local.properties`.
 
 **All non-device tests:**
 
@@ -108,15 +111,10 @@ E2E_EMAIL=test+e2e@bran.name E2E_PASSWORD=... ./gradlew :app:connectedAndroidTes
 - Install Android Studio via JetBrains Toolbox.
 - Install the `Claude Code [Beta]` plugin in Android Studio.
 - Add `$HOME/Library/Android/sdk/platform-tools` to your path.
-- Create the development AVD (Pixel 6a, API 34 AOSP) — requires Android SDK Command-line
-  Tools installed via Android Studio → SDK Manager → SDK Tools → Android SDK Command-line Tools:
-  ```bash
-  scripts/create-dev-avd.sh
-  ```
-- Start the emulator:
-  ```bash
-  ~/Library/Android/sdk/emulator/emulator -avd Pixel_6a -no-snapshot &
-  ```
+- Install Android SDK Command-line Tools via Android Studio → SDK Manager → SDK Tools →
+  Android SDK Command-line Tools (needed for `avdmanager`/`sdkmanager`)
+- To run E2E tests locally, see the **Running tests → E2E smoke tests** section above —
+  the script creates the AVD and runs everything end-to-end
 - Add to `local.properties` to point the app at the local server instead of production:  
   `server.baseUrl=http://10.0.2.2:8080`  
   (`10.0.2.2` is the emulator's alias for `localhost`; use your LAN IP for a real device.)
