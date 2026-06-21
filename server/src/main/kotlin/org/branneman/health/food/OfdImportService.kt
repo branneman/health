@@ -1,16 +1,22 @@
 package org.branneman.health.food
 
 import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import kotlinx.serialization.json.*
 import org.branneman.health.data.ImportState
 import org.branneman.health.data.Product
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.io.BufferedReader
+import java.io.ByteArrayInputStream
+import java.io.InputStreamReader
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.zip.GZIPInputStream
 import javax.sql.DataSource
 
 class OfdImportService(
@@ -108,6 +114,75 @@ class OfdImportService(
                 }
             }
         }
+    }
+
+    suspend fun importDelta(): ImportResult {
+        if (!importing.compareAndSet(false, true)) error("Import already in progress")
+        return try {
+            val indexText = httpClient.get(INDEX_URL).bodyAsText()
+            val allFiles  = parseDeltaIndex(indexText)
+
+            val lastEndTs = transaction {
+                ImportState.selectAll().where { ImportState.id eq true }
+                    .single()[ImportState.lastDeltaEndTs]
+            }
+
+            val toProcess = allFiles
+                .filter { it.startTs > (lastEndTs ?: Long.MIN_VALUE) }
+                .sortedBy { it.startTs }
+
+            var upserted = 0
+            var skipped  = 0
+            for (file in toProcess) {
+                val bytes = httpClient.get("$DELTA_BASE_URL${file.filename}") {
+                    header("User-Agent", USER_AGENT)
+                }.readRawBytes()
+                val result = processGzipBytes(bytes)
+                upserted += result.upserted
+                skipped  += result.skipped
+            }
+
+            if (toProcess.isNotEmpty()) {
+                val maxEndTs = toProcess.maxOf { it.endTs }
+                transaction {
+                    ImportState.update({ ImportState.id eq true }) {
+                        it[lastDeltaEndTs] = maxEndTs
+                    }
+                }
+            }
+
+            ImportResult(upserted, skipped)
+        } finally {
+            importing.set(false)
+        }
+    }
+
+    private fun processGzipBytes(bytes: ByteArray): ImportResult {
+        var upserted = 0
+        var skipped  = 0
+        GZIPInputStream(ByteArrayInputStream(bytes)).use { gz ->
+            BufferedReader(InputStreamReader(gz, Charsets.UTF_8)).use { reader ->
+                val batch = mutableListOf<ProductRow>()
+                var line = reader.readLine()
+                while (line != null) {
+                    val row = runCatching {
+                        extractProduct(Json.parseToJsonElement(line).jsonObject)
+                    }.getOrNull()
+                    if (row != null) batch.add(row) else skipped++
+                    if (batch.size >= BATCH_SIZE) {
+                        upsertBatch(batch)
+                        upserted += batch.size
+                        batch.clear()
+                    }
+                    line = reader.readLine()
+                }
+                if (batch.isNotEmpty()) {
+                    upsertBatch(batch)
+                    upserted += batch.size
+                }
+            }
+        }
+        return ImportResult(upserted, skipped)
     }
 
     data class ProductRow(

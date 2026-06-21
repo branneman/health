@@ -5,7 +5,6 @@ import io.ktor.client.engine.mock.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.branneman.health.TestDatabase
-import org.jetbrains.exposed.sql.Database
 import kotlin.test.*
 
 class OfdImportServiceTest {
@@ -14,10 +13,6 @@ class OfdImportServiceTest {
         dataSource = TestDatabase.dataSource,
         httpClient = HttpClient(MockEngine { error("should not be called") }),
     )
-
-    private fun json(vararg pairs: String) = pairs.joinToString(",", "{", "}").let {
-        Json.parseToJsonElement(it).jsonObject
-    }
 
     private fun nlProduct(
         code: String = "1234567890123",
