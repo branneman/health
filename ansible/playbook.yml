@@ -85,6 +85,25 @@
         job: /home/deploy/backup.sh >> /var/log/health-backup.log 2>&1
         user: deploy
 
+    - name: Create OFD import log file
+      file:
+        path: /var/log/health-ofd-import.log
+        state: touch
+        owner: deploy
+        group: deploy
+        mode: "0644"
+
+    - name: Add daily OFD delta import cron
+      cron:
+        name: daily ofd delta import
+        minute: "30"
+        hour: "2"
+        job: >-
+          curl -s -X POST "http://localhost:8080/admin/ofd-import?mode=delta"
+          -H "X-Admin-Secret: $(grep -m1 '^OFD_ADMIN_SECRET=' /home/deploy/health/.env | cut -d= -f2-)"
+          >> /var/log/health-ofd-import.log 2>&1
+        user: deploy
+
     - name: Start docker compose stack
       community.docker.docker_compose_v2:
         project_src: /home/deploy/health
