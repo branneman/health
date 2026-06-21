@@ -131,3 +131,22 @@ object PolarConnectState : Table("polar_connect_state") {
     val expiresAt = timestampWithTimeZone("expires_at")
     override val primaryKey = PrimaryKey(state)
 }
+
+object Product : Table("catalog.product") {
+    val id             = uuid("id")
+    val barcode        = text("barcode")
+    val name           = text("name")
+    val kcalPer100g    = decimal("kcal_per_100g", 7, 2)
+    val proteinPer100g = decimal("protein_per_100g", 7, 2).nullable()
+    val carbsPer100g   = decimal("carbs_per_100g", 7, 2).nullable()
+    val fatPer100g     = decimal("fat_per_100g", 7, 2).nullable()
+    val updatedAt      = timestampWithTimeZone("updated_at")
+    override val primaryKey = PrimaryKey(id)
+}
+
+object ImportState : Table("catalog.import_state") {
+    val id               = bool("id")
+    val lastDeltaEndTs   = long("last_delta_end_ts").nullable()
+    val lastFullImportAt = timestampWithTimeZone("last_full_import_at").nullable()
+    override val primaryKey = PrimaryKey(id)
+}
