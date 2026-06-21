@@ -24,6 +24,8 @@ class OfdImportService(
     private val dataSource: DataSource,
     private val httpClient: HttpClient,
 ) {
+    private val log = org.slf4j.LoggerFactory.getLogger(OfdImportService::class.java)
+
     companion object {
         const val INDEX_URL      = "https://static.openfoodfacts.org/data/delta/index.txt"
         const val DELTA_BASE_URL = "https://static.openfoodfacts.org/data/delta/"
@@ -128,6 +130,14 @@ class OfdImportService(
             val lastEndTs = transaction {
                 ImportState.selectAll().where { ImportState.id eq true }
                     .single()[ImportState.lastDeltaEndTs]
+            }
+
+            if (lastEndTs != null) {
+                val ageSeconds = java.time.Instant.now().epochSecond - lastEndTs
+                if (ageSeconds > 14L * 24 * 60 * 60) {
+                    log.warn("OFD delta checkpoint is older than 14 days (last_delta_end_ts=$lastEndTs). Run ?mode=full to reseed.")
+                    return ImportResult(0, 0)
+                }
             }
 
             val toProcess = allFiles

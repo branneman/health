@@ -15,6 +15,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.io.ByteArrayOutputStream
+import java.time.Instant
 import java.util.zip.GZIPOutputStream
 import kotlin.test.*
 
@@ -84,21 +85,26 @@ class OfdImportIntegrationTest {
     }
 
     @Test fun `delta import only processes files newer than last_delta_end_ts`() = runBlocking {
+        // Use recent timestamps so the 14-day staleness guard does not trigger.
+        val recentBase = Instant.now().epochSecond - 3600  // 1 hour ago
+        val ts1 = recentBase - 1000
+        val ts2 = recentBase
+        val ts3 = recentBase + 1000
         transaction {
             ImportState.update({ ImportState.id eq true }) {
-                it[ImportState.lastDeltaEndTs] = 2000L
+                it[ImportState.lastDeltaEndTs] = ts2
             }
         }
         val mockEngine = MockEngine { request ->
             when (request.url.toString()) {
                 OfdImportService.INDEX_URL -> respond(
                     deltaIndex(
-                        "openfoodfacts_products_1000_2000.json.gz",   // startTs=1000 <= 2000 — skip
-                        "openfoodfacts_products_2001_3000.json.gz",   // startTs=2001 > 2000 — process
+                        "openfoodfacts_products_${ts1}_${ts2}.json.gz",   // startTs=ts1 <= ts2 — skip
+                        "openfoodfacts_products_${ts2 + 1}_${ts3}.json.gz",  // startTs=ts2+1 > ts2 — process
                     ),
                     HttpStatusCode.OK
                 )
-                "${OfdImportService.DELTA_BASE_URL}openfoodfacts_products_2001_3000.json.gz" ->
+                "${OfdImportService.DELTA_BASE_URL}openfoodfacts_products_${ts2 + 1}_${ts3}.json.gz" ->
                     respond(gzip(nlProductJson("test-0003", "Rice Milk")), HttpStatusCode.OK)
                 else -> error("Unexpected URL: ${request.url}")
             }
