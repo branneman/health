@@ -140,6 +140,54 @@ class OfdImportIntegrationTest {
         assertEquals(3000L, endTs)
     }
 
+    // --- full import ---
+
+    @Test fun `full import upserts NL products and skips non-NL`() = runBlocking {
+        val fullBytes = gzip(
+            nlProductJson("test-0010", "NL Product"),
+            """{"code":"test-0011","product_name":"FR Product","countries_tags":["en:france"],"nutriments":{"energy-kcal_100g":200.0}}""",
+        )
+        val mockEngine = MockEngine { request ->
+            when (request.url.toString()) {
+                OfdImportService.INDEX_URL ->
+                    respond("openfoodfacts_products_9000_9999.json.gz", HttpStatusCode.OK)
+                OfdImportService.FULL_JSONL_URL ->
+                    respond(fullBytes, HttpStatusCode.OK)
+                else -> error("Unexpected: ${request.url}")
+            }
+        }
+        val service = OfdImportService(ds, HttpClient(mockEngine))
+        val result = service.importFull()
+
+        assertEquals(1, result.upserted)
+        assertNotNull(
+            transaction { Product.selectAll().where { Product.barcode eq "test-0010" }.singleOrNull() }
+        )
+        assertNull(
+            transaction { Product.selectAll().where { Product.barcode eq "test-0011" }.singleOrNull() }
+        )
+    }
+
+    @Test fun `full import sets last_full_import_at and last_delta_end_ts`() = runBlocking {
+        val mockEngine = MockEngine { request ->
+            when (request.url.toString()) {
+                OfdImportService.INDEX_URL ->
+                    respond("openfoodfacts_products_5000_5999.json.gz", HttpStatusCode.OK)
+                OfdImportService.FULL_JSONL_URL ->
+                    respond(gzip(nlProductJson("test-0012", "Bread")), HttpStatusCode.OK)
+                else -> error("Unexpected: ${request.url}")
+            }
+        }
+        val service = OfdImportService(ds, HttpClient(mockEngine))
+        service.importFull()
+
+        val state = transaction {
+            ImportState.selectAll().where { ImportState.id eq true }.single()
+        }
+        assertNotNull(state[ImportState.lastFullImportAt])
+        assertEquals(5999L, state[ImportState.lastDeltaEndTs])
+    }
+
     @Test fun `upserting same barcode twice produces one row with updated name`() = runBlocking {
         val firstBytes  = gzip(nlProductJson("test-0006", "Original Name"))
         val secondBytes = gzip(nlProductJson("test-0006", "Updated Name"))

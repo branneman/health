@@ -3,6 +3,7 @@ package org.branneman.health.food
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.serialization.json.*
 import org.branneman.health.data.ImportState
 import org.branneman.health.data.Product
@@ -150,6 +151,56 @@ class OfdImportService(
                     ImportState.update({ ImportState.id eq true }) {
                         it[lastDeltaEndTs] = maxEndTs
                     }
+                }
+            }
+
+            ImportResult(upserted, skipped)
+        } finally {
+            importing.set(false)
+        }
+    }
+
+    suspend fun importFull(): ImportResult {
+        if (!importing.compareAndSet(false, true)) error("Import already in progress")
+        return try {
+            val indexText = httpClient.get(INDEX_URL) {
+                header("User-Agent", USER_AGENT)
+            }.bodyAsText()
+            val maxEndTs = parseDeltaIndex(indexText).maxOfOrNull { it.endTs }
+
+            var upserted = 0
+            var skipped  = 0
+            httpClient.prepareGet(FULL_JSONL_URL) {
+                header("User-Agent", USER_AGENT)
+            }.execute { response ->
+                GZIPInputStream(response.bodyAsChannel().toInputStream()).use { gz ->
+                    BufferedReader(InputStreamReader(gz, Charsets.UTF_8)).use { reader ->
+                        val batch = mutableListOf<ProductRow>()
+                        var line = reader.readLine()
+                        while (line != null) {
+                            val row = runCatching {
+                                extractProduct(Json.parseToJsonElement(line).jsonObject)
+                            }.getOrNull()
+                            if (row != null) batch.add(row) else skipped++
+                            if (batch.size >= BATCH_SIZE) {
+                                upsertBatch(batch)
+                                upserted += batch.size
+                                batch.clear()
+                            }
+                            line = reader.readLine()
+                        }
+                        if (batch.isNotEmpty()) {
+                            upsertBatch(batch)
+                            upserted += batch.size
+                        }
+                    }
+                }
+            }
+
+            transaction {
+                ImportState.update({ ImportState.id eq true }) {
+                    it[lastFullImportAt] = OffsetDateTime.now()
+                    if (maxEndTs != null) it[lastDeltaEndTs] = maxEndTs
                 }
             }
 
