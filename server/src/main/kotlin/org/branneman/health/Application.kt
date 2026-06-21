@@ -735,6 +735,9 @@ private fun buildPolarHttpClient(): io.ktor.client.HttpClient {
 
 private fun buildOfdHttpClient(): io.ktor.client.HttpClient {
     return io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
+        engine {
+            requestTimeout = 0 // full JSONL import streams 3-5 GB; no timeout
+        }
         install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
             json()
         }
