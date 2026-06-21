@@ -119,7 +119,9 @@ class OfdImportService(
     suspend fun importDelta(): ImportResult {
         if (!importing.compareAndSet(false, true)) error("Import already in progress")
         return try {
-            val indexText = httpClient.get(INDEX_URL).bodyAsText()
+            val indexText = httpClient.get(INDEX_URL) {
+                header("User-Agent", USER_AGENT)
+            }.bodyAsText()
             val allFiles  = parseDeltaIndex(indexText)
 
             val lastEndTs = transaction {
