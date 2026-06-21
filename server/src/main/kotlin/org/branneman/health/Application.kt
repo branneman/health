@@ -51,6 +51,7 @@ import org.branneman.health.polar.TokenCipher
 import org.branneman.health.e2e.clearRateLimitsRoute
 import org.branneman.health.e2e.e2eSeedRoute
 import org.branneman.health.food.OfdImportService
+import org.branneman.health.food.foodRoutes
 import org.branneman.health.food.ofdAdminRoute
 import org.branneman.health.polar.polarRoutes
 import org.flywaydb.core.Flyway
@@ -705,6 +706,8 @@ fun Application.module(
         ofdAdminSecret?.let { secret ->
             ofdAdminRoute(secret, ofdImportService)
         }
+
+        foodRoutes(ofdHttpClient, ofdImportService)
 
         System.getenv("E2E_PASSWORD")?.let { pwd ->
             e2eSeedRoute(pwd)

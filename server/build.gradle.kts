@@ -71,6 +71,19 @@ tasks.register<Test>("apiTest") {
                 if (System.getenv(trimmedKey) == null) environment(trimmedKey, value)
             }
     }
+    // Gradle project property overrides (useful for local runs against dev server):
+    //   -PapiTestServerUrl=http://localhost:8080
+    //   -PapiTestEmail=test+e2e@bran.name
+    //   -PapiTestPassword=<secret>
+    if (project.hasProperty("apiTestServerUrl")) {
+        environment("API_TEST_SERVER_URL", project.property("apiTestServerUrl")!!)
+    }
+    if (project.hasProperty("apiTestEmail")) {
+        environment("API_TEST_EMAIL", project.property("apiTestEmail")!!)
+    }
+    if (project.hasProperty("apiTestPassword")) {
+        environment("API_TEST_PASSWORD", project.property("apiTestPassword")!!)
+    }
 }
 
 tasks.test {
@@ -82,6 +95,19 @@ tasks.test {
                 val (key, raw) = line.split("=", limit = 2)
                 val value = raw.trim().removeSurrounding("\"").removeSurrounding("'")
                 environment(key.trim(), value)
+            }
+    }
+}
+
+tasks.named<JavaExec>("run") {
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()) {
+        envFile.readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") && it.contains("=") }
+            .forEach { line ->
+                val (key, raw) = line.split("=", limit = 2)
+                val value = raw.trim().removeSurrounding("\"").removeSurrounding("'")
+                if (System.getenv(key.trim()) == null) environment(key.trim(), value)
             }
     }
 }
