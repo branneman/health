@@ -50,6 +50,8 @@ import org.branneman.health.polar.PolarSyncService
 import org.branneman.health.polar.TokenCipher
 import org.branneman.health.e2e.clearRateLimitsRoute
 import org.branneman.health.e2e.e2eSeedRoute
+import org.branneman.health.food.OfdImportService
+import org.branneman.health.food.ofdAdminRoute
 import org.branneman.health.polar.polarRoutes
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
@@ -97,15 +99,21 @@ fun Application.module() {
 
     val polarCipher: TokenCipher? = encKeyBase64?.let { TokenCipher.fromBase64(it) }
 
-    module(dataSource, polarApiClient, polarCipher)
+    val ofdAdminSecret = System.getenv("OFD_ADMIN_SECRET")
+
+    module(dataSource, polarApiClient, polarCipher, ofdAdminSecret)
 }
 
 fun Application.module(
     dataSource: javax.sql.DataSource,
     polarApiClient: PolarApiClient? = null,
     polarCipher: TokenCipher? = null,
+    ofdAdminSecret: String? = null,
 ) {
     Database.connect(dataSource)
+
+    val ofdHttpClient = buildOfdHttpClient()
+    val ofdImportService = OfdImportService(dataSource, ofdHttpClient)
 
     val authService = AuthService()
     val ipRateLimiter = RateLimiter(store = DbLoginAttemptsStore())
@@ -694,6 +702,10 @@ fun Application.module(
             polarRoutes(polarApiClient, polarCipher, polarSyncService)
         }
 
+        ofdAdminSecret?.let { secret ->
+            ofdAdminRoute(secret, ofdImportService)
+        }
+
         System.getenv("E2E_PASSWORD")?.let { pwd ->
             e2eSeedRoute(pwd)
             clearRateLimitsRoute(pwd, usernameRateLimiter, ipRateLimiter)
@@ -711,6 +723,14 @@ fun Application.module(
 }
 
 private fun buildPolarHttpClient(): io.ktor.client.HttpClient {
+    return io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
+        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            json()
+        }
+    }
+}
+
+private fun buildOfdHttpClient(): io.ktor.client.HttpClient {
     return io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
         install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
             json()
