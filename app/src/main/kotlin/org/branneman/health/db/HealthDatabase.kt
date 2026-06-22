@@ -1,6 +1,8 @@
 package org.branneman.health.db
 
+import android.content.Context
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import org.branneman.health.db.dao.*
 import org.branneman.health.db.entities.*
@@ -34,4 +36,11 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     abstract fun sportTonightDao(): SportTonightDao
     abstract fun dynamicBudgetParamsDao(): DynamicBudgetParamsDao
+
+    companion object {
+        fun buildInMemory(context: Context): HealthDatabase =
+            Room.inMemoryDatabaseBuilder(context, HealthDatabase::class.java)
+                .allowMainThreadQueries()
+                .build()
+    }
 }
