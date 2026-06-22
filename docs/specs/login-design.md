@@ -69,14 +69,13 @@ on the server handles storage security. This is the universal industry approach.
 (FBE, guaranteed on `minSdk = 24`) encrypts all app-private storage at rest using the
 device lock-screen credential. Adding AES on top via Android Keystore would be
 defence-in-depth that adds operational complexity (key rotation, cipher exceptions,
-migration) without meaningfully improving the threat model for a personal app. Plain
+migration) without meaningfully improving the threat model for this app. Plain
 Preferences DataStore is the correct choice.
 
 **Single token model (no access/refresh split).** The two-token pattern (short-lived
 access token + long-lived refresh token) limits damage if an access token leaks to a
-third party — e.g. a logging system, CDN, or proxy. This API is called only from the
-owner's own app on their own device. The attack surface does not justify the added
-complexity. A single rotating 30-day token is simpler and correct for this use case.
+third party — e.g. a logging system, CDN, or proxy. This API is called only from pre-provisioned users on their own devices. The attack
+surface does not justify the added complexity. A single rotating 30-day token is simpler and correct for this use case.
 
 ---
 
@@ -249,7 +248,7 @@ Notes:
 - Field label is "Email"; the value is sent as `username` in the request body. The
   stored username is an email address (seeded via Ansible), so the label is accurate
   from the user's perspective.
-- No "create account" option — account is pre-provisioned; this is a personal app.
+- No "create account" option — accounts are admin-provisioned; no self-registration.
 - Sign in requires a network connection. All subsequent app use (3 (Persist rate-limit state) onwards) works
   offline once logged in.
 - Error responses from the server are deliberately non-specific (wrong username and

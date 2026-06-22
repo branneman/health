@@ -197,7 +197,7 @@ as `FoodItemDto` (already in `shared`), with `source = "openfoodfacts"`. No new 
 3. If not found: **proxy to OFD API**:
    ```
    GET https://world.openfoodfacts.org/api/v2/product/{code}.json
-   User-Agent: HealthApp/1.0 (personal project; bran.van.der.meer@protonmail.com)
+   User-Agent: HealthApp/1.0 (github.com/branneman/health)
    ```
    - OFD requires a meaningful `User-Agent` for API access.
    - If OFD returns 404 or missing nutrition data: respond `404 Not Found`.

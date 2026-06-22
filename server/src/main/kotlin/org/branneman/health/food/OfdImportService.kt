@@ -32,7 +32,7 @@ class OfdImportService(
         const val DELTA_BASE_URL = "https://static.openfoodfacts.org/data/delta/"
         const val FULL_JSONL_URL = "https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz"
         const val OFD_PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product"
-        const val USER_AGENT     = "HealthApp/1.0 (personal project; bran.van.der.meer@protonmail.com)"
+        const val USER_AGENT     = "HealthApp/1.0 (github.com/branneman/health)"
         const val BATCH_SIZE     = 500
         const val NL_TAG         = "en:netherlands"
     }

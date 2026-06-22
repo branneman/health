@@ -142,8 +142,9 @@ low priority until the Polar integration story is started.
 **[LOW] No certificate pinning in the Android app**  
 The app does not pin the server's TLS certificate. A MITM attack with a CA-trusted
 certificate (e.g. a corporate proxy on the user's network, or a compromised root CA)
-could intercept requests. For a personal app, this is an acceptable tradeoff — pinning
-adds operational fragility (app breaks if the cert changes before the app is updated).
+could intercept requests. For an admin-provisioned app with a small trusted user base,
+this is an acceptable tradeoff — pinning adds operational fragility (app breaks if the
+cert changes before the app is updated).
 
 ---
 
@@ -423,9 +424,9 @@ log.info("Token issued, expires: $expiresAt")
 - The debug network security config (`src/debug/res/xml/network_security_config.xml`)
   allows cleartext to `10.0.2.2` (emulator localhost). Never add production domains or
   `*` wildcards to this config.
-- `isMinifyEnabled = false` in release is acceptable for a personal app distributed via
-  ADB. If the app is ever distributed via Play Store, enable minification to reduce
-  reverse-engineering exposure.
+- `isMinifyEnabled = false` in release is acceptable for an app distributed via ADB to
+  known users. If the app is ever distributed via Play Store, enable minification to
+  reduce reverse-engineering exposure.
 
 ### Polar integration (future story)
 

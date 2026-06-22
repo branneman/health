@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Health is a personal health-tracking app. Goal: get healthier,
+Health is a health-tracking app for a small group of invited users. Goal: get healthier,
 and build AI skills/knowledge along the way. Friction is the enemy — if logging is too
 hard, it won't get used.
 
@@ -83,8 +83,8 @@ Load these on demand when the topic comes up — don't load all upfront:
 
 ## Goals & constraints
 
-- **Scope:** personal use (the owner plus invited users — family, friends), built
-  properly (clean, maintainable, a real project — not throwaway).
+- **Scope:** small group of invited users (family, friends), accounts provisioned by
+  the admin — built properly (clean, maintainable, a real project — not throwaway).
 - **What it does:** combine *calories-out* (from a Polar watch) and *calories-in*
   (food logging) into insights about whether the user is on track to lose weight.
 - **Platform:** Android only.
