@@ -67,6 +67,39 @@ implication for every implementation session:
   invariant at the database level. Postgres `body_weight` has a `UNIQUE(user_id, date)`
   constraint instead of relying on a UUID PK for the same reason.
 
+## Feedback loops
+
+Always optimise for the shortest possible feedback cycle. Before writing code and pushing
+to CI, stop and ask: **is there a faster way to learn whether this approach is correct?**
+The cost of a slow feedback loop is not just time — it's also noise (broken CI, failed
+deploys, restarted servers, muddled context) that obscures the real signal.
+
+**The hierarchy, fastest to slowest:**
+
+1. A throwaway script or REPL against the real external API
+2. A unit or integration test (`./gradlew :server:test` / `./gradlew :app:test`)
+3. A local server + API test (`./gradlew :server:apiTest` against localhost)
+4. Push to CI and wait for the pipeline
+5. Deploy to production and test manually in the app
+
+**Default to the fastest loop available, and say which one you are using and why before
+proceeding.**
+
+Concrete rules:
+
+- **Integrating an external API?** Before writing any abstraction, write a minimal
+  throwaway script (Python, curl, etc.) that calls the real API and prints the raw
+  response. Learn from the actual system first; build the abstraction second.
+- **Fixing a server bug?** Before pushing to CI, ask: can this be verified with
+  `./gradlew :server:test` or `./gradlew :server:apiTest` against a local server? Use
+  one of those first.
+- **Debugging a production issue?** Before SSHing to read logs, ask: can the same
+  scenario be reproduced locally or pinned with a unit test?
+- **About to push to CI to "see if it works"?** Stop. That is level 4. A faster loop
+  almost certainly exists — find it and use it first.
+- **A fix required a full deploy-wait-test cycle?** That is a signal: test coverage is
+  insufficient. Add a test that catches the failure locally before declaring done.
+
 ## Documentation index
 
 Load these on demand when the topic comes up — don't load all upfront:
