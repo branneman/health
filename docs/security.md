@@ -442,6 +442,30 @@ When the Polar integration is built:
 - The Polar webhook endpoint (future) must verify the `X-Polar-Webhook-Signature` HMAC
   before processing any payload.
 
+### AI key encryption (`AI_KEY_ENCRYPTION_KEY`)
+
+Per-user Anthropic API keys are stored encrypted at rest in the `ai_config` table.
+The server-side symmetric encryption key is `AI_KEY_ENCRYPTION_KEY` (AES-256 via
+`TokenCipher`).
+
+**Consequence of omission:** if `AI_KEY_ENCRYPTION_KEY` is missing from the environment,
+`Application.kt` silently skips registering the `/ai/*` routes. The AI Calorie Estimate
+feature will be entirely absent — no 500 error, no log warning, just a 404 on every AI
+endpoint. A deployment that forgets this variable loses the feature silently.
+
+**How to generate:**
+```
+openssl rand -base64 32
+```
+Store the result in the Ansible vault under `ai_key_encryption_key` and template it into
+`.env` via `ansible/templates/env.j2` alongside `POLAR_TOKEN_ENCRYPTION_KEY`.
+
+**Rotation:** rotating `AI_KEY_ENCRYPTION_KEY` requires re-encrypting all rows in
+`ai_config`. There is no automatic rotation path — if the key must be rotated, decrypt
+all rows with the old key, set the new key, re-encrypt and update all rows.
+
+---
+
 ### Open Food Facts proxy (future story)
 
 When the food search proxy is built:
