@@ -110,6 +110,13 @@ class AskAiViewModel private constructor(
 
     fun discard() { state.value = AskAiState.Idle }
 
+    fun reset() {
+        state.value = AskAiState.Idle
+        text.value = ""
+        imageBitmap.value = null
+        imageBytes = null
+    }
+
     fun logDirectly(kcal: Int, label: String?) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch

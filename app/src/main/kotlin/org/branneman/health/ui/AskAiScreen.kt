@@ -35,6 +35,10 @@ fun AskAiScreen(
         uri?.let { viewModel.setImage(context, it) }
     }
 
+    DisposableEffect(Unit) {
+        onDispose { viewModel.reset() }
+    }
+
     AskAiContent(
         state           = state,
         text            = text,
@@ -143,8 +147,8 @@ fun AskAiContent(
                 OutlinedTextField(
                     value         = text,
                     onValueChange = onTextChange,
-                    label         = { Text("What did you eat?") },
-                    placeholder   = { Text("e.g. tiramisu, restaurant portion") },
+                    label         = { Text("What did you eat or drink?") },
+                    placeholder   = { Text("e.g. tiramisu, restaurant portion, dry martini") },
                     singleLine    = false,
                     maxLines      = 4,
                     modifier      = Modifier
