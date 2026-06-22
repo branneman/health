@@ -6,6 +6,8 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.branneman.health.AiConfigRequestDto
 import org.slf4j.LoggerFactory
 import java.time.LocalDate
@@ -92,21 +94,25 @@ fun Route.aiRoutes(configService: AiConfigService, estimateService: AiEstimateSe
                         )
                     is AiKeyResult.Available -> {
                         val imageBase64 = imageBytes?.let { Base64.getEncoder().encodeToString(it) }
-                        val response = try {
-                            estimateService.estimate(
-                                apiKey        = keyResult.apiKey,
-                                text          = textPart,
-                                imageBase64   = imageBase64,
-                                imageMimeType = imageMimeType,
-                            )
-                        } catch (e: ClaudeEstimateException) {
+                        val dto = try {
+                            withContext(Dispatchers.IO) {
+                                estimateService.estimate(
+                                    apiKey        = keyResult.apiKey,
+                                    text          = textPart,
+                                    imageBase64   = imageBase64,
+                                    imageMimeType = imageMimeType,
+                                )
+                            }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
                             log.warn("AI estimate failed for userId=$userId: ${e.message}")
                             return@post call.respond(
                                 HttpStatusCode.UnprocessableEntity,
                                 mapOf("error" to "ai_estimate_failed"),
                             )
                         }
-                        call.respond(response)
+                        call.respond(dto)
                     }
                 }
             }

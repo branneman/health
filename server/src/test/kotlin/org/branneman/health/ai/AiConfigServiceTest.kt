@@ -120,4 +120,36 @@ class AiConfigServiceTest {
         val status = service.getStatus(userId)
         assertEquals(false, status.configured)
     }
+
+    @Test
+    fun `upsert with today as expiresAt is configured not expired`() {
+        service.upsert(userId, "sk-ant-test-key", expiresAt = LocalDate.now())
+        val status = service.getStatus(userId)
+        assertEquals(true, status.configured)
+    }
+
+    @Test
+    fun `upsert with null expiresAt clears a previously set expiresAt`() {
+        val future = LocalDate.now().plusYears(1)
+        service.upsert(userId, "sk-ant-test-key", expiresAt = future)
+        service.upsert(userId, "sk-ant-test-key", expiresAt = null)
+        val status = service.getStatus(userId)
+        assertNull(status.expiresAt)
+        assertEquals(true, status.configured)
+    }
+
+    @Test
+    fun `getDecryptedKey returns Available when expiresAt is in the future`() {
+        service.upsert(userId, "sk-ant-key", expiresAt = LocalDate.now().plusDays(1))
+        val result = service.getDecryptedKey(userId)
+        assertIs<AiKeyResult.Available>(result)
+    }
+
+    @Test
+    fun `delete is idempotent — second delete does not throw`() {
+        service.upsert(userId, "sk-ant-test-key", expiresAt = null)
+        service.delete(userId)
+        service.delete(userId) // should not throw
+        assertEquals(false, service.getStatus(userId).configured)
+    }
 }

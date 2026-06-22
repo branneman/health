@@ -85,4 +85,34 @@ class AiEstimateServiceTest {
             service.estimate("key", "food", null, null)
         }
     }
+
+    @Test
+    fun `kcal of 1 is valid lower boundary`() {
+        val service = makeService { ClaudeEstimate(1, "Trace amount.") }
+        val result = service.estimate("key", "food", null, null)
+        assertEquals(AiEstimateResponseDto(1, "Trace amount."), result)
+    }
+
+    @Test
+    fun `kcal of 9999 is valid upper boundary`() {
+        val service = makeService { ClaudeEstimate(9999, "Enormous feast.") }
+        val result = service.estimate("key", "food", null, null)
+        assertEquals(AiEstimateResponseDto(9999, "Enormous feast."), result)
+    }
+
+    @Test
+    fun `explanation of exactly 300 chars is valid upper boundary`() {
+        val explanation = "a".repeat(300)
+        val service = makeService { ClaudeEstimate(500, explanation) }
+        val result = service.estimate("key", "food", null, null)
+        assertEquals(explanation, result.explanation)
+    }
+
+    @Test
+    fun `whitespace-only explanation throws ClaudeEstimateException`() {
+        val service = makeService { ClaudeEstimate(500, "   ") }
+        assertFailsWith<ClaudeEstimateException> {
+            service.estimate("key", "food", null, null)
+        }
+    }
 }

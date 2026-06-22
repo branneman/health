@@ -4,6 +4,7 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.Headers
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
@@ -296,5 +297,201 @@ class AiIntegrationTest {
         val body = Json.parseToJsonElement(statusB.bodyAsText()).jsonObject
         assertEquals(false, body["configured"]!!.jsonPrimitive.boolean)
         assertFalse(statusB.bodyAsText().contains("sk-ant-key-a"))
+    }
+
+    // --- PUT /ai/config validation ---
+
+    @Test
+    fun `DELETE ai-config returns 401 without token`() = appTest {
+        assertEquals(HttpStatusCode.Unauthorized, client.delete("/ai/config").status)
+    }
+
+    @Test
+    fun `PUT ai-config with blank apiKey returns 400`() = appTest {
+        val token = loginToken()
+        val r = client.put("/ai/config") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":""}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+    }
+
+    @Test
+    fun `PUT ai-config with apiKey over 300 chars returns 400`() = appTest {
+        val token = loginToken()
+        val r = client.put("/ai/config") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"${"a".repeat(301)}"}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+    }
+
+    @Test
+    fun `PUT ai-config with invalid expiresAt format returns 400`() = appTest {
+        val token = loginToken()
+        val r = client.put("/ai/config") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-key","expiresAt":"not-a-date"}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+    }
+
+    @Test
+    fun `PUT ai-config second call overwrites first and estimate uses new key`() = testApplication {
+        var capturedKey: String? = null
+        val capturingGateway = object : AnthropicGateway {
+            override fun estimate(apiKey: String, text: String?, imageBase64: String?, imageMimeType: String?): ClaudeEstimate {
+                capturedKey = apiKey
+                return ClaudeEstimate(500, "Test.")
+            }
+        }
+        application { module(ds, aiCipher = testCipher, anthropicGateway = capturingGateway) }
+        val token = client.post("/auth/token") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"username":"$TEST_EMAIL","password":"$TEST_PASSWORD"}""")
+        }.let { Json.parseToJsonElement(it.bodyAsText()).jsonObject["token"]!!.jsonPrimitive.content }
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-old"}""")
+        }
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-new"}""")
+        }
+        client.post("/ai/estimate") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData { append("text", "pasta") }))
+        }
+        assertEquals("sk-ant-new", capturedKey)
+    }
+
+    // --- POST /ai/estimate input validation ---
+
+    @Test
+    fun `POST ai-estimate with wrong content type returns 400`() = appTest {
+        val token = loginToken()
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-key"}""")
+        }
+        val r = client.post("/ai/estimate") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"text":"pizza"}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+    }
+
+    @Test
+    fun `POST ai-estimate with text at exactly 500 chars returns 200`() = appTest {
+        val token = loginToken()
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-key"}""")
+        }
+        fakeGateway.nextResult = { ClaudeEstimate(300, "Long description meal.") }
+        val r = client.post("/ai/estimate") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData { append("text", "x".repeat(500)) }))
+        }
+        assertEquals(HttpStatusCode.OK, r.status)
+    }
+
+    @Test
+    fun `POST ai-estimate with image only returns 200`() = appTest {
+        val token = loginToken()
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-key"}""")
+        }
+        fakeGateway.nextResult = { ClaudeEstimate(400, "Meal from photo.") }
+        val r = client.post("/ai/estimate") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData {
+                append("image", ByteArray(16) { 0xFF.toByte() }, Headers.build {
+                    append(HttpHeaders.ContentType, "image/jpeg")
+                    append(HttpHeaders.ContentDisposition, "filename=\"photo.jpg\"")
+                })
+            }))
+        }
+        assertEquals(HttpStatusCode.OK, r.status)
+        assertEquals(400, Json.parseToJsonElement(r.bodyAsText()).jsonObject["kcal"]!!.jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun `POST ai-estimate with image and text returns 200`() = appTest {
+        val token = loginToken()
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-key"}""")
+        }
+        fakeGateway.nextResult = { ClaudeEstimate(700, "Pasta with sauce.") }
+        val r = client.post("/ai/estimate") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData {
+                append("text", "pasta carbonara")
+                append("image", ByteArray(16) { 0xFF.toByte() }, Headers.build {
+                    append(HttpHeaders.ContentType, "image/png")
+                    append(HttpHeaders.ContentDisposition, "filename=\"photo.png\"")
+                })
+            }))
+        }
+        assertEquals(HttpStatusCode.OK, r.status)
+        assertEquals(700, Json.parseToJsonElement(r.bodyAsText()).jsonObject["kcal"]!!.jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun `POST ai-estimate with invalid image mime type returns 400`() = appTest {
+        val token = loginToken()
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-key"}""")
+        }
+        val r = client.post("/ai/estimate") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData {
+                append("image", ByteArray(16) { 0 }, Headers.build {
+                    append(HttpHeaders.ContentType, "image/gif")
+                    append(HttpHeaders.ContentDisposition, "filename=\"anim.gif\"")
+                })
+            }))
+        }
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+    }
+
+    // --- Security / correctness properties ---
+
+    @Test
+    fun `POST ai-estimate passes decrypted api key to gateway not ciphertext`() = testApplication {
+        var capturedKey: String? = null
+        val capturingGateway = object : AnthropicGateway {
+            override fun estimate(apiKey: String, text: String?, imageBase64: String?, imageMimeType: String?): ClaudeEstimate {
+                capturedKey = apiKey
+                return ClaudeEstimate(500, "Test.")
+            }
+        }
+        application { module(ds, aiCipher = testCipher, anthropicGateway = capturingGateway) }
+        val token = client.post("/auth/token") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"username":"$TEST_EMAIL","password":"$TEST_PASSWORD"}""")
+        }.let { Json.parseToJsonElement(it.bodyAsText()).jsonObject["token"]!!.jsonPrimitive.content }
+        client.put("/ai/config") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-plaintext"}""")
+        }
+        client.post("/ai/estimate") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData { append("text", "pasta") }))
+        }
+        assertEquals("sk-ant-plaintext", capturedKey)
+    }
+
+    @Test
+    fun `AI routes return 404 when aiCipher is not configured`() = testApplication {
+        application { module(ds, aiCipher = null) }
+        assertEquals(HttpStatusCode.NotFound, client.get("/ai/config").status)
     }
 }
