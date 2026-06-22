@@ -36,9 +36,11 @@ fun QuickAddContent(
     onLog: (kcal: String, label: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    initialKcal: Int? = null,
+    initialLabel: String? = null,
 ) {
-    var kcal by remember { mutableStateOf("") }
-    var label by remember { mutableStateOf("") }
+    var kcal by remember { mutableStateOf(initialKcal?.toString() ?: "") }
+    var label by remember { mutableStateOf(initialLabel ?: "") }
     val logEnabled = (kcal.toIntOrNull() ?: 0) > 0
     val kcalFocus = remember { FocusRequester() }
 
