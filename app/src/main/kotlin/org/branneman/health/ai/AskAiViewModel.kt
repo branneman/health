@@ -27,7 +27,7 @@ import java.time.OffsetDateTime
 sealed interface AskAiState {
     data object Idle : AskAiState
     data object Loading : AskAiState
-    data class Result(val kcal: Int, val explanation: String, val inputText: String?) : AskAiState
+    data class Result(val kcal: Int, val explanation: String?, val inputText: String?) : AskAiState
     sealed interface Error : AskAiState {
         data object NotConfigured : Error
         data object KeyExpired : Error

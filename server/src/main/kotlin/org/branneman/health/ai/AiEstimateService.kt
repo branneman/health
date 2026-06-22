@@ -16,7 +16,7 @@ import kotlinx.serialization.json.Json
 import org.branneman.health.AiEstimateResponseDto
 
 @Serializable
-data class ClaudeEstimate(val kcal: Int, val explanation: String)
+data class ClaudeEstimate(val kcal: Int, val explanation: String? = null)
 
 class ClaudeEstimateException(message: String, cause: Throwable? = null) :
     RuntimeException(message, cause)
@@ -40,11 +40,11 @@ class HttpAnthropicGateway : AnthropicGateway {
                 JsonValue.from(
                     mapOf(
                         "kcal" to mapOf("type" to "integer", "minimum" to 1, "maximum" to 9999),
-                        "explanation" to mapOf("type" to "string", "maxLength" to 300),
+                        "explanation" to mapOf("type" to "string"),
                     )
                 )
             )
-            .putAdditionalProperty("required", JsonValue.from(listOf("kcal", "explanation")))
+            .putAdditionalProperty("required", JsonValue.from(listOf("kcal")))
             .putAdditionalProperty("additionalProperties", JsonValue.from(false))
             .build()
         OutputConfig.builder()
@@ -85,10 +85,13 @@ class HttpAnthropicGateway : AnthropicGateway {
 
         val params = MessageCreateParams.builder()
             .model(Model.CLAUDE_OPUS_4_8)
-            .maxTokens(512L)
+            .maxTokens(100L)
             .system(
-                "You are a nutritionist AI. Estimate the calorie content of the described or " +
-                "shown meal. Be practical and concise."
+                "You are a nutritionist AI. Estimate the total calorie content of the described " +
+                "or shown meal. Return only a JSON object with a required 'kcal' integer (1–9999) " +
+                "and an optional 'explanation' string. If you include an explanation, keep it to " +
+                "one short sentence starting with the calorie count, e.g. '350 kcal — typical " +
+                "cocktail with one spirit measure and mixer.'"
             )
             .addUserMessageOfBlockParams(blocks)
             .outputConfig(outputConfig)
@@ -130,12 +133,6 @@ class AiEstimateService(private val gateway: AnthropicGateway) {
 
         if (result.kcal !in 1..9999) {
             throw ClaudeEstimateException("kcal out of range: ${result.kcal}")
-        }
-        if (result.explanation.isBlank()) {
-            throw ClaudeEstimateException("explanation is blank")
-        }
-        if (result.explanation.length > 300) {
-            throw ClaudeEstimateException("explanation too long: ${result.explanation.length}")
         }
 
         return AiEstimateResponseDto(result.kcal, result.explanation)

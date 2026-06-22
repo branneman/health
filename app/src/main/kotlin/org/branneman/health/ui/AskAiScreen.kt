@@ -86,11 +86,13 @@ fun AskAiContent(
                     style    = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.testTag("ask_ai_result_kcal"),
                 )
-                Text(
-                    "\"${state.explanation}\"",
-                    style    = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.testTag("ask_ai_result_explanation"),
-                )
+                if (state.explanation != null) {
+                    Text(
+                        "\"${state.explanation}\"",
+                        style    = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.testTag("ask_ai_result_explanation"),
+                    )
+                }
                 Button(
                     onClick  = { onUseThis(state.kcal, state.inputText) },
                     modifier = Modifier

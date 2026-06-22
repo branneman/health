@@ -260,6 +260,26 @@ class AiIntegrationTest {
     }
 
     @Test
+    fun `POST ai-estimate with null explanation returns 200 with null explanation field`() = appTest {
+        val token = loginToken()
+        client.put("/ai/config") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"apiKey":"sk-ant-key"}""")
+        }
+        fakeGateway.nextResult = { ClaudeEstimate(350, null) }
+        val r = client.post("/ai/estimate") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData { append("text", "martini") }))
+        }
+        assertEquals(HttpStatusCode.OK, r.status)
+        val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
+        assertEquals(350, body["kcal"]!!.jsonPrimitive.content.toInt())
+        val explanationEl = body["explanation"]
+        assertTrue(explanationEl == null || explanationEl == kotlinx.serialization.json.JsonNull)
+    }
+
+    @Test
     fun `POST ai-estimate when gateway throws returns 422 ai_estimate_failed`() = testApplication {
         application { module(ds, aiCipher = testCipher, anthropicGateway = failingGateway) }
         val token = client.post("/auth/token") {

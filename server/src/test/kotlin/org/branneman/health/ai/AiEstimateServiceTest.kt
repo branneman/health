@@ -1,9 +1,11 @@
 package org.branneman.health.ai
 
+import kotlinx.serialization.json.Json
 import org.branneman.health.AiEstimateResponseDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class AiEstimateServiceTest {
 
@@ -55,19 +57,18 @@ class AiEstimateServiceTest {
     }
 
     @Test
-    fun `empty explanation throws ClaudeEstimateException`() {
-        val service = makeService { ClaudeEstimate(500, "") }
-        assertFailsWith<ClaudeEstimateException> {
-            service.estimate("key", "food", null, null)
-        }
+    fun `null explanation is allowed — explanation is optional`() {
+        val service = makeService { ClaudeEstimate(500, null) }
+        val result = service.estimate("key", "food", null, null)
+        assertNull(result.explanation)
     }
 
     @Test
-    fun `explanation over 300 chars throws ClaudeEstimateException`() {
-        val service = makeService { ClaudeEstimate(500, "x".repeat(301)) }
-        assertFailsWith<ClaudeEstimateException> {
-            service.estimate("key", "food", null, null)
-        }
+    fun `explanation is passed through verbatim regardless of length`() {
+        val long = "x".repeat(1000)
+        val service = makeService { ClaudeEstimate(500, long) }
+        val result = service.estimate("key", "food", null, null)
+        assertEquals(long, result.explanation)
     }
 
     @Test
@@ -101,18 +102,47 @@ class AiEstimateServiceTest {
     }
 
     @Test
-    fun `explanation of exactly 300 chars is valid upper boundary`() {
-        val explanation = "a".repeat(300)
-        val service = makeService { ClaudeEstimate(500, explanation) }
+    fun `whitespace-only explanation is passed through — no server-side content validation`() {
+        val service = makeService { ClaudeEstimate(500, "   ") }
         val result = service.estimate("key", "food", null, null)
-        assertEquals(explanation, result.explanation)
+        assertEquals("   ", result.explanation)
     }
 
     @Test
-    fun `whitespace-only explanation throws ClaudeEstimateException`() {
-        val service = makeService { ClaudeEstimate(500, "   ") }
-        assertFailsWith<ClaudeEstimateException> {
-            service.estimate("key", "food", null, null)
-        }
+    fun `AiEstimateResponseDto serializes without explanation field when null`() {
+        val dto = AiEstimateResponseDto(350, null)
+        val json = Json.encodeToString(AiEstimateResponseDto.serializer(), dto)
+        assertEquals("""{"kcal":350}""", json)
+    }
+
+    @Test
+    fun `AiEstimateResponseDto deserializes when explanation field is absent`() {
+        val json = """{"kcal":350}"""
+        val dto = Json.decodeFromString(AiEstimateResponseDto.serializer(), json)
+        assertEquals(350, dto.kcal)
+        assertNull(dto.explanation)
+    }
+
+    @Test
+    fun `AiEstimateResponseDto deserializes when explanation field is present`() {
+        val json = """{"kcal":500,"explanation":"350 kcal — gin martini with olive."}"""
+        val dto = Json.decodeFromString(AiEstimateResponseDto.serializer(), json)
+        assertEquals(500, dto.kcal)
+        assertEquals("350 kcal — gin martini with olive.", dto.explanation)
+    }
+
+    @Test
+    fun `ClaudeEstimate deserializes from JSON without explanation field`() {
+        val json = """{"kcal":400}"""
+        val estimate = Json.decodeFromString<ClaudeEstimate>(json)
+        assertEquals(400, estimate.kcal)
+        assertNull(estimate.explanation)
+    }
+
+    @Test
+    fun `kcal of 1 with null explanation returns correct dto`() {
+        val service = makeService { ClaudeEstimate(1, null) }
+        val result = service.estimate("key", "food", null, null)
+        assertEquals(AiEstimateResponseDto(1, null), result)
     }
 }
