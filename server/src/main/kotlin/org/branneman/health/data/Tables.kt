@@ -150,3 +150,12 @@ object ImportState : Table("catalog.import_state") {
     val lastFullImportAt = timestampWithTimeZone("last_full_import_at").nullable()
     override val primaryKey = PrimaryKey(id)
 }
+
+object AiConfig : Table("ai_config") {
+    val id        = uuid("id")
+    val userId    = uuid("user_id")
+    val apiKey    = text("api_key")
+    val expiresAt = date("expires_at").nullable()
+    val createdAt = timestampWithTimeZone("created_at")
+    override val primaryKey = PrimaryKey(id)
+}
