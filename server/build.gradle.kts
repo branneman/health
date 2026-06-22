@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.ktor.clientCio)
     implementation(libs.ktor.clientContentNegotiation)
     implementation(libs.ktor.clientSerializationJson)
+    implementation(libs.anthropic.java)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.ktor.clientMock)
     testImplementation(libs.kotlin.testJunit)
