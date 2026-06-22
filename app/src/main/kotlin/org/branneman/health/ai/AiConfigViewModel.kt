@@ -30,6 +30,7 @@ class AiConfigViewModel private constructor(
 
     val status: MutableStateFlow<AiConfigStatusDto?> = MutableStateFlow(null)
     val isSaving: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val saveError: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     init {
         viewModelScope.launch {
@@ -40,7 +41,13 @@ class AiConfigViewModel private constructor(
     fun save(apiKey: String, expiresAt: String?) {
         viewModelScope.launch {
             isSaving.value = true
-            status.value = repository.saveKey(apiKey, expiresAt)
+            saveError.value = false
+            val result = repository.saveKey(apiKey, expiresAt)
+            if (result != null) {
+                status.value = result
+            } else {
+                saveError.value = true
+            }
             isSaving.value = false
         }
     }

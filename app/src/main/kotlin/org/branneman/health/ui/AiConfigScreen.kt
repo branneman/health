@@ -22,19 +22,21 @@ fun AiConfigScreen(
 ) {
     val status by viewModel.status.collectAsStateWithLifecycle()
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
+    val saveError by viewModel.saveError.collectAsStateWithLifecycle()
     var apiKeyInput by remember { mutableStateOf("") }
     var keyVisible by remember { mutableStateOf(false) }
 
     AiConfigContent(
         status             = status ?: AiConfigStatusDto(configured = false, expiresAt = null),
         apiKeyInput        = apiKeyInput,
-        onApiKeyChange     = { apiKeyInput = it },
+        onApiKeyChange     = { apiKeyInput = it; viewModel.saveError.value = false },
         keyVisible         = keyVisible,
         onToggleKeyVisible = { keyVisible = !keyVisible },
         onSave             = { viewModel.save(apiKeyInput, null) },
         onRemove           = { viewModel.remove() },
         onBack             = onBack,
         isSaving           = isSaving,
+        saveError          = saveError,
     )
 }
 
@@ -49,6 +51,7 @@ fun AiConfigContent(
     onRemove: () -> Unit,
     onBack: () -> Unit,
     isSaving: Boolean,
+    saveError: Boolean = false,
 ) {
     val badgeText = when {
         status.configured                              -> "Connected"
@@ -99,7 +102,16 @@ fun AiConfigContent(
                 .fillMaxWidth()
                 .testTag("ai_config_save_button"),
         ) {
-            Text("Save")
+            Text(if (isSaving) "Saving…" else "Save")
+        }
+
+        if (saveError) {
+            Text(
+                text  = "Could not save — check your connection and try again.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testTag("ai_config_save_error"),
+            )
         }
 
         if (status.configured || status.expiresAt != null) {

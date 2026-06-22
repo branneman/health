@@ -119,6 +119,44 @@ class AiConfigScreenTest {
     }
 
     @Test
+    fun `save error message shown when saveError is true`() {
+        composeRule.setContent {
+            AiConfigContent(
+                status = AiConfigStatusDto(configured = false, expiresAt = null),
+                apiKeyInput = "sk-ant-test",
+                onApiKeyChange = {},
+                keyVisible = false,
+                onToggleKeyVisible = {},
+                onSave = {},
+                onRemove = {},
+                onBack = {},
+                isSaving = false,
+                saveError = true,
+            )
+        }
+        composeRule.onNodeWithTag("ai_config_save_error").assertIsDisplayed()
+    }
+
+    @Test
+    fun `save error message hidden when saveError is false`() {
+        composeRule.setContent {
+            AiConfigContent(
+                status = AiConfigStatusDto(configured = false, expiresAt = null),
+                apiKeyInput = "sk-ant-test",
+                onApiKeyChange = {},
+                keyVisible = false,
+                onToggleKeyVisible = {},
+                onSave = {},
+                onRemove = {},
+                onBack = {},
+                isSaving = false,
+                saveError = false,
+            )
+        }
+        composeRule.onNodeWithTag("ai_config_save_error").assertDoesNotExist()
+    }
+
+    @Test
     fun `key field is masked by default`() {
         composeRule.setContent {
             AiConfigContent(
