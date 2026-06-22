@@ -30,6 +30,10 @@ implication for every implementation session:
 - **Spec and plan filenames do not include a date prefix.** Save them as `docs/specs/<topic>.md` and
   `docs/plans/<topic>.md`, not `docs/specs/YYYY-MM-DD-<topic>.md`. The superpowers skill suggests
   dated filenames — ignore that convention here.
+- **Always run tests before committing.** After any code change, run the relevant test tier(s)
+  and confirm `BUILD SUCCESSFUL` before running `git commit`. Never commit on a failed or
+  unrun test suite. The rule: touch server code → `./gradlew :server:test`; touch app or
+  shared code → `./gradlew :app:test`; touch both → run both.
 - **Conventional commits:** use the format `type(scope): message`. Valid types:
   `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`, `ci`, `security`.
   Always include a scope when it makes sense: use `app`, `server`, or `shared`
