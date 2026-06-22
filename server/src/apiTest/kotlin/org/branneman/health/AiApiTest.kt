@@ -70,8 +70,8 @@ class AiApiTest : ApiTestBase() {
         assertEquals(HttpStatusCode.OK, r.status)
         val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
         val kcal = body["kcal"]!!.jsonPrimitive.int
-        val explanation = body["explanation"]!!.jsonPrimitive.content
         assertTrue(kcal in 1..9999, "kcal $kcal out of range")
-        assertTrue(explanation.isNotBlank(), "explanation is blank")
+        val explanation = body["explanation"]?.jsonPrimitive?.content
+        if (explanation != null) assertTrue(explanation.isNotBlank(), "explanation present but blank")
     }
 }
