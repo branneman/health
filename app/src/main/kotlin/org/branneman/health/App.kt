@@ -137,6 +137,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
             logPage = LogPage.Main
             showLogSheet = false
             pendingLogUndoAction = null
+            quickAddPrefill = null
         }
     }
 
