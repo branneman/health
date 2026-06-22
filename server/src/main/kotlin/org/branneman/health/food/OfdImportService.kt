@@ -3,6 +3,7 @@ package org.branneman.health.food
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.serialization.json.*
 import org.branneman.health.data.ImportState
@@ -147,9 +148,12 @@ class OfdImportService(
             var upserted = 0
             var skipped  = 0
             for (file in toProcess) {
-                val bytes = httpClient.get("$DELTA_BASE_URL${file.filename}") {
+                val deltaResponse = httpClient.get("$DELTA_BASE_URL${file.filename}") {
                     header("User-Agent", USER_AGENT)
-                }.readRawBytes()
+                }
+                if (!deltaResponse.status.isSuccess())
+                    error("HTTP ${deltaResponse.status.value} fetching delta file ${file.filename}")
+                val bytes = deltaResponse.readRawBytes()
                 val result = processGzipBytes(bytes)
                 upserted += result.upserted
                 skipped  += result.skipped
@@ -183,14 +187,19 @@ class OfdImportService(
             httpClient.prepareGet(FULL_JSONL_URL) {
                 header("User-Agent", USER_AGENT)
             }.execute { response ->
+                if (!response.status.isSuccess())
+                    error("HTTP ${response.status.value} fetching full JSONL")
                 GZIPInputStream(response.bodyAsChannel().toInputStream()).use { gz ->
                     BufferedReader(InputStreamReader(gz, Charsets.UTF_8)).use { reader ->
                         val batch = mutableListOf<ProductRow>()
                         var line = reader.readLine()
                         while (line != null) {
-                            val row = runCatching {
+                            val row = try {
                                 extractProduct(Json.parseToJsonElement(line).jsonObject)
-                            }.getOrNull()
+                            } catch (e: Exception) {
+                                log.warn("Skipping malformed JSONL line: ${e.message}")
+                                null
+                            }
                             if (row != null) batch.add(row) else skipped++
                             if (batch.size >= BATCH_SIZE) {
                                 upsertBatch(batch)
@@ -228,9 +237,12 @@ class OfdImportService(
                 val batch = mutableListOf<ProductRow>()
                 var line = reader.readLine()
                 while (line != null) {
-                    val row = runCatching {
+                    val row = try {
                         extractProduct(Json.parseToJsonElement(line).jsonObject)
-                    }.getOrNull()
+                    } catch (e: Exception) {
+                        log.warn("Skipping malformed JSONL line: ${e.message}")
+                        null
+                    }
                     if (row != null) batch.add(row) else skipped++
                     if (batch.size >= BATCH_SIZE) {
                         upsertBatch(batch)

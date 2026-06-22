@@ -25,7 +25,7 @@ Kotlin throughout — Android app, shared DTOs, and backend server in one monore
 
 **Low-friction logging:** fixed meals (breakfast, lunch) are one-tap templates. Only dinner — the variable meal — needs per-ingredient logging. Configurable shortcuts handle drinks and snacks. The widget surfaces the same shortcuts for truly in-the-moment logging.
 
-**Food data pipeline:** a weekly Open Food Facts Netherlands export is imported into Postgres with full-text search. The app queries the server — it never calls OFD directly, which keeps the app free of rate-limit exposure and gives fast autocomplete.
+**Food data pipeline:** an Open Food Facts Netherlands mirror lives in `catalog.product`. A one-time full import seeds it; a daily delta sync keeps it current. The app queries the server — it never calls OFD directly, which keeps the app free of rate-limit exposure and gives fast autocomplete.
 
 **Polar integration:** hourly cron pull via the AccessLink REST API (hand-written Ktor client, no code generation). Polar access tokens are permanent and encrypted at the application layer (AES-256-GCM) before hitting the database. See [polar sync spec](docs/specs/polar-sync.md).
 

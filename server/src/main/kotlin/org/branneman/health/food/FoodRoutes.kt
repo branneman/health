@@ -95,7 +95,11 @@ fun Route.foodRoutes(httpClient: HttpClient, importService: OfdImportService) {
                 return@get call.respond(HttpStatusCode.BadGateway)
 
             val body = ofdResponse.bodyAsText()
-            val root = Json.parseToJsonElement(body).jsonObject
+            val root = try {
+                Json.parseToJsonElement(body).jsonObject
+            } catch (e: Exception) {
+                return@get call.respond(HttpStatusCode.BadGateway)
+            }
             val status = root["status"]?.jsonPrimitive?.intOrNull
             if (status != 1) return@get call.respond(HttpStatusCode.NotFound)
 

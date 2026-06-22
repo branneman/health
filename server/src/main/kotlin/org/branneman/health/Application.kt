@@ -113,8 +113,9 @@ fun Application.module(
 ) {
     Database.connect(dataSource)
 
-    val ofdHttpClient = buildOfdHttpClient()
-    val ofdImportService = OfdImportService(dataSource, ofdHttpClient)
+    val ofdImportClient = buildOfdImportHttpClient()
+    val ofdProxyClient  = buildOfdProxyHttpClient()
+    val ofdImportService = OfdImportService(dataSource, ofdImportClient)
 
     val authService = AuthService()
     val ipRateLimiter = RateLimiter(store = DbLoginAttemptsStore())
@@ -707,7 +708,7 @@ fun Application.module(
             ofdAdminRoute(secret, ofdImportService)
         }
 
-        foodRoutes(ofdHttpClient, ofdImportService)
+        foodRoutes(ofdProxyClient, ofdImportService)
 
         System.getenv("E2E_PASSWORD")?.let { pwd ->
             e2eSeedRoute(pwd)
@@ -733,11 +734,19 @@ private fun buildPolarHttpClient(): io.ktor.client.HttpClient {
     }
 }
 
-private fun buildOfdHttpClient(): io.ktor.client.HttpClient {
+private fun buildOfdImportHttpClient(): io.ktor.client.HttpClient {
     return io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
         engine {
             requestTimeout = 0 // full JSONL import streams 3-5 GB; no timeout
         }
+        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            json()
+        }
+    }
+}
+
+private fun buildOfdProxyHttpClient(): io.ktor.client.HttpClient {
+    return io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
         install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
             json()
         }

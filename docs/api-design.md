@@ -44,7 +44,16 @@
 | `POST`   | `/body/weight`      | Yes  | Log a weight entry                  |
 | `DELETE` | `/body/weight/{id}` | Yes  | Delete entry (correction mechanism) |
 
-### Calories in — food catalog
+### OFD catalog — search and barcode lookup (story 14)
+
+| Method | Path                        | Auth | Description                                              |
+|--------|-----------------------------|------|----------------------------------------------------------|
+| `GET`  | `/food/search?q=&limit=`    | Yes  | Full-text search `catalog.product`; `limit` max 50       |
+| `GET`  | `/food/barcode?barcode=`    | Yes  | Exact lookup; falls back to live OFD proxy on cache miss |
+
+Both return `List<FoodItemDto>` / `FoodItemDto` with `source = "openfoodfacts"`.
+
+### Calories in — personal food catalog (story 15)
 
 | Method | Path                  | Auth | Description                    |
 |--------|-----------------------|------|--------------------------------|

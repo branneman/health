@@ -114,15 +114,15 @@ Query:  ?mode=delta   (default)
   `AtomicBoolean`).
 - Logs progress at INFO level (files downloaded, rows upserted, duration).
 
-The systemd timer on the VPS runs:
+The daily cron job on the VPS runs (via `ansible/playbook.yml`):
 ```
-curl -s -X POST https://server/admin/ofd-import \
-     -H "X-Admin-Secret: ${OFD_ADMIN_SECRET}"
+curl -s -X POST "http://localhost:8080/admin/ofd-import?mode=delta" \
+     -H "X-Admin-Secret: $(grep -m1 '^OFD_ADMIN_SECRET=' /home/deploy/health/.env | cut -d= -f2-)"
 ```
 
 A developer triggers a full re-import with:
 ```
-curl -s -X POST https://server/admin/ofd-import?mode=full \
+curl -s -X POST "http://localhost:8080/admin/ofd-import?mode=full" \
      -H "X-Admin-Secret: ${OFD_ADMIN_SECRET}"
 ```
 

@@ -21,6 +21,10 @@ fun Route.ofdAdminRoute(secret: String, importService: OfdImportService) {
             return@post
         }
         val mode = call.request.queryParameters["mode"] ?: "delta"
+        if (mode != "full" && mode != "delta") {
+            call.respond(HttpStatusCode.BadRequest, "mode must be 'full' or 'delta'")
+            return@post
+        }
         call.respond(HttpStatusCode.Accepted)
         call.application.launch {
             runCatching {

@@ -107,10 +107,11 @@ Load these on demand when the topic comes up — don't load all upfront:
 - **Backend API:** Ktor (Kotlin) so the whole project is one language and data models
   can be shared between app and server.
 - **Database:** PostgreSQL on the VPS.
-- **Food/barcode data:** Open Food Facts (French non-profit, EU). A weekly export
-  of the NL subset (EU as fallback) is imported into a `product` table on the
-  server and indexed for full-text search. The app never calls OFD directly —
-  it queries the server's `/food/search` and `/food/barcode` endpoints instead.
+- **Food/barcode data:** Open Food Facts (French non-profit, EU). A one-time full
+  import seeds `catalog.product` with the NL subset; a daily delta sync (cron,
+  2:30 AM) keeps it current. Non-NL products are cached on barcode miss (EU fallback).
+  The app never calls OFD directly — it queries the server's `/food/search` and
+  `/food/barcode` endpoints instead.
 
 ## Monorepo structure
 
