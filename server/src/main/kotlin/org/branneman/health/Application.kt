@@ -54,6 +54,11 @@ import org.branneman.health.food.OfdImportService
 import org.branneman.health.food.foodRoutes
 import org.branneman.health.food.ofdAdminRoute
 import org.branneman.health.polar.polarRoutes
+import org.branneman.health.ai.AiConfigService
+import org.branneman.health.ai.AiEstimateService
+import org.branneman.health.ai.AnthropicGateway
+import org.branneman.health.ai.HttpAnthropicGateway
+import org.branneman.health.ai.aiRoutes
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -102,7 +107,10 @@ fun Application.module() {
 
     val ofdAdminSecret = System.getenv("OFD_ADMIN_SECRET")
 
-    module(dataSource, polarApiClient, polarCipher, ofdAdminSecret)
+    val aiKeyBase64 = System.getenv("AI_KEY_ENCRYPTION_KEY")
+    val aiCipher: TokenCipher? = aiKeyBase64?.let { TokenCipher.fromBase64(it) }
+
+    module(dataSource, polarApiClient, polarCipher, ofdAdminSecret, aiCipher)
 }
 
 fun Application.module(
@@ -110,6 +118,8 @@ fun Application.module(
     polarApiClient: PolarApiClient? = null,
     polarCipher: TokenCipher? = null,
     ofdAdminSecret: String? = null,
+    aiCipher: TokenCipher? = null,
+    anthropicGateway: AnthropicGateway? = null,
 ) {
     Database.connect(dataSource)
 
@@ -132,9 +142,12 @@ fun Application.module(
 
     intercept(ApplicationCallPipeline.Plugins) {
         val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
-        if (length != null && length > 65_536L) {
-            call.respond(HttpStatusCode.PayloadTooLarge)
-            finish()
+        if (length != null) {
+            val limit = if (call.request.uri == "/ai/estimate") 2_097_152L else 65_536L
+            if (length > limit) {
+                call.respond(HttpStatusCode.PayloadTooLarge)
+                finish()
+            }
         }
     }
 
@@ -709,6 +722,13 @@ fun Application.module(
         }
 
         foodRoutes(ofdProxyClient, ofdImportService)
+
+        aiCipher?.let { cipher ->
+            val aiConfigService = AiConfigService(cipher)
+            val gateway = anthropicGateway ?: HttpAnthropicGateway()
+            val aiEstimateService = AiEstimateService(gateway)
+            aiRoutes(aiConfigService, aiEstimateService)
+        }
 
         System.getenv("E2E_PASSWORD")?.let { pwd ->
             e2eSeedRoute(pwd)
