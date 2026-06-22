@@ -39,7 +39,7 @@ class HttpAnthropicGateway : AnthropicGateway {
                 "properties",
                 JsonValue.from(
                     mapOf(
-                        "kcal" to mapOf("type" to "integer", "minimum" to 1, "maximum" to 9999),
+                        "kcal" to mapOf("type" to "integer"),
                         "explanation" to mapOf("type" to "string"),
                     )
                 )

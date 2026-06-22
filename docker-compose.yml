@@ -53,7 +53,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks: [watchtower]
-    command: --interval 60 --cleanup
+    command: --interval 60 --cleanup --rolling-restart
 
 volumes:
   pgdata: { }
