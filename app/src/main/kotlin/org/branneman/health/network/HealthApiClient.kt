@@ -12,12 +12,19 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import org.branneman.health.AiConfigRequestDto
+import org.branneman.health.AiConfigStatusDto
+import org.branneman.health.AiEstimateResponseDto
 import org.branneman.health.BuildConfig
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
@@ -35,6 +42,14 @@ import org.branneman.health.PolarStatusDto
 
 @kotlinx.serialization.Serializable
 private data class PolarConnectUrlResponse(val url: String)
+
+sealed interface AiEstimateApiResult {
+    data class Success(val dto: AiEstimateResponseDto) : AiEstimateApiResult
+    data object NotConfigured : AiEstimateApiResult
+    data object KeyExpired : AiEstimateApiResult
+    data object EstimateFailed : AiEstimateApiResult
+    data object NetworkError : AiEstimateApiResult
+}
 
 class HealthApiClient(
     private val baseUrl: String = BuildConfig.SERVER_BASE_URL,
@@ -188,6 +203,61 @@ class HealthApiClient(
     suspend fun triggerPolarSync(token: String) {
         client.post("$baseUrl/polar/sync") {
             header(HttpHeaders.Authorization, "Bearer $token")
+        }
+    }
+
+    suspend fun getAiConfig(token: String): AiConfigStatusDto =
+        client.get("$baseUrl/ai/config") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }.body()
+
+    suspend fun putAiConfig(token: String, dto: AiConfigRequestDto): AiConfigStatusDto =
+        client.put("$baseUrl/ai/config") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(dto)
+        }.body()
+
+    suspend fun deleteAiConfig(token: String) {
+        client.delete("$baseUrl/ai/config") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+    }
+
+    suspend fun postAiEstimate(
+        token: String,
+        text: String?,
+        imageBytes: ByteArray?,
+    ): AiEstimateApiResult {
+        return try {
+            val response = client.post("$baseUrl/ai/estimate") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                setBody(MultiPartFormDataContent(
+                    formData {
+                        text?.let { append("text", it) }
+                        imageBytes?.let { bytes ->
+                            append("image", bytes, Headers.build {
+                                append(HttpHeaders.ContentType, "image/jpeg")
+                                append(HttpHeaders.ContentDisposition, "filename=\"photo.jpg\"")
+                            })
+                        }
+                    }
+                ))
+            }
+            when (response.status) {
+                HttpStatusCode.OK -> AiEstimateApiResult.Success(response.body())
+                HttpStatusCode.UnprocessableEntity -> {
+                    val errorBody = runCatching { response.body<Map<String, String>>() }.getOrNull()
+                    when (errorBody?.get("error")) {
+                        "ai_not_configured" -> AiEstimateApiResult.NotConfigured
+                        "ai_key_expired"    -> AiEstimateApiResult.KeyExpired
+                        else                -> AiEstimateApiResult.EstimateFailed
+                    }
+                }
+                else -> AiEstimateApiResult.EstimateFailed
+            }
+        } catch (e: Exception) {
+            AiEstimateApiResult.NetworkError
         }
     }
 }
