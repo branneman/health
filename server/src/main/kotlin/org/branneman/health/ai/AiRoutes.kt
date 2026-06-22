@@ -49,6 +49,11 @@ fun Route.aiRoutes(configService: AiConfigService, estimateService: AiEstimateSe
                 var imageBytes: ByteArray? = null
                 var imageMimeType: String? = null
 
+                val contentType = call.request.contentType()
+                if (!contentType.match(ContentType.MultiPart.FormData)) {
+                    return@post call.respond(HttpStatusCode.BadRequest)
+                }
+
                 val multipart = call.receiveMultipart()
                 multipart.forEachPart { part ->
                     when {
