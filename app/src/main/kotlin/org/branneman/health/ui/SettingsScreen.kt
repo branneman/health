@@ -34,6 +34,7 @@ fun SettingsScreen(
     onNavigateMealButtons: () -> Unit = {},
     onNavigateDrinkButtons: () -> Unit = {},
     onNavigateTemplates: () -> Unit = {},
+    onNavigateAi: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var serverReachable by remember { mutableStateOf<Boolean?>(null) }
@@ -61,6 +62,7 @@ fun SettingsScreen(
         onNavigateMealButtons  = onNavigateMealButtons,
         onNavigateDrinkButtons = onNavigateDrinkButtons,
         onNavigateTemplates    = onNavigateTemplates,
+        onNavigateAi           = onNavigateAi,
         onSignOut              = onSignOut,
         serverReachable        = serverReachable,
         lastSyncedAt           = lastSyncedAt,
@@ -86,6 +88,7 @@ fun SettingsContent(
     onNavigateMealButtons: () -> Unit,
     onNavigateDrinkButtons: () -> Unit,
     onNavigateTemplates: () -> Unit = {},
+    onNavigateAi: () -> Unit = {},
     onSignOut: () -> Unit,
     serverReachable: Boolean? = null,
     lastSyncedAt: Long? = null,
@@ -134,6 +137,10 @@ fun SettingsContent(
                 else                                 -> null
             },
         )
+
+        HorizontalDivider()
+        SettingsSectionHeader("AI")
+        SettingsNavRow("Anthropic AI", "API key for calorie estimates", onNavigateAi)
 
         HorizontalDivider()
         SettingsSectionHeader("Sync")

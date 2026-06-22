@@ -28,6 +28,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.auth.AuthState
 import org.branneman.health.auth.AuthViewModel
 import org.branneman.health.log.LogViewModel
+import org.branneman.health.ui.AiConfigScreen
+import org.branneman.health.ui.AskAiScreen
 import org.branneman.health.ui.ConnectPolarScreen
 import org.branneman.health.ui.DashboardScreen
 import org.branneman.health.ui.DrinkButtonsScreen
@@ -116,9 +118,9 @@ fun App() {
     }
 }
 
-private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule, Templates }
+private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule, Templates, Ai }
 
-private enum class LogPage { Main, TemplateList, QuickAdd }
+private enum class LogPage { Main, TemplateList, QuickAdd, AskAi }
 
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
@@ -127,6 +129,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
     var logPage by remember { mutableStateOf(LogPage.Main) }
     var showLogSheet by remember { mutableStateOf(false) }
     var pendingLogUndoAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var quickAddPrefill by remember { mutableStateOf<Pair<Int, String?>?>(null) }
 
     LaunchedEffect(currentTab) {
         if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
@@ -182,10 +185,28 @@ private fun MainNav(authViewModel: AuthViewModel) {
                             },
                         )
                         LogPage.QuickAdd -> QuickAddScreen(
-                            onBack   = { logPage = LogPage.Main },
-                            onLogged = { undoAction ->
+                            onBack         = { logPage = LogPage.Main; quickAddPrefill = null },
+                            onLogged       = { undoAction ->
                                 pendingLogUndoAction = undoAction
+                                quickAddPrefill = null
                                 logPage = LogPage.Main
+                            },
+                            initialKcal    = quickAddPrefill?.first,
+                            initialLabel   = quickAddPrefill?.second,
+                        )
+                        LogPage.AskAi -> AskAiScreen(
+                            onBack         = { logPage = LogPage.Main },
+                            onUseThis      = { _, _ ->
+                                // AskAiViewModel already logged; just navigate back
+                                logPage = LogPage.Main
+                            },
+                            onEditAmount   = { kcal, label ->
+                                quickAddPrefill = Pair(kcal, label)
+                                logPage = LogPage.QuickAdd
+                            },
+                            onNeedsAiConfig = {
+                                currentTab   = Tab.Settings
+                                settingsPage = SettingsPage.Ai
                             },
                         )
                     }
@@ -193,6 +214,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                         LogFlowSheet(
                             onFromTemplate = { showLogSheet = false; logPage = LogPage.TemplateList },
                             onQuickAdd     = { showLogSheet = false; logPage = LogPage.QuickAdd },
+                            onAskAi        = { showLogSheet = false; logPage = LogPage.AskAi },
                             onDismiss      = { showLogSheet = false },
                         )
                     }
@@ -206,6 +228,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                         onNavigateGoal         = { settingsPage = SettingsPage.Goal },
                         onNavigateSchedule     = { settingsPage = SettingsPage.Schedule },
                         onNavigateTemplates    = { settingsPage = SettingsPage.Templates },
+                        onNavigateAi           = { settingsPage = SettingsPage.Ai },
                     )
                     SettingsPage.MealButtons -> MealButtonsScreen(
                         onBack = { settingsPage = SettingsPage.Main }
@@ -225,6 +248,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
                     SettingsPage.Templates -> TemplatesScreen(
                         onBack = { settingsPage = SettingsPage.Main }
                     )
+                    SettingsPage.Ai -> AiConfigScreen(
+                        onBack = { settingsPage = SettingsPage.Main }
+                    )
                 }
             }
         }
@@ -236,6 +262,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
 private fun LogFlowSheet(
     onFromTemplate: () -> Unit,
     onQuickAdd: () -> Unit,
+    onAskAi: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -259,6 +286,15 @@ private fun LogFlowSheet(
                 modifier = Modifier
                     .clickable(onClick = onQuickAdd)
                     .testTag("log_quick_add"),
+            )
+            HorizontalDivider()
+            ListItem(
+                headlineContent   = { Text("Ask AI") },
+                supportingContent = { Text("Describe or photo a meal") },
+                trailingContent   = { Text("›", style = MaterialTheme.typography.titleLarge) },
+                modifier = Modifier
+                    .clickable(onClick = onAskAi)
+                    .testTag("log_ask_ai"),
             )
         }
     }

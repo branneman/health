@@ -17,16 +17,20 @@ import org.branneman.health.log.QuickAddViewModel
 fun QuickAddScreen(
     onBack: () -> Unit,
     onLogged: (undoAction: () -> Unit) -> Unit = {},
+    initialKcal: Int? = null,
+    initialLabel: String? = null,
     viewModel: QuickAddViewModel = viewModel(),
 ) {
     Scaffold { padding ->
         QuickAddContent(
-            onLog    = { kcal, label ->
+            onLog        = { kcal, label ->
                 viewModel.log(kcal, label)
                 onLogged { viewModel.undoLog() }
             },
-            onBack   = onBack,
-            modifier = Modifier.padding(padding),
+            onBack       = onBack,
+            modifier     = Modifier.padding(padding),
+            initialKcal  = initialKcal,
+            initialLabel = initialLabel,
         )
     }
 }
