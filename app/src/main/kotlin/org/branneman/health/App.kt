@@ -197,8 +197,8 @@ private fun MainNav(authViewModel: AuthViewModel) {
                         )
                         LogPage.AskAi -> AskAiScreen(
                             onBack         = { logPage = LogPage.Main },
-                            onUseThis      = { _, _ ->
-                                // AskAiViewModel already logged; just navigate back
+                            onUseThis      = { _, _, undoAction ->
+                                pendingLogUndoAction = undoAction
                                 logPage = LogPage.Main
                             },
                             onEditAmount   = { kcal, label ->

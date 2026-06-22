@@ -20,7 +20,7 @@ import org.branneman.health.ai.AskAiViewModel
 @Composable
 fun AskAiScreen(
     onBack: () -> Unit,
-    onUseThis: (kcal: Int, label: String?) -> Unit,
+    onUseThis: (kcal: Int, label: String?, undoAction: () -> Unit) -> Unit,
     onEditAmount: (kcal: Int, label: String?) -> Unit,
     onNeedsAiConfig: () -> Unit,
     viewModel: AskAiViewModel = viewModel(),
@@ -46,7 +46,7 @@ fun AskAiScreen(
         onEstimate      = viewModel::estimate,
         onUseThis       = { kcal, label ->
             viewModel.logDirectly(kcal, label)
-            onUseThis(kcal, label)
+            onUseThis(kcal, label) { viewModel.undoDirectLog() }
         },
         onEditAmount    = { kcal, label -> onEditAmount(kcal, label) },
         onDiscard       = viewModel::discard,
