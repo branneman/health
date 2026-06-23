@@ -18,6 +18,7 @@ import io.ktor.server.routing.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.hours
+import org.branneman.health.FoodItemRequestDto
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
@@ -61,6 +62,7 @@ import org.branneman.health.ai.HttpAnthropicGateway
 import org.branneman.health.ai.aiRoutes
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.upsert
 import java.time.OffsetDateTime
@@ -426,24 +428,67 @@ fun Application.module(
             }
 
             get("/in/food-items") {
-                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val userId  = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val barcode = call.request.queryParameters["barcode"]
+                val q       = call.request.queryParameters["q"]
                 val rows = transaction {
-                    FoodItem.selectAll()
-                        .where { FoodItem.userId eq userId }
-                        .map {
-                            FoodItemDto(
-                                id             = it[FoodItem.id].toString(),
-                                barcode        = it[FoodItem.barcode],
-                                name           = it[FoodItem.name],
-                                kcalPer100g    = it[FoodItem.kcalPer100g].toDouble(),
-                                proteinPer100g = it[FoodItem.proteinPer100g]?.toDouble(),
-                                carbsPer100g   = it[FoodItem.carbsPer100g]?.toDouble(),
-                                fatPer100g     = it[FoodItem.fatPer100g]?.toDouble(),
-                                source         = it[FoodItem.dataSource],
-                            )
-                        }
+                    val query = FoodItem.selectAll().where { FoodItem.userId eq userId }
+                    when {
+                        barcode != null -> query.andWhere { FoodItem.barcode eq barcode }
+                        q != null       -> query.andWhere { FoodItem.name.lowerCase() like "%${q.lowercase()}%" }
+                        else            -> query
+                    }.map {
+                        FoodItemDto(
+                            id             = it[FoodItem.id].toString(),
+                            barcode        = it[FoodItem.barcode],
+                            name           = it[FoodItem.name],
+                            kcalPer100g    = it[FoodItem.kcalPer100g].toDouble(),
+                            proteinPer100g = it[FoodItem.proteinPer100g]?.toDouble(),
+                            carbsPer100g   = it[FoodItem.carbsPer100g]?.toDouble(),
+                            fatPer100g     = it[FoodItem.fatPer100g]?.toDouble(),
+                            source         = it[FoodItem.dataSource],
+                        )
+                    }
                 }
                 call.respond(rows)
+            }
+
+            post("/in/food-items") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val dto    = call.receive<FoodItemRequestDto>()
+                val id     = runCatching { UUID.fromString(dto.id) }.getOrNull()
+                    ?: return@post call.respond(HttpStatusCode.BadRequest)
+
+                val inserted = transaction {
+                    val exists = FoodItem.selectAll()
+                        .where { (FoodItem.id eq id) and (FoodItem.userId eq userId) }
+                        .count() > 0
+                    if (exists) return@transaction false
+                    FoodItem.insert {
+                        it[FoodItem.id]             = id
+                        it[FoodItem.userId]         = userId
+                        it[FoodItem.barcode]        = dto.barcode
+                        it[FoodItem.name]           = dto.name
+                        it[FoodItem.kcalPer100g]    = dto.kcalPer100g.toBigDecimal()
+                        it[FoodItem.proteinPer100g] = dto.proteinPer100g?.toBigDecimal()
+                        it[FoodItem.carbsPer100g]   = dto.carbsPer100g?.toBigDecimal()
+                        it[FoodItem.fatPer100g]     = dto.fatPer100g?.toBigDecimal()
+                        it[FoodItem.dataSource]     = dto.source
+                    }
+                    true
+                }
+                if (!inserted) return@post call.respond(HttpStatusCode.Conflict)
+
+                call.respond(HttpStatusCode.Created, FoodItemDto(
+                    id             = id.toString(),
+                    barcode        = dto.barcode,
+                    name           = dto.name,
+                    kcalPer100g    = dto.kcalPer100g,
+                    proteinPer100g = dto.proteinPer100g,
+                    carbsPer100g   = dto.carbsPer100g,
+                    fatPer100g     = dto.fatPer100g,
+                    source         = dto.source,
+                ))
             }
 
             get("/in/templates") {
