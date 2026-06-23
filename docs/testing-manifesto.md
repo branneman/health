@@ -83,6 +83,7 @@ another class.
 | 9 | `...000009` | `MealTemplatesIntegrationTest` | `mealtemplates-test@test.local` |
 | 10 | `...000010` | `DynamicBudgetIntegrationTest` | `dynamic-budget-test@test.local` |
 | 11 | `...000011` | `AiIntegrationTest` | `ai-test@test.local` |
+| 12 | `...000012` | `FoodCatalogIntegrationTest` | `foodcatalog-test@test.local` |
 
 **`init` block pattern** — the `health_test` database is persistent, so a UUID from a previous run
 may still exist with a stale email, or vice versa. Delete by **both** UUID and email before
