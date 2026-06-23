@@ -88,9 +88,9 @@ data class AiConfigStatusDto(
 )
 
 @Serializable
-data class AiEstimateResponse(
+data class AiEstimateResponseDto(
     val kcal: Int,
-    val explanation: String
+    val explanation: String? = null   // absent from JSON when null
 )
 ```
 
@@ -159,7 +159,7 @@ At least one of `text` or `image` must be present. Both may be sent together for
 }
 ```
 
-`kcal` is a positive integer in range [1, 9999]. `explanation` is a non-empty string, max 300 chars.
+`kcal` is a positive integer in range [1, 9999]. `explanation` is an optional string; omitted from the JSON when Claude doesn't provide one.
 
 **Error responses:**
 
@@ -185,23 +185,26 @@ The server enforces structured output via `output_config.format` with a JSON sch
 {
   "type": "object",
   "properties": {
-    "kcal":        { "type": "integer", "minimum": 1, "maximum": 9999 },
-    "explanation": { "type": "string",  "maxLength": 300 }
+    "kcal":        { "type": "integer" },
+    "explanation": { "type": "string" }
   },
-  "required": ["kcal", "explanation"]
+  "required": ["kcal"],
+  "additionalProperties": false
 }
 ```
 
-**Server-side validation after Claude responds** — the server always validates before building its
-response and never passes through raw Claude output:
+Note: `minimum`/`maximum` constraints are not used in the schema — the Anthropic API rejects them
+on `integer` fields. Range validation (1–9999) is done server-side after Claude responds.
+`explanation` is optional in both the schema and the DTO; Claude may omit it.
+
+**Server-side validation after Claude responds:**
 
 1. Parse the structured JSON from Claude's response
 2. Assert `kcal` is an integer in range [1, 9999]
-3. Assert `explanation` is a non-empty string, max 300 chars
-4. Build and return `AiEstimateResponse` from validated fields
+3. Build and return `AiEstimateResponseDto` from validated fields (`explanation` passed through as-is, may be null)
 
-Any failure in steps 1–3 (parse error, out-of-range value, missing field, Claude refusal, API
-timeout, network error to Anthropic) → `422 { "error": "ai_estimate_failed" }`.
+Any failure in steps 1–2 (parse error, out-of-range value, Claude refusal, API timeout, network
+error to Anthropic) → `422 { "error": "ai_estimate_failed" }`.
 
 ---
 
