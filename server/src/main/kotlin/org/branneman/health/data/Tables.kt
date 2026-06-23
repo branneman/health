@@ -65,6 +65,7 @@ object MealTemplateItem : Table("meal_template_item") {
     val templateId = uuid("template_id")
     val foodItemId = uuid("food_item_id")
     val grams      = decimal("grams", 7, 1)
+    val sortOrder  = integer("sort_order").default(0)
     override val primaryKey = PrimaryKey(templateId, foodItemId)
 }
 

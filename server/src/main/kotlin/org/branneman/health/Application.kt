@@ -455,10 +455,12 @@ fun Application.module(
                     templateRows.map { tRow ->
                         val items = MealTemplateItem.selectAll()
                             .where { MealTemplateItem.templateId eq tRow[MealTemplate.id] }
+                            .orderBy(MealTemplateItem.sortOrder, SortOrder.ASC)
                             .map { iRow ->
                                 MealTemplateItemDto(
                                     foodItemId = iRow[MealTemplateItem.foodItemId].toString(),
                                     grams      = iRow[MealTemplateItem.grams].toDouble(),
+                                    sortOrder  = iRow[MealTemplateItem.sortOrder],
                                 )
                             }
                         MealTemplateDto(
@@ -496,6 +498,16 @@ fun Application.module(
                             it[MealTemplate.sortOrder]    = dto.sortOrder
                             it[MealTemplate.createdAt]    = OffsetDateTime.now()
                             it[MealTemplate.updatedAt]    = OffsetDateTime.now()
+                        }
+                        dto.items.forEachIndexed { index, item ->
+                            val foodId = runCatching { UUID.fromString(item.foodItemId) }.getOrNull()
+                                ?: return@forEachIndexed
+                            MealTemplateItem.insert {
+                                it[MealTemplateItem.templateId] = newId
+                                it[MealTemplateItem.foodItemId] = foodId
+                                it[MealTemplateItem.grams]      = item.grams.toBigDecimal()
+                                it[MealTemplateItem.sortOrder]  = index
+                            }
                         }
                         dto.copy(id = newId.toString())
                     }
