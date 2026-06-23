@@ -3,7 +3,12 @@ package org.branneman.health
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import kotlinx.coroutines.test.runTest
+import org.branneman.health.FoodItemRequestDto
+import org.branneman.health.FoodLogItemRequestDto
+import org.branneman.health.FoodLogRequestDto
 import org.junit.Test
 import kotlin.test.*
 
@@ -62,5 +67,65 @@ class FoodApiTest : ApiTestBase() {
         assertEquals("3017620422003", item.barcode)
         assertEquals("openfoodfacts", item.source)
         assertTrue(item.kcalPer100g > 0.0, "Expected positive kcal value")
+    }
+
+    @Test fun `POST in food-items creates item and returns 201`() = runTest {
+        val token  = login()
+        val foodId = java.util.UUID.randomUUID()
+        val resp = client.post("$serverUrl/in/food-items") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(FoodItemRequestDto(
+                id             = foodId.toString(),
+                barcode        = null,
+                name           = "Api Test Food",
+                kcalPer100g    = 200.0,
+                proteinPer100g = 10.0,
+                carbsPer100g   = 25.0,
+                fatPer100g     = 5.0,
+                source         = "manual",
+            ))
+        }
+        assertEquals(HttpStatusCode.Created, resp.status)
+        val item = resp.body<FoodItemDto>()
+        assertEquals(foodId.toString(), item.id)
+        assertEquals("Api Test Food", item.name)
+    }
+
+    @Test fun `POST in food-items returns 409 on duplicate id`() = runTest {
+        val token  = login()
+        val foodId = java.util.UUID.randomUUID()
+        val dto = FoodItemRequestDto(foodId.toString(), null, "Dup Food", 100.0, null, null, null, "manual")
+        client.post("$serverUrl/in/food-items") {
+            bearerAuth(token); contentType(ContentType.Application.Json); setBody(dto)
+        }
+        val r2 = client.post("$serverUrl/in/food-items") {
+            bearerAuth(token); contentType(ContentType.Application.Json); setBody(dto)
+        }
+        assertEquals(HttpStatusCode.Conflict, r2.status)
+    }
+
+    @Test fun `POST in log food creates entry with nutrition snapshot`() = runTest {
+        val token  = login()
+        // First create the food item
+        val foodId = java.util.UUID.randomUUID()
+        client.post("$serverUrl/in/food-items") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(FoodItemRequestDto(foodId.toString(), null, "Log Test Food", 150.0, 5.0, 20.0, 3.0, "manual"))
+        }
+        // Then log it
+        val logId = java.util.UUID.randomUUID()
+        val resp = client.post("$serverUrl/in/log/food") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(FoodLogRequestDto(logId.toString(), "dinner", null, listOf(FoodLogItemRequestDto(foodId.toString(), 200.0))))
+        }
+        assertEquals(HttpStatusCode.Created, resp.status)
+        val entry = resp.body<LogEntryDto>()
+        assertEquals(logId.toString(), entry.id)
+        assertEquals("dinner", entry.mealType)
+        assertEquals(1, entry.items.size)
+        assertEquals(150.0, entry.items[0].kcalPer100g)
     }
 }
