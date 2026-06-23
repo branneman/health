@@ -64,8 +64,10 @@ fun Route.aiRoutes(configService: AiConfigService, estimateService: AiEstimateSe
                         }
                         part is PartData.FileItem && part.name == "image" -> {
                             imageMimeType = part.contentType?.toString()
-                            @Suppress("DEPRECATION")
-                            imageBytes = part.streamProvider().readBytes()
+                            imageBytes = withContext(Dispatchers.IO) {
+                                @Suppress("DEPRECATION")
+                                part.streamProvider().readBytes()
+                            }
                         }
                     }
                     part.dispose()
