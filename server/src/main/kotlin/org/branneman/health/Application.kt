@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.hours
 import org.branneman.health.FoodItemRequestDto
+import org.branneman.health.FoodLogRequestDto
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
@@ -629,6 +630,94 @@ fun Application.module(
                     quickAddLabel = dto.quickAddLabel,
                     items         = emptyList(),
                 ))
+            }
+
+            post("/in/log/food") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val dto    = call.receive<FoodLogRequestDto>()
+                val id     = runCatching { UUID.fromString(dto.id) }.getOrNull()
+                    ?: return@post call.respond(HttpStatusCode.BadRequest)
+                if (dto.items.isEmpty()) return@post call.respond(HttpStatusCode.BadRequest)
+                val loggedAt = dto.loggedAt
+                    ?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
+                    ?: OffsetDateTime.now()
+
+                data class SnapshotItem(
+                    val foodItemId: UUID,
+                    val grams: Double,
+                    val kcalPer100g: Double,
+                    val proteinPer100g: Double?,
+                    val carbsPer100g: Double?,
+                    val fatPer100g: Double?,
+                )
+
+                val result: Any = transaction {
+                    val exists = LogEntry.selectAll()
+                        .where { (LogEntry.id eq id) and (LogEntry.userId eq userId) }
+                        .count() > 0
+                    if (exists) return@transaction HttpStatusCode.Conflict
+
+                    val snapshots = dto.items.map { item ->
+                        val foodId = runCatching { UUID.fromString(item.foodItemId) }.getOrNull()
+                            ?: return@transaction HttpStatusCode.BadRequest
+                        val row = FoodItem.selectAll()
+                            .where { (FoodItem.id eq foodId) and (FoodItem.userId eq userId) }
+                            .singleOrNull()
+                            ?: return@transaction HttpStatusCode.NotFound
+                        SnapshotItem(
+                            foodItemId     = foodId,
+                            grams          = item.grams,
+                            kcalPer100g    = row[FoodItem.kcalPer100g].toDouble(),
+                            proteinPer100g = row[FoodItem.proteinPer100g]?.toDouble(),
+                            carbsPer100g   = row[FoodItem.carbsPer100g]?.toDouble(),
+                            fatPer100g     = row[FoodItem.fatPer100g]?.toDouble(),
+                        )
+                    }
+
+                    LogEntry.insert {
+                        it[LogEntry.id]           = id
+                        it[LogEntry.userId]       = userId
+                        it[LogEntry.loggedAt]     = loggedAt
+                        it[LogEntry.mealType]     = dto.mealType
+                        it[LogEntry.quickAddKcal] = null
+                        it[LogEntry.quickAddLabel]= null
+                        it[LogEntry.createdAt]    = OffsetDateTime.now()
+                    }
+                    snapshots.forEach { snap ->
+                        LogEntryItem.insert {
+                            it[LogEntryItem.logEntryId]     = id
+                            it[LogEntryItem.foodItemId]     = snap.foodItemId
+                            it[LogEntryItem.grams]          = snap.grams.toBigDecimal()
+                            it[LogEntryItem.kcalPer100g]    = snap.kcalPer100g.toBigDecimal()
+                            it[LogEntryItem.proteinPer100g] = snap.proteinPer100g?.toBigDecimal()
+                            it[LogEntryItem.carbsPer100g]   = snap.carbsPer100g?.toBigDecimal()
+                            it[LogEntryItem.fatPer100g]     = snap.fatPer100g?.toBigDecimal()
+                        }
+                    }
+
+                    LogEntryDto(
+                        id            = id.toString(),
+                        loggedAt      = loggedAt.toString(),
+                        mealType      = dto.mealType,
+                        quickAddKcal  = null,
+                        quickAddLabel = null,
+                        items = snapshots.map { snap ->
+                            LogEntryItemDto(
+                                foodItemId     = snap.foodItemId.toString(),
+                                grams          = snap.grams,
+                                kcalPer100g    = snap.kcalPer100g,
+                                proteinPer100g = snap.proteinPer100g,
+                                carbsPer100g   = snap.carbsPer100g,
+                                fatPer100g     = snap.fatPer100g,
+                            )
+                        },
+                    )
+                }
+
+                when (result) {
+                    is HttpStatusCode -> call.respond(result)
+                    is LogEntryDto    -> call.respond(HttpStatusCode.Created, result)
+                }
             }
 
             delete("/in/log/{id}") {
