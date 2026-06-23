@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 data class MealTemplateItemDto(
     val foodItemId: String,
     val grams: Double,
+    val sortOrder: Int = 0,
 )
 
 @Serializable
