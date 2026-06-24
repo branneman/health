@@ -31,6 +31,8 @@ import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.TodaySummaryDto
 import org.branneman.health.FoodItemDto
+import org.branneman.health.FoodItemRequestDto
+import org.branneman.health.FoodLogRequestDto
 import org.branneman.health.LogEntryDto
 import org.branneman.health.MealTemplateDto
 import org.branneman.health.ShortcutDto
@@ -144,6 +146,41 @@ class HealthApiClient(
         client.get("$baseUrl/in/food-items") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }.body()
+
+    suspend fun postFoodItem(token: String, dto: FoodItemRequestDto): FoodItemDto? {
+        val response = client.post("$baseUrl/in/food-items") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(dto)
+        }
+        if (response.status == HttpStatusCode.Conflict) return null
+        return response.body()
+    }
+
+    suspend fun searchFoodItems(token: String, q: String): List<FoodItemDto> =
+        client.get("$baseUrl/in/food-items") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            parameter("q", q)
+        }.body()
+
+    suspend fun lookupFoodByBarcode(token: String, barcode: String): FoodItemDto? {
+        val items: List<FoodItemDto> = client.get("$baseUrl/in/food-items") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            parameter("barcode", barcode)
+        }.body()
+        return items.firstOrNull()
+    }
+
+    suspend fun postFoodLog(token: String, dto: FoodLogRequestDto): LogEntryDto? {
+        val response = client.post("$baseUrl/in/log/food") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(dto)
+        }
+        if (response.status == HttpStatusCode.Conflict) return null
+        if (!response.status.isSuccess()) throw Exception("POST /in/log/food failed: ${response.status}")
+        return response.body()
+    }
 
     suspend fun getTemplates(token: String): List<MealTemplateDto> =
         client.get("$baseUrl/in/templates") {

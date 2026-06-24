@@ -2,6 +2,7 @@ package org.branneman.health
 
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.*
+import org.branneman.health.db.entities.LogEntryItemEntity
 import java.util.UUID
 
 fun uuid() = UUID.randomUUID().toString()
@@ -33,10 +34,11 @@ fun aFoodItem(
     name: String = "Test Food",
     kcalPer100g: Double = 200.0,
     source: String = "manual",
+    syncStatus: SyncStatus = SyncStatus.SYNCED,
 ) = FoodItemEntity(
     id = id, userId = userId, barcode = null, name = name,
     kcalPer100g = kcalPer100g, proteinPer100g = null, carbsPer100g = null,
-    fatPer100g = null, source = source, syncStatus = SyncStatus.SYNCED,
+    fatPer100g = null, source = source, syncStatus = syncStatus,
 )
 
 fun aShortcut(
@@ -124,4 +126,19 @@ fun aSportTonight(
     activityType = activityType,
     intensity = intensity,
     estimatedKcal = estimatedKcal,
+)
+
+fun aLogEntryItem(
+    logEntryId: String = uuid(),
+    foodItemId: String = uuid(),
+    grams: Double = 100.0,
+    kcalPer100g: Double = 200.0,
+) = LogEntryItemEntity(
+    logEntryId     = logEntryId,
+    foodItemId     = foodItemId,
+    grams          = grams,
+    kcalPer100g    = kcalPer100g,
+    proteinPer100g = null,
+    carbsPer100g   = null,
+    fatPer100g     = null,
 )
