@@ -7,4 +7,5 @@ data class MealTemplateItemEntity(
     val templateId: String,
     val foodItemId: String,
     val grams: Double,
+    val sortOrder: Int = 0,
 )
