@@ -4,14 +4,15 @@
 
 Two independent improvements to food logging:
 
-1. **AI description** — when a user logs via Ask AI with a photo only (no text), the entry
-   currently gets label "Unknown". Claude now returns a short meal description used as the
-   label fallback.
+1. **AI description** — Ask AI log entries currently use the user's raw typed text as the
+   label (e.g. "tiramisu, restaurant portion, very rich"), and fall back to "Unknown" when
+   only a photo was provided. Claude now returns a concise meal name used as the label for
+   all three Ask AI paths (text-only, text+photo, photo-only). The user's typed text becomes
+   a secondary fallback if Claude returns no description.
 
 2. **Edit log entry** — tapping a quick-add log entry opens an edit dialog (kcal + label).
    Edits sync to the server via a new `PATCH /in/log/{id}` endpoint. Food-item entries
-   (Build from scratch / templates) remain delete-only; their nutrition snapshot is still
-   immutable.
+   (Build from scratch only) remain delete-only; their nutrition snapshot is still immutable.
 
 Out of scope: editing food-item entries, editing `loggedAt` timestamp, multi-device
 conflict resolution.
@@ -55,8 +56,9 @@ data class Result(val kcal: Int, val explanation: String?, val inputText: String
 
 In `estimate()`, populate it from `result.dto.description`.
 
-In `logDirectly(kcal, label, aiDescription)`, use `label ?: aiDescription` as
-`quickAddLabel`. The user's typed text always wins; Claude's description is the fallback.
+In `logDirectly(kcal, label, aiDescription)`, use `aiDescription ?: label` as
+`quickAddLabel`. Claude's concise description wins over the user's raw typed text; the
+typed text is the fallback; null means Room falls back to `mealType` ("Unknown").
 
 `AskAiScreen` passes `state.aiDescription` through to `onUseThis` and `logDirectly`.
 
@@ -66,9 +68,21 @@ In `logDirectly(kcal, label, aiDescription)`, use `label ?: aiDescription` as
 
 ### Invariant: quick-add vs. food-item
 
-A log entry is a **quick-add entry** when `quickAddKcal IS NOT NULL` (no `log_entry_item`
-rows). Only quick-add entries are editable. Food-item entries (`quickAddKcal IS NULL`,
-with `log_entry_item` rows containing snapshotted nutrition) remain delete-only.
+There are currently four logging paths. Three of them produce **quick-add entries**
+(`quickAddKcal IS NOT NULL`, no `log_entry_item` rows):
+
+| Path | How it logs |
+|------|-------------|
+| Quick-add kcal | `QuickAddScreen` → `LogEntryEntity(quickAddKcal = kcal, quickAddLabel = label)` |
+| Ask AI | `AskAiViewModel.logDirectly()` → same shape |
+| Template / shortcut | `LogViewModel.logFromTemplate/Shortcut()` → same shape (uses `template.quickAddKcal`) |
+
+Only **Build from scratch** produces a **food-item entry** (`quickAddKcal IS NULL`, with
+`log_entry_item` rows that snapshot nutrition values at log time). These remain delete-only
+— their snapshot integrity is still immutable.
+
+The edit dialog is only shown for quick-add entries; tapping a food-item entry still opens
+the existing delete-confirm dialog.
 
 ### Shared DTO
 
@@ -164,23 +178,24 @@ New behaviour:
 
 ## Commit plan
 
-- **Commit 1** (`feat(server): add description field to AI estimate response`) — shared DTO +
+- **Commit 1** (`feat(ai): add description field to estimate response`) — shared DTO +
   server + app changes for feature 1.
-- **Commit 2** (`feat(app): add PATCH /in/log/{id} and quick-add entry editing`) — all of
+- **Commit 2** (`feat(log): add quick-add entry editing with PATCH /in/log/{id}`) — all of
   feature 2 (shared DTO, server endpoint, SyncStatus, DAO, sync service, API client, ViewModel,
-  UI). Doc updates included in this commit.
+  UI, doc updates).
 
 ---
 
 ## Test coverage
 
 ### Feature 1
-- `AiEstimateServiceTest`: description field passed through when Claude returns it; null when absent.
-- `AskAiViewModelTest`: `logDirectly` uses `aiDescription` when `label` is null.
+- **Unit** `AiEstimateServiceTest`: description passed through when Claude returns it; null when absent.
+- **Unit** `AskAiViewModelTest`: `aiDescription` used as label when present; user text used as fallback when `aiDescription` is null; null when neither present.
 
 ### Feature 2
-- `LogEntryDaoTest`: `updateQuickAdd` sets correct fields and `PENDING_UPDATE` status.
-- `LogEntrySyncServiceTest`: `PENDING_UPDATE` entries call `patchQuickAdd`; on success status → `SYNCED`.
-- `AiIntegrationTest` / server apiTest: `PATCH /in/log/{id}` happy path (204); 404 on unknown id; 422 on food-item entry.
-- `LogViewModelTest`: `editEntry` calls DAO correctly.
-- `LogScreenTest`: tapping quick-add entry opens edit dialog; tapping food-item entry opens delete dialog.
+- **App component** `LogEntryDaoTest`: `updateQuickAdd` sets correct fields and `PENDING_UPDATE` status.
+- **App component** `LogEntrySyncServiceTest` (Robolectric + in-memory Room + `MockEngine`): `PENDING_UPDATE` entries call `patchQuickAdd`; on success status → `SYNCED`.
+- **App component** `LogViewModelTest`: `editEntry` calls DAO correctly.
+- **App component** `LogScreenTest`: tapping quick-add entry opens edit dialog; tapping food-item entry opens delete dialog.
+- **Server integration** `LogEntryIntegrationTest` (UUID slot 4): `PATCH /in/log/{id}` happy path (204); 404 on unknown id / other user's entry; 422 on food-item entry.
+- **API test** `LogEntryApiTest`: `PATCH /in/log/{id}` against live server — 204 happy path; cleanup in teardown.
