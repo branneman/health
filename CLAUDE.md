@@ -67,28 +67,43 @@ implication for every implementation session:
   invariant at the database level. Postgres `body_weight` has a `UNIQUE(user_id, date)`
   constraint instead of relying on a UUID PK for the same reason.
 
-## ViewModel state lifecycle — screens must reset on re-entry
+## ViewModel state lifecycle — screens must reset on navigation
 
 `viewModel()` in this app's enum-based navigation (no NavHost) is scoped to the
 Activity. The **same ViewModel instance persists** every time a screen re-enters
 the composition. Never assume state is clean just because the composable re-appeared.
 
-Two patterns — pick the right one for each screen:
+Three patterns — pick the right one for each screen:
 
-1. **Always-fresh screens** (search, empty form): add `fun reset()` to the ViewModel
-   and call it from a `LaunchedEffect(Unit)` inside the composable. Runs once on every
-   entry. Example: `FoodSearchScreen` — the query and results must always start empty.
+1. **Ephemeral form state with no async work**: hold it in local `remember` /
+   `rememberSaveable` inside the composable, not in the ViewModel. It dies with the
+   composable automatically — no `reset()` needed. Example: `QuickAddScreen` — the
+   kcal and label fields live in local state, not in `QuickAddViewModel`.
 
-2. **Session-aware screens** (multi-step flow where the user navigates to a sub-screen
-   and returns mid-session): hoist the ViewModel one level up to `MainNav`, call
-   `vm.reset()` explicitly when starting a **new** session (e.g. on the button tap that
-   navigates there), and **not** on mid-session sub-navigation. Pass the instance down
-   explicitly so the dependency is visible. Example: `BuildFromScratchScreen` — must
-   reset when a new meal is started, but not when returning from food search.
+2. **Always-fresh screens** (search, any form that must start empty on every entry):
+   add `fun reset()` to the ViewModel, **cancel any in-flight coroutines inside
+   `reset()`** (track the job and call `job?.cancel()`), then call reset from a
+   `DisposableEffect`:
+   ```kotlin
+   DisposableEffect(Unit) { onDispose { viewModel.reset() } }
+   ```
+   This fires when the composable **leaves** composition, so the ViewModel is clean
+   *before* the next entry — no flash of stale state. **Do not use `LaunchedEffect`
+   for this**: it fires after the first frame is drawn, so stale state is always
+   visible for at least one frame. Example: `AskAiScreen`.
+
+3. **Session-aware screens** (multi-step flow where the user navigates to a sub-screen
+   and returns mid-session): hoist the ViewModel to `MainNav`, call `vm.reset()`
+   explicitly when starting a **new** session (e.g. on the button tap that navigates
+   there), and **not** on mid-session sub-navigation. Pass the instance down explicitly
+   so the dependency is visible. Example: `BuildFromScratchScreen` — reset when a new
+   meal is started, not when returning from food search.
 
 When in doubt, ask: "If the user leaves this screen and comes back later, should they
-see a blank slate or pick up where they left off?" Blank slate → reset on entry.
-Pick up → session-aware reset at the session boundary.
+see a blank slate or pick up where they left off?"
+- Blank slate, no async → local `remember`, no ViewModel needed
+- Blank slate, needs async → `DisposableEffect` + `onDispose { reset() }` + cancel coroutines in `reset()`
+- Pick up where they left off → session-aware reset at the session boundary
 
 ## Feedback loops
 
