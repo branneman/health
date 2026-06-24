@@ -22,6 +22,7 @@ fun BuildFromScratchScreen(
     onLogged: (mealType: String) -> Unit,
     onSavedAsTemplate: (name: String) -> Unit,
     onBack: (bailOutKcal: Int?) -> Unit,
+    initialTemplateId: String? = null,
     viewModel: BuildFromScratchViewModel = viewModel(),
 ) {
     val ingredients by viewModel.ingredients.collectAsStateWithLifecycle()
@@ -35,6 +36,10 @@ fun BuildFromScratchScreen(
         }
     }
 
+    LaunchedEffect(initialTemplateId) {
+        if (initialTemplateId != null) viewModel.loadFromTemplate(initialTemplateId)
+    }
+
     BuildFromScratchContent(
         ingredients      = ingredients,
         totalKcal        = totalKcal,
@@ -45,8 +50,14 @@ fun BuildFromScratchScreen(
             viewModel.addIngredient(item, grams)
             pendingItem = null
         },
-        onLog            = onLogged,
-        onSaveAsTemplate = onSavedAsTemplate,
+        onLog            = { mealType ->
+            viewModel.log(mealType)
+            onLogged(mealType)
+        },
+        onSaveAsTemplate = { name ->
+            viewModel.saveAsTemplate(name)
+            onSavedAsTemplate(name)
+        },
         onBack           = onBack,
     )
 }

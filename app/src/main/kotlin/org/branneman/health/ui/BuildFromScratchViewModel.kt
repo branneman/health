@@ -1,11 +1,15 @@
 package org.branneman.health.ui
 
-import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.branneman.health.HealthApplication
+import org.branneman.health.auth.TokenStore
+import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.FoodItemEntity
@@ -19,12 +23,23 @@ import kotlin.math.roundToInt
 
 data class Ingredient(val item: FoodItemEntity, val grams: Double)
 
-class BuildFromScratchViewModel(
+class BuildFromScratchViewModel private constructor(
+    application: Application,
     private val db: HealthDatabase,
-) : ViewModel() {
+    private val tokenStore: TokenStore,
+) : AndroidViewModel(application) {
 
-    private val job = SupervisorJob()
-    private val scope = CoroutineScope(job)
+    constructor(application: Application) : this(
+        application = application,
+        db          = (application as HealthApplication).db,
+        tokenStore  = TokenStore(application.authDataStore),
+    )
+
+    internal constructor(db: HealthDatabase, tokenStore: TokenStore) : this(
+        application = Application(),
+        db          = db,
+        tokenStore  = tokenStore,
+    )
 
     private val _ingredients = MutableStateFlow<List<Ingredient>>(emptyList())
     val ingredients: StateFlow<List<Ingredient>> = _ingredients
@@ -55,58 +70,74 @@ class BuildFromScratchViewModel(
         }
     }
 
-    suspend fun log(mealType: String, userId: String) {
-        val entryId = UUID.randomUUID().toString()
-        val entry = LogEntryEntity(
-            id            = entryId,
-            userId        = userId,
-            loggedAt      = OffsetDateTime.now().toString(),
-            mealType      = mealType,
-            quickAddKcal  = null,
-            quickAddLabel = null,
-            syncStatus    = SyncStatus.PENDING_CREATE,
-        )
-        db.logEntryDao().upsert(entry)
-
-        for (ingredient in _ingredients.value) {
-            val logItem = LogEntryItemEntity(
-                logEntryId     = entryId,
-                foodItemId     = ingredient.item.id,
-                grams          = ingredient.grams,
-                kcalPer100g    = ingredient.item.kcalPer100g,
-                proteinPer100g = ingredient.item.proteinPer100g,
-                carbsPer100g   = ingredient.item.carbsPer100g,
-                fatPer100g     = ingredient.item.fatPer100g,
-            )
-            db.logEntryDao().upsertItem(logItem)
+    fun loadFromTemplate(templateId: String) {
+        viewModelScope.launch {
+            val items = db.mealTemplateDao().getItemsForTemplate(templateId)
+            val loaded = items.mapNotNull { item ->
+                db.foodItemDao().getById(item.foodItemId)?.let { food ->
+                    Ingredient(food, item.grams)
+                }
+            }
+            _ingredients.value = loaded
+            recomputeTotal(loaded)
         }
     }
 
-    suspend fun saveAsTemplate(name: String, userId: String) {
-        val templateId = UUID.randomUUID().toString()
-        val template = MealTemplateEntity(
-            id           = templateId,
-            userId       = userId,
-            name         = name,
-            sortOrder    = null,
-            quickAddKcal = null,
-            syncStatus   = SyncStatus.PENDING_CREATE,
-        )
-        db.mealTemplateDao().upsert(template)
-
-        _ingredients.value.forEachIndexed { index, ingredient ->
-            val templateItem = MealTemplateItemEntity(
-                templateId = templateId,
-                foodItemId = ingredient.item.id,
-                grams      = ingredient.grams,
-                sortOrder  = index,
+    fun log(mealType: String) {
+        viewModelScope.launch {
+            val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val entryId = UUID.randomUUID().toString()
+            db.logEntryDao().upsert(
+                LogEntryEntity(
+                    id            = entryId,
+                    userId        = userId,
+                    loggedAt      = OffsetDateTime.now().toString(),
+                    mealType      = mealType,
+                    quickAddKcal  = null,
+                    quickAddLabel = null,
+                    syncStatus    = SyncStatus.PENDING_CREATE,
+                )
             )
-            db.mealTemplateDao().upsertItem(templateItem)
+            for (ingredient in _ingredients.value) {
+                db.logEntryDao().upsertItem(
+                    LogEntryItemEntity(
+                        logEntryId     = entryId,
+                        foodItemId     = ingredient.item.id,
+                        grams          = ingredient.grams,
+                        kcalPer100g    = ingredient.item.kcalPer100g,
+                        proteinPer100g = ingredient.item.proteinPer100g,
+                        carbsPer100g   = ingredient.item.carbsPer100g,
+                        fatPer100g     = ingredient.item.fatPer100g,
+                    )
+                )
+            }
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        scope.cancel()
+    fun saveAsTemplate(name: String) {
+        viewModelScope.launch {
+            val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val templateId = UUID.randomUUID().toString()
+            db.mealTemplateDao().upsert(
+                MealTemplateEntity(
+                    id           = templateId,
+                    userId       = userId,
+                    name         = name,
+                    sortOrder    = null,
+                    quickAddKcal = null,
+                    syncStatus   = SyncStatus.PENDING_CREATE,
+                )
+            )
+            _ingredients.value.forEachIndexed { index, ingredient ->
+                db.mealTemplateDao().upsertItem(
+                    MealTemplateItemEntity(
+                        templateId = templateId,
+                        foodItemId = ingredient.item.id,
+                        grams      = ingredient.grams,
+                        sortOrder  = index,
+                    )
+                )
+            }
+        }
     }
 }

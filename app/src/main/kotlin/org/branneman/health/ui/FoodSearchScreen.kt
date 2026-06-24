@@ -112,11 +112,8 @@ private fun ManualFoodForm(
     onSave: (String, Double, Double?, Double?, Double?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var name    by remember { mutableStateOf("") }
-    var kcal    by remember { mutableStateOf("") }
-    var protein by remember { mutableStateOf("") }
-    var carbs   by remember { mutableStateOf("") }
-    var fat     by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var kcal by remember { mutableStateOf("") }
 
     val saveEnabled = name.isNotBlank() && (kcal.toDoubleOrNull() ?: 0.0) > 0.0
 
@@ -127,17 +124,8 @@ private fun ManualFoodForm(
         OutlinedTextField(value = kcal, onValueChange = { kcal = it },
             label = { Text("kcal/100g *") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true, modifier = Modifier.fillMaxWidth().testTag("manual_kcal"))
-        OutlinedTextField(value = protein, onValueChange = { protein = it },
-            label = { Text("Protein/100g") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = carbs, onValueChange = { carbs = it },
-            label = { Text("Carbs/100g") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = fat, onValueChange = { fat = it },
-            label = { Text("Fat/100g") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true, modifier = Modifier.fillMaxWidth())
         Button(
-            onClick  = { onSave(name.trim(), kcal.toDouble(), protein.toDoubleOrNull(), carbs.toDoubleOrNull(), fat.toDoubleOrNull()) },
+            onClick  = { onSave(name.trim(), kcal.toDouble(), null, null, null) },
             enabled  = saveEnabled,
             modifier = Modifier.testTag("manual_save"),
         ) { Text("Add ingredient") }

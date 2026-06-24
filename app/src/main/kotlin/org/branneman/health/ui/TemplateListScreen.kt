@@ -21,19 +21,23 @@ import org.branneman.health.db.entities.MealTemplateEntity
 fun TemplateListScreen(
     onBack: () -> Unit,
     onLogged: (undoAction: () -> Unit) -> Unit = {},
+    onSelectIngredientTemplate: (String) -> Unit = {},
     viewModel: TemplateListViewModel = viewModel(),
 ) {
     val templates by viewModel.templates.collectAsStateWithLifecycle()
+    val ingredientTemplates by viewModel.ingredientTemplates.collectAsStateWithLifecycle()
 
     Scaffold { padding ->
         TemplateListContent(
-            templates     = templates,
-            onLogTemplate = { template, multiplier ->
+            templates                  = templates,
+            ingredientTemplates        = ingredientTemplates,
+            onLogTemplate              = { template, multiplier ->
                 viewModel.logFromTemplate(template, multiplier)
                 onLogged { viewModel.undoLog() }
             },
-            onBack   = onBack,
-            modifier = Modifier.padding(padding),
+            onSelectIngredientTemplate = onSelectIngredientTemplate,
+            onBack                     = onBack,
+            modifier                   = Modifier.padding(padding),
         )
     }
 }
@@ -43,6 +47,8 @@ fun TemplateListContent(
     templates: List<MealTemplateEntity>,
     onLogTemplate: (MealTemplateEntity, Float) -> Unit,
     onBack: () -> Unit,
+    ingredientTemplates: List<MealTemplateEntity> = emptyList(),
+    onSelectIngredientTemplate: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var selectedTemplate by remember { mutableStateOf<MealTemplateEntity?>(null) }
@@ -56,7 +62,7 @@ fun TemplateListContent(
             Text("← Back")
         }
 
-        if (templates.isEmpty()) {
+        if (templates.isEmpty() && ingredientTemplates.isEmpty()) {
             Spacer(Modifier.height(24.dp))
             Text(
                 text  = "No templates yet — add one in Settings → Templates.",
@@ -77,6 +83,24 @@ fun TemplateListContent(
                         modifier = Modifier.clickable { selectedTemplate = template },
                     )
                     HorizontalDivider()
+                }
+                if (ingredientTemplates.isNotEmpty()) {
+                    item {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text  = "Ingredient templates",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
+                    items(ingredientTemplates, key = { "i_${it.id}" }) { template ->
+                        ListItem(
+                            headlineContent   = { Text(template.name) },
+                            supportingContent = { Text("Build from ingredients") },
+                            modifier          = Modifier.clickable { onSelectIngredientTemplate(template.id) },
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }

@@ -48,6 +48,10 @@ class TemplateListViewModel private constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val ingredientTemplates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observeAll()
+        .map { list -> list.filter { it.quickAddKcal == null }.sortedBy { it.name } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun logFromTemplate(template: MealTemplateEntity, multiplier: Float) {
         val baseKcal = template.quickAddKcal ?: return
         viewModelScope.launch {

@@ -1,34 +1,53 @@
 package org.branneman.health.ui
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.branneman.health.aFoodItem
+import org.branneman.health.auth.TokenStore
 import org.branneman.health.db.HealthDatabase
-import org.branneman.health.db.SyncStatus
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 import kotlin.test.assertEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class BuildFromScratchViewModelTest {
 
+    private val testDispatcher = StandardTestDispatcher()
     private lateinit var db: HealthDatabase
+    private lateinit var tokenStore: TokenStore
     private lateinit var vm: BuildFromScratchViewModel
 
     @Before fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), HealthDatabase::class.java)
             .allowMainThreadQueries().build()
-        vm = BuildFromScratchViewModel(db)
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope       = CoroutineScope(testDispatcher),
+            produceFile = {
+                File.createTempFile("test_auth_bfsvmtest", ".preferences_pb").also { it.deleteOnExit() }
+            },
+        )
+        tokenStore = TokenStore(dataStore)
+        vm = BuildFromScratchViewModel(db, tokenStore)
     }
 
-    @After fun tearDown() { db.close() }
+    @After fun tearDown() { db.close(); Dispatchers.resetMain() }
 
     @Test
     fun `running kcal total is sum of ingredient kcal contributions`() = runTest {
@@ -66,11 +85,12 @@ class BuildFromScratchViewModelTest {
 
     @Test
     fun `log writes LogEntryEntity and items to Room`() = runTest {
+        tokenStore.save("test-token", "9999-12-31T00:00:00Z", "test-user")
         val item = aFoodItem(kcalPer100g = 200.0)
         db.foodItemDao().upsert(item)
         vm.addIngredient(item, 100.0)
-        vm.log("lunch", item.userId)
-        val entries = db.logEntryDao().getByStatus(SyncStatus.PENDING_CREATE)
+        vm.log("lunch")
+        val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(1, entries.size)
         assertEquals("lunch", entries[0].mealType)
         val logItems = db.logEntryDao().getItemsForEntry(entries[0].id)

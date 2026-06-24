@@ -137,6 +137,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
     var selectedFoodItemForLog      by remember { mutableStateOf<FoodItemEntity?>(null) }
     var selectedFoodItemForTemplate by remember { mutableStateOf<FoodItemEntity?>(null) }
     var editingTemplateId           by remember { mutableStateOf<String?>(null) }
+    var loadIngredientTemplateId    by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(currentTab) {
         if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
@@ -145,6 +146,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
             showLogSheet = false
             pendingLogUndoAction = null
             quickAddPrefill = null
+            loadIngredientTemplateId = null
         }
     }
 
@@ -191,6 +193,10 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                 pendingLogUndoAction = undoAction
                                 logPage = LogPage.Main
                             },
+                            onSelectIngredientTemplate = { templateId ->
+                                loadIngredientTemplateId = templateId
+                                logPage = LogPage.BuildFromScratch
+                            },
                         )
                         LogPage.QuickAdd -> QuickAddScreen(
                             onBack         = { logPage = LogPage.Main; quickAddPrefill = null },
@@ -221,9 +227,14 @@ private fun MainNav(authViewModel: AuthViewModel) {
                             pendingFoodItem           = selectedFoodItemForLog,
                             onPendingFoodItemConsumed = { selectedFoodItemForLog = null },
                             onAddIngredient           = { logPage = LogPage.FoodSearch },
-                            onLogged                  = { logPage = LogPage.Main },
+                            initialTemplateId         = loadIngredientTemplateId,
+                            onLogged                  = {
+                                loadIngredientTemplateId = null
+                                logPage = LogPage.Main
+                            },
                             onSavedAsTemplate         = { },
                             onBack                    = { bailOutKcal ->
+                                loadIngredientTemplateId = null
                                 if (bailOutKcal != null) {
                                     quickAddPrefill = Pair(bailOutKcal, null)
                                     logPage = LogPage.QuickAdd
