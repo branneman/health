@@ -46,6 +46,10 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.androidx.browser)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
 }
 
 val localProps = Properties().apply {
