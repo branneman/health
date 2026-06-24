@@ -57,7 +57,8 @@ class FoodSearchViewModel private constructor(
                 if (q.isBlank()) { _results.value = emptyList(); return@collect }
                 val token = tokenStore.tokenFlow.first()?.token ?: return@collect
                 val localResults = db.foodItemDao().searchByName(q)
-                val remoteResults = runCatching { api.searchFoodItems(token, q) }
+                val remoteResults = runCatching { api.searchOfdCatalog(token, q) }
+                    .onSuccess { _isOffline.value = false }
                     .onFailure { _isOffline.value = true }
                     .getOrDefault(emptyList())
                 val localIds = localResults.map { it.id }.toSet()

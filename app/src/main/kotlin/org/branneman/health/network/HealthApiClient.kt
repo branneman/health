@@ -163,6 +163,12 @@ class HealthApiClient(
             parameter("q", q)
         }.body()
 
+    suspend fun searchOfdCatalog(token: String, q: String): List<FoodItemDto> =
+        client.get("$baseUrl/food/search") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            parameter("q", q)
+        }.body()
+
     suspend fun lookupFoodByBarcode(token: String, barcode: String): FoodItemDto? {
         val items: List<FoodItemDto> = client.get("$baseUrl/in/food-items") {
             header(HttpHeaders.Authorization, "Bearer $token")
