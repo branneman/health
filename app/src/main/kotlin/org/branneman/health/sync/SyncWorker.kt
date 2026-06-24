@@ -33,6 +33,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         }
 
         BodyWeightSyncService(apiClient, db).sync(stored.token)
+        FoodItemSyncService(apiClient, db).pushPending(stored.token)
         LogEntrySyncService(apiClient, db).sync(stored.token)
         MealTemplateSyncService(apiClient, db).pushPending(stored.token)
         ShortcutSyncService(apiClient, db).pushPending(stored.token)

@@ -1,9 +1,11 @@
 package org.branneman.health.sync
 
 import org.branneman.health.MealTemplateDto
+import org.branneman.health.MealTemplateItemDto
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.MealTemplateEntity
+import org.branneman.health.db.entities.MealTemplateItemEntity
 import org.branneman.health.network.HealthApiClient
 
 class MealTemplateSyncService(
@@ -16,8 +18,12 @@ class MealTemplateSyncService(
         if (pendingCreate.isEmpty() && pendingDelete.isEmpty()) return
 
         val allActive = pendingCreate + db.mealTemplateDao().getByStatus(SyncStatus.SYNCED)
+        val dtos = allActive.map { template ->
+            val items = db.mealTemplateDao().getItemsForTemplate(template.id)
+            template.toDto(items)
+        }
         runCatching {
-            api.putTemplates(token, allActive.map { it.toDto() })
+            api.putTemplates(token, dtos)
         }.onSuccess {
             allActive.forEach { db.mealTemplateDao().updateSyncStatus(it.id, SyncStatus.SYNCED) }
             pendingDelete.forEach { db.mealTemplateDao().deleteById(it.id) }
@@ -36,13 +42,26 @@ class MealTemplateSyncService(
                 syncStatus   = SyncStatus.SYNCED,
             )
         })
+        templates.forEach { dto ->
+            db.mealTemplateDao().deleteItemsForTemplate(dto.id)
+            db.mealTemplateDao().upsertAllItems(
+                dto.items.mapIndexed { index, item ->
+                    MealTemplateItemEntity(
+                        templateId = dto.id,
+                        foodItemId = item.foodItemId,
+                        grams      = item.grams,
+                        sortOrder  = item.sortOrder.takeIf { it != 0 } ?: index,
+                    )
+                }
+            )
+        }
     }
 
-    private fun MealTemplateEntity.toDto() = MealTemplateDto(
+    private fun MealTemplateEntity.toDto(items: List<MealTemplateItemEntity> = emptyList()) = MealTemplateDto(
         id           = id,
         name         = name,
         sortOrder    = sortOrder,
         quickAddKcal = quickAddKcal,
-        items        = emptyList(),
+        items        = items.map { MealTemplateItemDto(foodItemId = it.foodItemId, grams = it.grams, sortOrder = it.sortOrder) },
     )
 }
