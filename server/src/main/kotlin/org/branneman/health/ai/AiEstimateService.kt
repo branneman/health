@@ -16,7 +16,7 @@ import kotlinx.serialization.json.Json
 import org.branneman.health.AiEstimateResponseDto
 
 @Serializable
-data class ClaudeEstimate(val kcal: Int, val explanation: String? = null)
+data class ClaudeEstimate(val kcal: Int, val explanation: String? = null, val description: String? = null)
 
 class ClaudeEstimateException(message: String, cause: Throwable? = null) :
     RuntimeException(message, cause)
@@ -39,8 +39,9 @@ class HttpAnthropicGateway : AnthropicGateway {
                 "properties",
                 JsonValue.from(
                     mapOf(
-                        "kcal" to mapOf("type" to "integer"),
-                        "explanation" to mapOf("type" to "string"),
+                        "kcal"         to mapOf("type" to "integer"),
+                        "explanation"  to mapOf("type" to "string"),
+                        "description"  to mapOf("type" to "string"),
                     )
                 )
             )
@@ -91,7 +92,9 @@ class HttpAnthropicGateway : AnthropicGateway {
                 "or shown meal. Return only a JSON object with a required 'kcal' integer (1–9999) " +
                 "and an optional 'explanation' string. If you include an explanation, keep it to " +
                 "one short sentence starting with the calorie count, e.g. '350 kcal — typical " +
-                "cocktail with one spirit measure and mixer.'"
+                "cocktail with one spirit measure and mixer.' " +
+                "Also include an optional 'description' string: a very short meal name (2–5 words), " +
+                "e.g. 'tiramisu' or 'grilled chicken salad'."
             )
             .addUserMessageOfBlockParams(blocks)
             .outputConfig(outputConfig)
@@ -135,6 +138,6 @@ class AiEstimateService(private val gateway: AnthropicGateway) {
             throw ClaudeEstimateException("kcal out of range: ${result.kcal}")
         }
 
-        return AiEstimateResponseDto(result.kcal, result.explanation)
+        return AiEstimateResponseDto(result.kcal, result.explanation, result.description)
     }
 }

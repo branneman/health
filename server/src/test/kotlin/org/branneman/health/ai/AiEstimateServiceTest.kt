@@ -5,6 +5,7 @@ import org.branneman.health.AiEstimateResponseDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class AiEstimateServiceTest {
@@ -144,5 +145,33 @@ class AiEstimateServiceTest {
         val service = makeService { ClaudeEstimate(1, null) }
         val result = service.estimate("key", "food", null, null)
         assertEquals(AiEstimateResponseDto(1, null), result)
+    }
+
+    @Test
+    fun `description field is passed through when Claude returns it`() {
+        val service = makeService { ClaudeEstimate(500, "Short sentence.", "grilled chicken salad") }
+        val result = service.estimate("key", "chicken salad", null, null)
+        assertEquals("grilled chicken salad", result.description)
+    }
+
+    @Test
+    fun `description field is null when Claude omits it`() {
+        val service = makeService { ClaudeEstimate(500, null, null) }
+        val result = service.estimate("key", "food", null, null)
+        assertNull(result.description)
+    }
+
+    @Test
+    fun `AiEstimateResponseDto serializes without description field when null`() {
+        val dto = AiEstimateResponseDto(350, null, null)
+        val json = Json.encodeToString(AiEstimateResponseDto.serializer(), dto)
+        assertFalse(json.contains("description"))
+    }
+
+    @Test
+    fun `AiEstimateResponseDto deserializes when description field is present`() {
+        val json = """{"kcal":500,"description":"tiramisu"}"""
+        val dto = Json.decodeFromString(AiEstimateResponseDto.serializer(), json)
+        assertEquals("tiramisu", dto.description)
     }
 }

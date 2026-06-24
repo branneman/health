@@ -48,8 +48,8 @@ fun AskAiScreen(
         onClearImage    = viewModel::clearImage,
         canEstimate     = canEstimate,
         onEstimate      = viewModel::estimate,
-        onUseThis       = { kcal, label ->
-            viewModel.logDirectly(kcal, label)
+        onUseThis       = { kcal, label, aiDescription ->
+            viewModel.logDirectly(kcal, label, aiDescription)
             onUseThis(kcal, label) { viewModel.undoDirectLog() }
         },
         onEditAmount    = { kcal, label -> onEditAmount(kcal, label) },
@@ -69,7 +69,7 @@ fun AskAiContent(
     onClearImage: () -> Unit,
     canEstimate: Boolean,
     onEstimate: () -> Unit,
-    onUseThis: (kcal: Int, label: String?) -> Unit,
+    onUseThis: (kcal: Int, label: String?, aiDescription: String?) -> Unit,
     onEditAmount: (kcal: Int, label: String?) -> Unit,
     onDiscard: () -> Unit,
     onNeedsAiConfig: () -> Unit,
@@ -98,7 +98,7 @@ fun AskAiContent(
                     )
                 }
                 Button(
-                    onClick  = { onUseThis(state.kcal, state.inputText) },
+                    onClick  = { onUseThis(state.kcal, state.inputText, state.aiDescription) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("ask_ai_use_this"),

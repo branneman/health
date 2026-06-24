@@ -27,7 +27,7 @@ import java.time.OffsetDateTime
 sealed interface AskAiState {
     data object Idle : AskAiState
     data object Loading : AskAiState
-    data class Result(val kcal: Int, val explanation: String?, val inputText: String?) : AskAiState
+    data class Result(val kcal: Int, val explanation: String?, val inputText: String?, val aiDescription: String?) : AskAiState
     sealed interface Error : AskAiState {
         data object NotConfigured : Error
         data object KeyExpired : Error
@@ -53,12 +53,19 @@ class AskAiViewModel private constructor(
         tokenStore  = TokenStore(application.authDataStore),
     )
 
-    internal constructor(application: Application, repository: AiRepository) : this(
-        application = application,
-        repository  = repository,
-        db          = HealthDatabase.buildInMemory(application),
-        tokenStore  = TokenStore(application.authDataStore),
-    )
+    internal companion object {
+        fun forTest(
+            application: Application,
+            repository:  AiRepository,
+            db:          HealthDatabase = HealthDatabase.buildInMemory(application),
+            tokenStore:  TokenStore     = TokenStore(application.authDataStore),
+        ) = AskAiViewModel(
+            application = application,
+            repository  = repository,
+            db          = db,
+            tokenStore  = tokenStore,
+        )
+    }
 
     val state: MutableStateFlow<AskAiState>     = MutableStateFlow(AskAiState.Idle)
     val text: MutableStateFlow<String>           = MutableStateFlow("")
@@ -99,7 +106,12 @@ class AskAiViewModel private constructor(
             )
             state.value = when (result) {
                 is AiEstimateApiResult.Success     ->
-                    AskAiState.Result(result.dto.kcal, result.dto.explanation, text.value.trim().ifEmpty { null })
+                    AskAiState.Result(
+                        kcal          = result.dto.kcal,
+                        explanation   = result.dto.explanation,
+                        inputText     = text.value.trim().ifEmpty { null },
+                        aiDescription = result.dto.description,
+                    )
                 AiEstimateApiResult.NotConfigured  -> AskAiState.Error.NotConfigured
                 AiEstimateApiResult.KeyExpired     -> AskAiState.Error.KeyExpired
                 AiEstimateApiResult.EstimateFailed -> AskAiState.Error.EstimateFailed
@@ -117,7 +129,7 @@ class AskAiViewModel private constructor(
         imageBytes = null
     }
 
-    fun logDirectly(kcal: Int, label: String?) {
+    fun logDirectly(kcal: Int, label: String?, aiDescription: String?) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
             val entity = LogEntryEntity(
@@ -125,7 +137,7 @@ class AskAiViewModel private constructor(
                 loggedAt      = OffsetDateTime.now().toString(),
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
-                quickAddLabel = label?.trim()?.ifEmpty { null },
+                quickAddLabel = (aiDescription ?: label)?.trim()?.ifEmpty { null },
             )
             db.logEntryDao().upsert(entity)
             lastLogged = entity

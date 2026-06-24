@@ -6,4 +6,5 @@ import kotlinx.serialization.Serializable
 data class AiEstimateResponseDto(
     val kcal: Int,
     val explanation: String? = null,
+    val description: String? = null,
 )
