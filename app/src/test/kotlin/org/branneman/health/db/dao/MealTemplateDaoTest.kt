@@ -128,4 +128,35 @@ class MealTemplateDaoTest {
         assertNull(dao.getById(id))
         assertTrue(dao.observeAll().first().isEmpty())
     }
+
+    @Test
+    fun `getItemsForTemplate respects sortOrder ascending`() = runTest {
+        val templateId = uuid()
+        val foodId1 = uuid()
+        val foodId2 = uuid()
+        val foodId3 = uuid()
+        dao.upsert(aMealTemplate(id = templateId, userId = uuid()))
+        dao.upsertItem(MealTemplateItemEntity(templateId = templateId, foodItemId = foodId2, grams = 100.0, sortOrder = 1))
+        dao.upsertItem(MealTemplateItemEntity(templateId = templateId, foodItemId = foodId3, grams = 50.0,  sortOrder = 2))
+        dao.upsertItem(MealTemplateItemEntity(templateId = templateId, foodItemId = foodId1, grams = 200.0, sortOrder = 0))
+        val items = dao.getItemsForTemplate(templateId)
+        assertEquals(3, items.size)
+        assertEquals(foodId1, items[0].foodItemId)
+        assertEquals(foodId2, items[1].foodItemId)
+        assertEquals(foodId3, items[2].foodItemId)
+    }
+
+    @Test
+    fun `deleteItemsForTemplate removes only that template's items`() = runTest {
+        val templateId1 = uuid()
+        val templateId2 = uuid()
+        val foodId = uuid()
+        dao.upsert(aMealTemplate(id = templateId1, userId = uuid()))
+        dao.upsert(aMealTemplate(id = templateId2, userId = uuid()))
+        dao.upsertItem(MealTemplateItemEntity(templateId = templateId1, foodItemId = foodId, grams = 100.0))
+        dao.upsertItem(MealTemplateItemEntity(templateId = templateId2, foodItemId = foodId, grams = 200.0))
+        dao.deleteItemsForTemplate(templateId1)
+        assertTrue(dao.getItemsForTemplate(templateId1).isEmpty())
+        assertEquals(1, dao.getItemsForTemplate(templateId2).size)
+    }
 }

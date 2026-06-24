@@ -26,6 +26,12 @@ interface MealTemplateDao {
     @Query("SELECT * FROM meal_template_item WHERE templateId = :templateId")
     suspend fun getItems(templateId: String): List<MealTemplateItemEntity>
 
+    @Query("SELECT * FROM meal_template_item WHERE templateId = :templateId ORDER BY sortOrder ASC")
+    suspend fun getItemsForTemplate(templateId: String): List<MealTemplateItemEntity>
+
+    @Query("DELETE FROM meal_template_item WHERE templateId = :templateId")
+    suspend fun deleteItemsForTemplate(templateId: String)
+
     @Upsert
     suspend fun upsert(entity: MealTemplateEntity)
 
