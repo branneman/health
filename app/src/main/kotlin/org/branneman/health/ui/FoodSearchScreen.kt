@@ -26,6 +26,8 @@ fun FoodSearchScreen(
     val selectedItem by viewModel.selectedItem.collectAsStateWithLifecycle()
     val isOffline    by viewModel.isOffline.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) { viewModel.resetSearch() }
+
     LaunchedEffect(selectedItem) {
         selectedItem?.let {
             onItemSelected(it)

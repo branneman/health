@@ -55,6 +55,11 @@ class BuildFromScratchViewModel private constructor(
         }
     }
 
+    fun reset() {
+        _ingredients.value = emptyList()
+        _totalKcal.value = 0
+    }
+
     fun addIngredient(item: FoodItemEntity, grams: Double) {
         val updated = _ingredients.value + Ingredient(item, grams)
         _ingredients.value = updated

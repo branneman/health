@@ -32,6 +32,7 @@ import org.branneman.health.log.LogViewModel
 import org.branneman.health.ui.AiConfigScreen
 import org.branneman.health.ui.AskAiScreen
 import org.branneman.health.ui.BuildFromScratchScreen
+import org.branneman.health.ui.BuildFromScratchViewModel
 import org.branneman.health.ui.ConnectPolarScreen
 import org.branneman.health.ui.DashboardScreen
 import org.branneman.health.ui.DrinkButtonsScreen
@@ -166,6 +167,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             val logVm: LogViewModel = viewModel()
+        val buildVm: BuildFromScratchViewModel = viewModel()
 
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
@@ -194,6 +196,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                 logPage = LogPage.Main
                             },
                             onSelectIngredientTemplate = { templateId ->
+                                buildVm.reset()
                                 loadIngredientTemplateId = templateId
                                 logPage = LogPage.BuildFromScratch
                             },
@@ -242,6 +245,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                     logPage = LogPage.Main
                                 }
                             },
+                            viewModel                 = buildVm,
                         )
                         LogPage.FoodSearch -> FoodSearchScreen(
                             onItemSelected = { item -> selectedFoodItemForLog = item; logPage = LogPage.BuildFromScratch },
@@ -253,7 +257,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                             onFromTemplate   = { showLogSheet = false; logPage = LogPage.TemplateList },
                             onQuickAdd       = { showLogSheet = false; logPage = LogPage.QuickAdd },
                             onAskAi          = { showLogSheet = false; logPage = LogPage.AskAi },
-                            onBuildFromScratch = { showLogSheet = false; logPage = LogPage.BuildFromScratch },
+                            onBuildFromScratch = { showLogSheet = false; buildVm.reset(); logPage = LogPage.BuildFromScratch },
                             onDismiss        = { showLogSheet = false },
                         )
                     }

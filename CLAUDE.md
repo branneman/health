@@ -67,6 +67,29 @@ implication for every implementation session:
   invariant at the database level. Postgres `body_weight` has a `UNIQUE(user_id, date)`
   constraint instead of relying on a UUID PK for the same reason.
 
+## ViewModel state lifecycle — screens must reset on re-entry
+
+`viewModel()` in this app's enum-based navigation (no NavHost) is scoped to the
+Activity. The **same ViewModel instance persists** every time a screen re-enters
+the composition. Never assume state is clean just because the composable re-appeared.
+
+Two patterns — pick the right one for each screen:
+
+1. **Always-fresh screens** (search, empty form): add `fun reset()` to the ViewModel
+   and call it from a `LaunchedEffect(Unit)` inside the composable. Runs once on every
+   entry. Example: `FoodSearchScreen` — the query and results must always start empty.
+
+2. **Session-aware screens** (multi-step flow where the user navigates to a sub-screen
+   and returns mid-session): hoist the ViewModel one level up to `MainNav`, call
+   `vm.reset()` explicitly when starting a **new** session (e.g. on the button tap that
+   navigates there), and **not** on mid-session sub-navigation. Pass the instance down
+   explicitly so the dependency is visible. Example: `BuildFromScratchScreen` — must
+   reset when a new meal is started, but not when returning from food search.
+
+When in doubt, ask: "If the user leaves this screen and comes back later, should they
+see a blank slate or pick up where they left off?" Blank slate → reset on entry.
+Pick up → session-aware reset at the session boundary.
+
 ## Feedback loops
 
 Always optimise for the shortest possible feedback cycle. Before writing code and pushing

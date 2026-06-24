@@ -86,6 +86,12 @@ class FoodSearchViewModel private constructor(
         }
     }
 
+    fun resetSearch() {
+        _query.value = ""
+        _results.value = emptyList()
+        _isOffline.value = false
+    }
+
     fun onQueryChange(q: String) { _query.value = q }
 
     fun onBarcodeScanned(barcode: String) {
