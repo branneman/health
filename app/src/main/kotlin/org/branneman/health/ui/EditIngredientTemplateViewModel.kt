@@ -78,6 +78,14 @@ class EditIngredientTemplateViewModel private constructor(
         }
     }
 
+    fun delete(onDeleted: () -> Unit) {
+        val id = templateId ?: return
+        viewModelScope.launch {
+            db.mealTemplateDao().updateSyncStatus(id, SyncStatus.PENDING_DELETE)
+            onDeleted()
+        }
+    }
+
     private fun saveWith(userId: String) {
         viewModelScope.launch {
             val id = templateId ?: UUID.randomUUID().toString().also { templateId = it }

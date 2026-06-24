@@ -1,5 +1,15 @@
 package org.branneman.health.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,12 +17,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 import org.branneman.health.db.entities.FoodItemEntity
 
 @Composable
@@ -21,10 +39,16 @@ fun FoodSearchScreen(
     onBack: () -> Unit,
     viewModel: FoodSearchViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
     val query        by viewModel.query.collectAsStateWithLifecycle()
     val results      by viewModel.results.collectAsStateWithLifecycle()
     val selectedItem by viewModel.selectedItem.collectAsStateWithLifecycle()
     val isOffline    by viewModel.isOffline.collectAsStateWithLifecycle()
+    var showScanner  by remember { mutableStateOf(false) }
+
+    val cameraPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) showScanner = true }
 
     LaunchedEffect(Unit) { viewModel.resetSearch() }
 
@@ -42,10 +66,27 @@ fun FoodSearchScreen(
         isOffline       = isOffline,
         onQueryChange   = viewModel::onQueryChange,
         onSelectResult  = viewModel::selectResult,
-        onBarcodeButton = { /* CameraX barcode scanner launched from screen */ },
+        onBarcodeButton = {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_GRANTED) {
+                showScanner = true
+            } else {
+                cameraPermission.launch(Manifest.permission.CAMERA)
+            }
+        },
         onManualCreate  = viewModel::createManual,
         onBack          = onBack,
     )
+
+    if (showScanner) {
+        BarcodeScannerOverlay(
+            onBarcodeDetected = { barcode ->
+                showScanner = false
+                viewModel.onBarcodeScanned(barcode)
+            },
+            onDismiss = { showScanner = false },
+        )
+    }
 }
 
 @Composable
@@ -131,5 +172,75 @@ private fun ManualFoodForm(
             enabled  = saveEnabled,
             modifier = Modifier.testTag("manual_save"),
         ) { Text("Add ingredient") }
+    }
+}
+
+@Composable
+private fun BarcodeScannerOverlay(
+    onBarcodeDetected: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = context as LifecycleOwner
+    val scanned = remember { mutableStateOf(false) }
+    val scanner = remember { BarcodeScanning.getClient() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                val previewView = PreviewView(ctx)
+                val executor = ContextCompat.getMainExecutor(ctx)
+                val future = ProcessCameraProvider.getInstance(ctx)
+                future.addListener({
+                    val cameraProvider = future.get()
+                    val preview = Preview.Builder().build()
+                        .also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                    val analysis = ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                    analysis.setAnalyzer(executor) { proxy ->
+                        val mediaImage = proxy.image
+                        if (mediaImage != null && !scanned.value) {
+                            val inputImage = InputImage.fromMediaImage(
+                                mediaImage, proxy.imageInfo.rotationDegrees,
+                            )
+                            scanner.process(inputImage)
+                                .addOnSuccessListener { barcodes ->
+                                    barcodes.firstOrNull()?.rawValue?.let { barcode ->
+                                        if (!scanned.value) {
+                                            scanned.value = true
+                                            onBarcodeDetected(barcode)
+                                        }
+                                    }
+                                }
+                                .addOnCompleteListener { proxy.close() }
+                        } else {
+                            proxy.close()
+                        }
+                    }
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        analysis,
+                    )
+                }, executor)
+                previewView
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+        TextButton(
+            onClick  = onDismiss,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp),
+        ) {
+            Text("✕ Close", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        }
     }
 }

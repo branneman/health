@@ -302,6 +302,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                         onPendingFoodItemConsumed = { selectedFoodItemForTemplate = null },
                         onAddIngredient           = { settingsPage = SettingsPage.TemplatesFoodSearch },
                         onSaved                   = { settingsPage = SettingsPage.Templates },
+                        onDeleted                 = { settingsPage = SettingsPage.Templates },
                         onBack                    = { settingsPage = SettingsPage.Templates },
                     )
                     SettingsPage.TemplatesFoodSearch -> FoodSearchScreen(

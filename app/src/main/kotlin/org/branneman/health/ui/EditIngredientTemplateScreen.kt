@@ -21,6 +21,7 @@ fun EditIngredientTemplateScreen(
     onPendingFoodItemConsumed: () -> Unit,
     onAddIngredient: () -> Unit,
     onSaved: () -> Unit,
+    onDeleted: () -> Unit = {},
     onBack: () -> Unit,
     viewModel: EditIngredientTemplateViewModel = viewModel(),
 ) {
@@ -90,6 +91,15 @@ fun EditIngredientTemplateScreen(
             enabled  = name.isNotBlank() && ingredients.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Save template") }
+        if (templateId != null) {
+            Spacer(Modifier.height(4.dp))
+            TextButton(
+                onClick  = { viewModel.delete(onDeleted) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Delete template", color = MaterialTheme.colorScheme.error)
+            }
+        }
     }
 }
 
