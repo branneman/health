@@ -60,6 +60,7 @@ class TemplatesScreenTest {
     @Test fun `add dialog Save is disabled when name is blank`() {
         render()
         compose.onNodeWithTag("add_template_button").performClick()
+        compose.onNodeWithTag("add_template_kcal_total").performClick()
         compose.onNodeWithTag("template_kcal_field").performTextInput("500")
         compose.onNodeWithTag("template_save_button").assertIsNotEnabled()
     }
@@ -67,6 +68,7 @@ class TemplatesScreenTest {
     @Test fun `add dialog Save is disabled when kcal is empty`() {
         render()
         compose.onNodeWithTag("add_template_button").performClick()
+        compose.onNodeWithTag("add_template_kcal_total").performClick()
         compose.onNodeWithTag("template_name_field").performTextInput("Pasta")
         compose.onNodeWithTag("template_save_button").assertIsNotEnabled()
     }
@@ -75,6 +77,7 @@ class TemplatesScreenTest {
         var result: Pair<String, Int>? = null
         render(onCreate = { name, kcal -> result = name to kcal })
         compose.onNodeWithTag("add_template_button").performClick()
+        compose.onNodeWithTag("add_template_kcal_total").performClick()
         compose.onNodeWithTag("template_name_field").performTextInput("Chicken soup")
         compose.onNodeWithTag("template_kcal_field").performTextInput("380")
         compose.onNodeWithTag("template_save_button").performClick()

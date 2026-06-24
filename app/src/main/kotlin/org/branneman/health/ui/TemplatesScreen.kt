@@ -19,15 +19,19 @@ import org.branneman.health.db.entities.MealTemplateEntity
 @Composable
 fun TemplatesScreen(
     onBack: () -> Unit,
+    onEditIngredientTemplate: (String) -> Unit = {},
+    onNewIngredientTemplate: () -> Unit = {},
     viewModel: TemplatesViewModel = viewModel(),
 ) {
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     TemplatesContent(
-        templates = templates,
-        onCreate  = { name, kcal -> viewModel.create(name, kcal) },
-        onUpdate  = { id, name, kcal -> viewModel.update(id, name, kcal) },
-        onDelete  = { id -> viewModel.delete(id) },
-        onBack    = onBack,
+        templates                = templates,
+        onCreate                 = { name, kcal -> viewModel.create(name, kcal) },
+        onUpdate                 = { id, name, kcal -> viewModel.update(id, name, kcal) },
+        onDelete                 = { id -> viewModel.delete(id) },
+        onBack                   = onBack,
+        onEditIngredientTemplate = onEditIngredientTemplate,
+        onNewIngredientTemplate  = onNewIngredientTemplate,
     )
 }
 
@@ -38,9 +42,12 @@ fun TemplatesContent(
     onUpdate: (String, String, Int) -> Unit,
     onDelete: (String) -> Unit,
     onBack: () -> Unit,
+    onEditIngredientTemplate: (String) -> Unit = {},
+    onNewIngredientTemplate: () -> Unit = {},
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
-    var editTarget by remember { mutableStateOf<MealTemplateEntity?>(null) }
+    var showAddDialog     by remember { mutableStateOf(false) }
+    var showAddTypeSheet  by remember { mutableStateOf(false) }
+    var editTarget        by remember { mutableStateOf<MealTemplateEntity?>(null) }
 
     Column(
         modifier = Modifier
@@ -61,7 +68,7 @@ fun TemplatesContent(
                 style = MaterialTheme.typography.titleLarge,
             )
             TextButton(
-                onClick  = { showAddDialog = true },
+                onClick  = { showAddTypeSheet = true },
                 modifier = Modifier.testTag("add_template_button"),
             ) {
                 Text("+ Add")
@@ -78,23 +85,41 @@ fun TemplatesContent(
         } else {
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(templates, key = { it.id }) { template ->
+                    val isIngredientTemplate = template.quickAddKcal == null
                     ListItem(
                         headlineContent   = {
                             val prefix = if (template.sortOrder != null) "📌 " else ""
                             Text("$prefix${template.name}")
                         },
                         supportingContent = {
-                            val kcalText = template.quickAddKcal?.let { "$it kcal" } ?: "—"
-                            Text(kcalText)
+                            if (isIngredientTemplate) {
+                                Text("ingredient template")
+                            } else {
+                                Text("${template.quickAddKcal} kcal")
+                            }
                         },
                         modifier = Modifier
                             .testTag("template_item_${template.id}")
-                            .clickable { editTarget = template },
+                            .clickable {
+                                if (isIngredientTemplate) {
+                                    onEditIngredientTemplate(template.id)
+                                } else {
+                                    editTarget = template
+                                }
+                            },
                     )
                     HorizontalDivider()
                 }
             }
         }
+    }
+
+    if (showAddTypeSheet) {
+        AddTemplateTypeSheet(
+            onKcalTotal      = { showAddTypeSheet = false; showAddDialog = true },
+            onFromIngredients = { showAddTypeSheet = false; onNewIngredientTemplate() },
+            onDismiss        = { showAddTypeSheet = false },
+        )
     }
 
     if (showAddDialog) {
@@ -123,6 +148,43 @@ fun TemplatesContent(
             onDismiss = { editTarget = null },
         )
     }
+}
+
+@Composable
+private fun AddTemplateTypeSheet(
+    onKcalTotal: () -> Unit,
+    onFromIngredients: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New template") },
+        text = {
+            Column {
+                TextButton(
+                    onClick  = onKcalTotal,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("add_template_kcal_total"),
+                ) {
+                    Text("Kcal total — enter a fixed calorie amount")
+                }
+                HorizontalDivider()
+                TextButton(
+                    onClick  = onFromIngredients,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("add_template_from_ingredients"),
+                ) {
+                    Text("From ingredients — build from food items")
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable

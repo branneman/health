@@ -27,12 +27,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.auth.AuthState
 import org.branneman.health.auth.AuthViewModel
+import org.branneman.health.db.entities.FoodItemEntity
 import org.branneman.health.log.LogViewModel
 import org.branneman.health.ui.AiConfigScreen
 import org.branneman.health.ui.AskAiScreen
+import org.branneman.health.ui.BuildFromScratchScreen
 import org.branneman.health.ui.ConnectPolarScreen
 import org.branneman.health.ui.DashboardScreen
 import org.branneman.health.ui.DrinkButtonsScreen
+import org.branneman.health.ui.EditIngredientTemplateScreen
+import org.branneman.health.ui.FoodSearchScreen
 import org.branneman.health.ui.LogScreen
 import org.branneman.health.ui.LoginScreen
 import org.branneman.health.ui.MealButtonsScreen
@@ -118,9 +122,9 @@ fun App() {
     }
 }
 
-private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule, Templates, Ai }
+private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule, Templates, Ai, EditIngredientTemplate, TemplatesFoodSearch }
 
-private enum class LogPage { Main, TemplateList, QuickAdd, AskAi }
+private enum class LogPage { Main, TemplateList, QuickAdd, AskAi, BuildFromScratch, FoodSearch }
 
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
@@ -130,6 +134,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
     var showLogSheet by remember { mutableStateOf(false) }
     var pendingLogUndoAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var quickAddPrefill by remember { mutableStateOf<Pair<Int, String?>?>(null) }
+    var selectedFoodItemForLog      by remember { mutableStateOf<FoodItemEntity?>(null) }
+    var selectedFoodItemForTemplate by remember { mutableStateOf<FoodItemEntity?>(null) }
+    var editingTemplateId           by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(currentTab) {
         if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
@@ -210,13 +217,33 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                 settingsPage = SettingsPage.Ai
                             },
                         )
+                        LogPage.BuildFromScratch -> BuildFromScratchScreen(
+                            pendingFoodItem           = selectedFoodItemForLog,
+                            onPendingFoodItemConsumed = { selectedFoodItemForLog = null },
+                            onAddIngredient           = { logPage = LogPage.FoodSearch },
+                            onLogged                  = { logPage = LogPage.Main },
+                            onSavedAsTemplate         = { },
+                            onBack                    = { bailOutKcal ->
+                                if (bailOutKcal != null) {
+                                    quickAddPrefill = Pair(bailOutKcal, null)
+                                    logPage = LogPage.QuickAdd
+                                } else {
+                                    logPage = LogPage.Main
+                                }
+                            },
+                        )
+                        LogPage.FoodSearch -> FoodSearchScreen(
+                            onItemSelected = { item -> selectedFoodItemForLog = item; logPage = LogPage.BuildFromScratch },
+                            onBack         = { logPage = LogPage.BuildFromScratch },
+                        )
                     }
                     if (showLogSheet) {
                         LogFlowSheet(
-                            onFromTemplate = { showLogSheet = false; logPage = LogPage.TemplateList },
-                            onQuickAdd     = { showLogSheet = false; logPage = LogPage.QuickAdd },
-                            onAskAi        = { showLogSheet = false; logPage = LogPage.AskAi },
-                            onDismiss      = { showLogSheet = false },
+                            onFromTemplate   = { showLogSheet = false; logPage = LogPage.TemplateList },
+                            onQuickAdd       = { showLogSheet = false; logPage = LogPage.QuickAdd },
+                            onAskAi          = { showLogSheet = false; logPage = LogPage.AskAi },
+                            onBuildFromScratch = { showLogSheet = false; logPage = LogPage.BuildFromScratch },
+                            onDismiss        = { showLogSheet = false },
                         )
                     }
                 }
@@ -247,10 +274,24 @@ private fun MainNav(authViewModel: AuthViewModel) {
                         onBack = { settingsPage = SettingsPage.Main }
                     )
                     SettingsPage.Templates -> TemplatesScreen(
-                        onBack = { settingsPage = SettingsPage.Main }
+                        onBack                   = { settingsPage = SettingsPage.Main },
+                        onEditIngredientTemplate = { id -> editingTemplateId = id; settingsPage = SettingsPage.EditIngredientTemplate },
+                        onNewIngredientTemplate  = { editingTemplateId = null; settingsPage = SettingsPage.EditIngredientTemplate },
                     )
                     SettingsPage.Ai -> AiConfigScreen(
                         onBack = { settingsPage = SettingsPage.Main }
+                    )
+                    SettingsPage.EditIngredientTemplate -> EditIngredientTemplateScreen(
+                        templateId                = editingTemplateId,
+                        pendingFoodItem           = selectedFoodItemForTemplate,
+                        onPendingFoodItemConsumed = { selectedFoodItemForTemplate = null },
+                        onAddIngredient           = { settingsPage = SettingsPage.TemplatesFoodSearch },
+                        onSaved                   = { settingsPage = SettingsPage.Templates },
+                        onBack                    = { settingsPage = SettingsPage.Templates },
+                    )
+                    SettingsPage.TemplatesFoodSearch -> FoodSearchScreen(
+                        onItemSelected = { item -> selectedFoodItemForTemplate = item; settingsPage = SettingsPage.EditIngredientTemplate },
+                        onBack         = { settingsPage = SettingsPage.EditIngredientTemplate },
                     )
                 }
             }
@@ -264,6 +305,7 @@ private fun LogFlowSheet(
     onFromTemplate: () -> Unit,
     onQuickAdd: () -> Unit,
     onAskAi: () -> Unit,
+    onBuildFromScratch: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -296,6 +338,14 @@ private fun LogFlowSheet(
                 modifier = Modifier
                     .clickable(onClick = onAskAi)
                     .testTag("log_ask_ai"),
+            )
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text("Build from scratch") },
+                trailingContent = { Text("›", style = MaterialTheme.typography.titleLarge) },
+                modifier = Modifier
+                    .clickable(onClick = onBuildFromScratch)
+                    .testTag("log_build_from_scratch"),
             )
         }
     }
