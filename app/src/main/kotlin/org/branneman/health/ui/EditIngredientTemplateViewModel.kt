@@ -8,8 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.branneman.health.HealthApplication
+import org.branneman.health.auth.TokenStore
+import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.FoodItemEntity
@@ -21,11 +24,13 @@ import kotlin.math.roundToInt
 class EditIngredientTemplateViewModel private constructor(
     application: Application,
     private val db: HealthDatabase,
+    private val tokenStore: TokenStore,
 ) : AndroidViewModel(application) {
 
     constructor(application: Application) : this(
         application = application,
-        db = (application as HealthApplication).db,
+        db          = (application as HealthApplication).db,
+        tokenStore  = TokenStore(application.authDataStore),
     )
 
     private val _name = MutableStateFlow("")
@@ -66,7 +71,14 @@ class EditIngredientTemplateViewModel private constructor(
         _ingredients.value = _ingredients.value.toMutableList().also { it.removeAt(index) }
     }
 
-    fun save(userId: String) {
+    fun save() {
+        viewModelScope.launch {
+            val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            saveWith(userId)
+        }
+    }
+
+    private fun saveWith(userId: String) {
         viewModelScope.launch {
             val id = templateId ?: UUID.randomUUID().toString().also { templateId = it }
             db.mealTemplateDao().upsert(
