@@ -1,5 +1,7 @@
 package org.branneman.health.sync
 
+import org.branneman.health.FoodLogItemRequestDto
+import org.branneman.health.FoodLogRequestDto
 import org.branneman.health.QuickAddRequestDto
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
@@ -11,19 +13,36 @@ class LogEntrySyncService(
 ) {
     suspend fun sync(token: String) {
         db.logEntryDao().getByStatus(SyncStatus.PENDING_CREATE).forEach { entity ->
-            val kcal = entity.quickAddKcal ?: return@forEach
-            runCatching {
-                api.postQuickAdd(
-                    token,
-                    QuickAddRequestDto(
-                        id            = entity.id,
-                        quickAddKcal  = kcal,
-                        quickAddLabel = entity.quickAddLabel,
-                        loggedAt      = entity.loggedAt,
+            if (entity.quickAddKcal != null) {
+                runCatching {
+                    api.postQuickAdd(
+                        token,
+                        QuickAddRequestDto(
+                            id            = entity.id,
+                            quickAddKcal  = entity.quickAddKcal,
+                            quickAddLabel = entity.quickAddLabel,
+                            loggedAt      = entity.loggedAt,
+                        )
                     )
-                )
-            }.onSuccess {
-                db.logEntryDao().updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                }.onSuccess {
+                    db.logEntryDao().updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                }
+            } else {
+                val items = db.logEntryDao().getItemsForEntry(entity.id)
+                if (items.isEmpty()) return@forEach
+                runCatching {
+                    api.postFoodLog(
+                        token,
+                        FoodLogRequestDto(
+                            id       = entity.id,
+                            mealType = entity.mealType,
+                            loggedAt = entity.loggedAt,
+                            items    = items.map { FoodLogItemRequestDto(it.foodItemId, it.grams) },
+                        )
+                    )
+                }.onSuccess {
+                    db.logEntryDao().updateSyncStatus(entity.id, SyncStatus.SYNCED)
+                }
             }
         }
 

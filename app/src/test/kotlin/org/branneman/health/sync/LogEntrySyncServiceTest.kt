@@ -9,7 +9,10 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.branneman.health.aLogEntry
+import org.branneman.health.aLogEntryItem
 import org.branneman.health.aQuickAddEntry
+import org.branneman.health.uuid
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.network.HealthApiClient
@@ -112,5 +115,44 @@ class LogEntrySyncServiceTest {
         LogEntrySyncService(api, db).sync("token")
 
         assertEquals(1, db.logEntryDao().getByStatus(SyncStatus.PENDING_DELETE).size)
+    }
+
+    @Test
+    fun `food-item entry (null quickAddKcal) calls postFoodLog and marks SYNCED`() = runTest {
+        val entry = aLogEntry(id = uuid(), mealType = "lunch") // quickAddKcal = null
+        val item  = aLogEntryItem(logEntryId = entry.id, foodItemId = uuid(), grams = 150.0, kcalPer100g = 200.0)
+        db.logEntryDao().upsert(entry)
+        db.logEntryDao().upsertItem(item)
+
+        val api = mockApiClient { req ->
+            if (req.url.encodedPath.endsWith("/log/food")) {
+                respond(
+                    """{"id":"${entry.id}","loggedAt":"2026-01-01T08:00:00Z","mealType":"lunch","quickAddKcal":null,"quickAddLabel":null,"items":[{"foodItemId":"${item.foodItemId}","grams":150.0,"kcalPer100g":200.0,"proteinPer100g":null,"carbsPer100g":null,"fatPer100g":null}]}""",
+                    HttpStatusCode.Created,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            } else {
+                respond("", HttpStatusCode.InternalServerError)
+            }
+        }
+
+        LogEntrySyncService(api, db).sync("token")
+
+        assertEquals(1, db.logEntryDao().getByStatus(SyncStatus.SYNCED).size)
+    }
+
+    @Test
+    fun `food-item entry stays PENDING_CREATE on network error`() = runTest {
+        val entry = aLogEntry()
+        db.logEntryDao().upsert(entry)
+        db.logEntryDao().upsertItem(aLogEntryItem(logEntryId = entry.id))
+
+        val api = HealthApiClient("http://test", HttpClient(MockEngine { error("net error") }) {
+            install(ContentNegotiation) { json() }
+        })
+
+        LogEntrySyncService(api, db).sync("token")
+
+        assertEquals(1, db.logEntryDao().getByStatus(SyncStatus.PENDING_CREATE).size)
     }
 }
