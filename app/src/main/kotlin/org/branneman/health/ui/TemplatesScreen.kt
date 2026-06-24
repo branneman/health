@@ -14,6 +14,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.branneman.health.db.dao.MealTemplateWithKcal
 import org.branneman.health.db.entities.MealTemplateEntity
 
 @Composable
@@ -37,7 +38,7 @@ fun TemplatesScreen(
 
 @Composable
 fun TemplatesContent(
-    templates: List<MealTemplateEntity>,
+    templates: List<MealTemplateWithKcal>,
     onCreate: (String, Int) -> Unit,
     onUpdate: (String, String, Int) -> Unit,
     onDelete: (String) -> Unit,
@@ -84,27 +85,29 @@ fun TemplatesContent(
             )
         } else {
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                items(templates, key = { it.id }) { template ->
-                    val isIngredientTemplate = template.quickAddKcal == null
+                items(templates, key = { it.template.id }) { twk ->
+                    val isIngredient = twk.template.quickAddKcal == null
+                    val isPinned     = twk.template.sortOrder != null
                     ListItem(
                         headlineContent   = {
-                            val prefix = if (template.sortOrder != null) "📌 " else ""
-                            Text("$prefix${template.name}")
+                            val prefix = if (isPinned) "📌 " else ""
+                            Text("$prefix${twk.template.name}")
                         },
                         supportingContent = {
-                            if (isIngredientTemplate) {
-                                Text("ingredient template")
-                            } else {
-                                Text("${template.quickAddKcal} kcal")
+                            val label = when {
+                                isIngredient -> "${twk.computedKcal} kcal (ingredient template)"
+                                isPinned     -> "${twk.computedKcal} kcal (meal button)"
+                                else         -> "${twk.computedKcal} kcal (fixed calories)"
                             }
+                            Text(label)
                         },
                         modifier = Modifier
-                            .testTag("template_item_${template.id}")
+                            .testTag("template_item_${twk.template.id}")
                             .clickable {
-                                if (isIngredientTemplate) {
-                                    onEditIngredientTemplate(template.id)
+                                if (isIngredient) {
+                                    onEditIngredientTemplate(twk.template.id)
                                 } else {
-                                    editTarget = template
+                                    editTarget = twk.template
                                 }
                             },
                     )

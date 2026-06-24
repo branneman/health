@@ -6,10 +6,27 @@ import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.MealTemplateItemEntity
 
+data class MealTemplateWithKcal(
+    @Embedded val template: MealTemplateEntity,
+    val computedKcal: Int,
+)
+
 @Dao
 interface MealTemplateDao {
     @Query("SELECT * FROM meal_template WHERE syncStatus != 'PENDING_DELETE'")
     fun observeAll(): Flow<List<MealTemplateEntity>>
+
+    @Query("""
+        SELECT mt.*, COALESCE(mt.quickAddKcal, (
+            SELECT CAST(SUM(mti.grams * fi.kcalPer100g / 100.0) AS INTEGER)
+            FROM meal_template_item mti
+            INNER JOIN food_item fi ON mti.foodItemId = fi.id
+            WHERE mti.templateId = mt.id
+        ), 0) AS computedKcal
+        FROM meal_template mt
+        WHERE mt.syncStatus != 'PENDING_DELETE'
+    """)
+    fun observeAllWithKcal(): Flow<List<MealTemplateWithKcal>>
 
     @Query("SELECT * FROM meal_template WHERE sortOrder IS NOT NULL AND syncStatus != 'PENDING_DELETE' ORDER BY sortOrder ASC")
     fun observePinned(): Flow<List<MealTemplateEntity>>

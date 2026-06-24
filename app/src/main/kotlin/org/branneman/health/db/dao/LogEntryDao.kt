@@ -6,13 +6,54 @@ import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.LogEntryItemEntity
 
+data class LogEntryWithKcal(
+    @Embedded val entry: LogEntryEntity,
+    val itemKcal: Int,
+) {
+    val totalKcal: Int get() = (entry.quickAddKcal ?: 0) + itemKcal
+    val displayLabel: String get() = entry.quickAddLabel
+        ?: entry.mealType.replaceFirstChar { it.uppercase() }
+}
+
 @Dao
 interface LogEntryDao {
     @Query("SELECT * FROM log_entry WHERE syncStatus != 'PENDING_DELETE' ORDER BY loggedAt DESC")
     fun observeAll(): Flow<List<LogEntryEntity>>
 
+    @Query("""
+        SELECT le.*, COALESCE((
+            SELECT CAST(SUM(lei.grams * lei.kcalPer100g / 100.0) AS INTEGER)
+            FROM log_entry_item lei WHERE lei.logEntryId = le.id
+        ), 0) AS itemKcal
+        FROM log_entry le
+        WHERE le.syncStatus != 'PENDING_DELETE'
+        ORDER BY le.loggedAt DESC
+    """)
+    fun observeAllWithKcal(): Flow<List<LogEntryWithKcal>>
+
     @Query("SELECT COALESCE(SUM(quickAddKcal), 0) FROM log_entry WHERE userId = :userId AND loggedAt LIKE :datePattern AND syncStatus != 'PENDING_DELETE'")
     suspend fun sumQuickAddKcalForDate(userId: String, datePattern: String): Int
+
+    @Query("""
+        SELECT COALESCE(CAST(SUM(lei.grams * lei.kcalPer100g / 100.0) AS INTEGER), 0)
+        FROM log_entry_item lei
+        INNER JOIN log_entry le ON lei.logEntryId = le.id
+        WHERE le.userId = :userId AND le.loggedAt LIKE :datePattern AND le.syncStatus != 'PENDING_DELETE'
+    """)
+    suspend fun sumItemKcalForDate(userId: String, datePattern: String): Int
+
+    @Query("""
+        SELECT COALESCE(SUM(le.quickAddKcal), 0) + COALESCE((
+            SELECT CAST(SUM(lei.grams * lei.kcalPer100g / 100.0) AS INTEGER)
+            FROM log_entry_item lei
+            INNER JOIN log_entry le2 ON lei.logEntryId = le2.id
+            WHERE le2.userId = :userId AND le2.loggedAt LIKE :datePattern
+              AND le2.syncStatus != 'PENDING_DELETE'
+        ), 0)
+        FROM log_entry le
+        WHERE le.userId = :userId AND le.loggedAt LIKE :datePattern AND le.syncStatus != 'PENDING_DELETE'
+    """)
+    fun observeTotalKcalForDate(userId: String, datePattern: String): Flow<Int>
 
     @Query("SELECT * FROM log_entry WHERE syncStatus = :status")
     suspend fun getByStatus(status: SyncStatus): List<LogEntryEntity>

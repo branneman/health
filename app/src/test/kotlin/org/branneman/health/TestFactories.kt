@@ -1,6 +1,8 @@
 package org.branneman.health
 
 import org.branneman.health.db.SyncStatus
+import org.branneman.health.db.dao.LogEntryWithKcal
+import org.branneman.health.db.dao.MealTemplateWithKcal
 import org.branneman.health.db.entities.*
 import org.branneman.health.db.entities.LogEntryItemEntity
 import java.util.UUID
@@ -104,6 +106,16 @@ fun aMealTemplate(
     sortOrder = sortOrder, quickAddKcal = quickAddKcal,
     syncStatus = syncStatus,
 )
+
+fun aMealTemplateWithKcal(
+    template: MealTemplateEntity = aMealTemplate(),
+    computedKcal: Int = template.quickAddKcal ?: 0,
+) = MealTemplateWithKcal(template = template, computedKcal = computedKcal)
+
+fun aLogEntryWithKcal(
+    entry: LogEntryEntity = aQuickAddEntry(),
+    itemKcal: Int = 0,
+) = LogEntryWithKcal(entry = entry, itemKcal = itemKcal)
 
 fun aWorkout(
     id: String = uuid(),

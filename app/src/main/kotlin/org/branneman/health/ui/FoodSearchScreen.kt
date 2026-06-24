@@ -9,6 +9,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,7 +20,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
@@ -44,7 +48,8 @@ fun FoodSearchScreen(
     val results      by viewModel.results.collectAsStateWithLifecycle()
     val selectedItem by viewModel.selectedItem.collectAsStateWithLifecycle()
     val isOffline    by viewModel.isOffline.collectAsStateWithLifecycle()
-    var showScanner  by remember { mutableStateOf(false) }
+    var showScanner      by remember { mutableStateOf(false) }
+    var scanNoResult     by remember { mutableStateOf(false) }
 
     val cameraPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -64,9 +69,11 @@ fun FoodSearchScreen(
         results         = results,
         selectedItem    = selectedItem,
         isOffline       = isOffline,
-        onQueryChange   = viewModel::onQueryChange,
+        scanNoResult    = scanNoResult,
+        onQueryChange   = { viewModel.onQueryChange(it); scanNoResult = false },
         onSelectResult  = viewModel::selectResult,
         onBarcodeButton = {
+            scanNoResult = false
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                     == PackageManager.PERMISSION_GRANTED) {
                 showScanner = true
@@ -84,7 +91,7 @@ fun FoodSearchScreen(
                 showScanner = false
                 viewModel.onBarcodeScanned(barcode)
             },
-            onDismiss = { showScanner = false },
+            onDismiss = { showScanner = false; scanNoResult = true },
         )
     }
 }
@@ -95,6 +102,7 @@ fun FoodSearchContent(
     results: List<FoodSearchResult>,
     selectedItem: FoodItemEntity?,
     isOffline: Boolean,
+    scanNoResult: Boolean = false,
     onQueryChange: (String) -> Unit,
     onSelectResult: (FoodSearchResult) -> Unit,
     onBarcodeButton: () -> Unit,
@@ -127,6 +135,13 @@ fun FoodSearchContent(
                 style    = MaterialTheme.typography.bodySmall,
                 color    = MaterialTheme.colorScheme.error,
                 modifier = Modifier.testTag("food_offline_notice"),
+            )
+        }
+        if (scanNoResult) {
+            Text(
+                text  = "No barcode detected — search by name or enter manually",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
             )
         }
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -185,11 +200,14 @@ private fun BarcodeScannerOverlay(
     val scanned = remember { mutableStateOf(false) }
     val scanner = remember { BarcodeScanning.getClient() }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black),
     ) {
+        val frameW = maxWidth * 0.72f
+        val frameH = frameW * 0.55f
+
         AndroidView(
             factory = { ctx ->
                 val previewView = PreviewView(ctx)
@@ -234,6 +252,32 @@ private fun BarcodeScannerOverlay(
             },
             modifier = Modifier.fillMaxSize(),
         )
+
+        // Dimmed overlay with rectangular viewfinder cutout (4 rects around the frame)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val fw = size.width * 0.72f
+            val fh = fw * 0.55f
+            val fl = (size.width - fw) / 2f
+            val ft = (size.height - fh) / 2f
+            val fr = fl + fw
+            val fb = ft + fh
+            val dim = Color.Black.copy(alpha = 0.65f)
+            drawRect(dim, topLeft = Offset(0f, 0f),  size = Size(size.width, ft))
+            drawRect(dim, topLeft = Offset(0f, fb),  size = Size(size.width, size.height - fb))
+            drawRect(dim, topLeft = Offset(0f, ft),  size = Size(fl, fh))
+            drawRect(dim, topLeft = Offset(fr, ft),  size = Size(size.width - fr, fh))
+            drawRect(Color.White, topLeft = Offset(fl, ft), size = Size(fw, fh), style = Stroke(width = 2.dp.toPx()))
+        }
+
+        Text(
+            text     = "Align barcode within the frame",
+            color    = Color.White,
+            style    = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = frameH / 2 + 16.dp),
+        )
+
         TextButton(
             onClick  = onDismiss,
             modifier = Modifier

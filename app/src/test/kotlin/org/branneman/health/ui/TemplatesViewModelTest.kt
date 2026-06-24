@@ -97,8 +97,8 @@ class TemplatesViewModelTest {
         db.mealTemplateDao().upsert(aMealTemplate(userId = userId, name = "Apple pie",     quickAddKcal = 450, syncStatus = SyncStatus.SYNCED))
         db.mealTemplateDao().upsert(aMealTemplate(userId = userId, name = "Bolognese",     quickAddKcal = 700, syncStatus = SyncStatus.SYNCED))
         val result = viewModel.templates.first { it.size == 3 }
-        assertEquals("Apple pie",     result[0].name)
-        assertEquals("Bolognese",     result[1].name)
-        assertEquals("Zucchini soup", result[2].name)
+        assertEquals("Apple pie",     result[0].template.name)
+        assertEquals("Bolognese",     result[1].template.name)
+        assertEquals("Zucchini soup", result[2].template.name)
     }
 }

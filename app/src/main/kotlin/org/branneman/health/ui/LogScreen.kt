@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.branneman.health.db.dao.LogEntryWithKcal
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
@@ -98,7 +99,7 @@ private sealed interface LogAction {
 
 @Composable
 fun LogContent(
-    entries: List<LogEntryEntity>,
+    entries: List<LogEntryWithKcal>,
     onDelete: (LogEntryEntity) -> Unit,
     modifier: Modifier = Modifier,
     pinnedTemplates: List<MealTemplateEntity> = emptyList(),
@@ -109,12 +110,12 @@ fun LogContent(
     onLogShortcut: (ShortcutEntity) -> Unit = {},
     onOpenLogFlow: () -> Unit = {},
 ) {
-    var entryToDelete by remember { mutableStateOf<LogEntryEntity?>(null) }
+    var entryToDelete by remember { mutableStateOf<LogEntryWithKcal?>(null) }
 
-    entryToDelete?.let { entry ->
+    entryToDelete?.let { ewk ->
         DeleteConfirmDialog(
-            entry     = entry,
-            onConfirm = { onDelete(entry); entryToDelete = null },
+            entry     = ewk,
+            onConfirm = { onDelete(ewk.entry); entryToDelete = null },
             onDismiss = { entryToDelete = null },
         )
     }
@@ -201,10 +202,10 @@ fun LogContent(
                 modifier = Modifier.padding(top = 12.dp),
             )
         } else {
-            val total = entries.sumOf { it.quickAddKcal ?: 0 }
+            val total = entries.sumOf { it.totalKcal }
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(entries, key = { it.id }) { entry ->
-                    LogEntryRow(entry = entry, onClick = { entryToDelete = entry })
+                items(entries, key = { it.entry.id }) { ewk ->
+                    LogEntryRow(entry = ewk, onClick = { entryToDelete = ewk })
                     HorizontalDivider()
                 }
             }
@@ -223,9 +224,9 @@ fun LogContent(
 private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
 
 @Composable
-private fun LogEntryRow(entry: LogEntryEntity, onClick: () -> Unit) {
-    val time = remember(entry.loggedAt) {
-        runCatching { OffsetDateTime.parse(entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
+private fun LogEntryRow(entry: LogEntryWithKcal, onClick: () -> Unit) {
+    val time = remember(entry.entry.loggedAt) {
+        runCatching { OffsetDateTime.parse(entry.entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
     }
     Row(
         modifier              = Modifier
@@ -241,12 +242,10 @@ private fun LogEntryRow(entry: LogEntryEntity, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (entry.quickAddLabel != null) {
-                Text(text = entry.quickAddLabel, style = MaterialTheme.typography.bodyMedium)
-            }
+            Text(text = entry.displayLabel, style = MaterialTheme.typography.bodyMedium)
         }
         Text(
-            text  = "${entry.quickAddKcal ?: 0} kcal",
+            text  = "${entry.totalKcal} kcal",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -255,17 +254,14 @@ private fun LogEntryRow(entry: LogEntryEntity, onClick: () -> Unit) {
 
 @Composable
 private fun DeleteConfirmDialog(
-    entry: LogEntryEntity,
+    entry: LogEntryWithKcal,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val time = remember(entry.loggedAt) {
-        runCatching { OffsetDateTime.parse(entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
+    val time = remember(entry.entry.loggedAt) {
+        runCatching { OffsetDateTime.parse(entry.entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
     }
-    val title = buildString {
-        entry.quickAddLabel?.let { append("$it — ") }
-        append("${entry.quickAddKcal ?: 0} kcal — $time")
-    }
+    val title = "${entry.displayLabel} — ${entry.totalKcal} kcal — $time"
     AlertDialog(
         onDismissRequest = onDismiss,
         title            = { Text(title) },

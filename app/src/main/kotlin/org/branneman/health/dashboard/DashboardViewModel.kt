@@ -134,12 +134,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun observeLogEntries() {
         val stored = tokenStore.tokenFlow.first() ?: return
-        app.db.logEntryDao().observeAll().collect { entries ->
-            val today = LocalDate.now().toString()
-            val caloriesIn = entries
-                .filter { it.userId == stored.userId && it.loggedAt.startsWith(today) }
-                .sumOf { it.quickAddKcal ?: 0 }
-            _uiState.update { it.copy(caloriesIn = caloriesIn) }
+        val today = LocalDate.now().toString()
+        app.db.logEntryDao().observeTotalKcalForDate(stored.userId, "$today%").collect { kcal ->
+            _uiState.update { it.copy(caloriesIn = kcal) }
             refreshCaloriesLeft()
         }
     }
@@ -182,7 +179,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val latestWeight = app.db.bodyWeightDao().observeAll().first().firstOrNull()?.kg
         val weightToday  = app.db.bodyWeightDao().getForDate(userId, today)?.kg
         val energy       = app.db.dailyEnergyDao().getForDate(userId, today)
-        val caloriesIn   = app.db.logEntryDao().sumQuickAddKcalForDate(userId, "$today%")
+        val caloriesIn   = app.db.logEntryDao().sumQuickAddKcalForDate(userId, "$today%") +
+                           app.db.logEntryDao().sumItemKcalForDate(userId, "$today%")
         val sport        = app.db.sportTonightDao().getForDate(today)?.takeIf { it.date == today }
         val params       = app.db.dynamicBudgetParamsDao().getForDate(today)
 

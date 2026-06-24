@@ -4,6 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import org.branneman.health.aMealTemplate
+import org.branneman.health.aMealTemplateWithKcal
+import org.branneman.health.db.dao.MealTemplateWithKcal
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.junit.Rule
 import org.junit.Test
@@ -20,7 +22,7 @@ class TemplatesScreenTest {
     @get:Rule val compose = createComposeRule()
 
     private fun render(
-        templates: List<MealTemplateEntity> = emptyList(),
+        templates: List<MealTemplateWithKcal> = emptyList(),
         onCreate: (String, Int) -> Unit = { _, _ -> },
         onUpdate: (String, String, Int) -> Unit = { _, _, _ -> },
         onDelete: (String) -> Unit = {},
@@ -46,14 +48,14 @@ class TemplatesScreenTest {
 
     @Test fun `templates are listed`() {
         val t = aMealTemplate(name = "Pasta bolognese", quickAddKcal = 720)
-        render(templates = listOf(t))
+        render(templates = listOf(aMealTemplateWithKcal(t)))
         compose.onNodeWithText("Pasta bolognese").assertExists()
-        compose.onNodeWithText("720 kcal").assertExists()
+        compose.onNodeWithText("720 kcal (fixed calories)", substring = true).assertExists()
     }
 
     @Test fun `pinned template shows pin indicator`() {
         val t = aMealTemplate(name = "Breakfast", sortOrder = 0, quickAddKcal = 450)
-        render(templates = listOf(t))
+        render(templates = listOf(aMealTemplateWithKcal(t)))
         compose.onNodeWithText("📌 Breakfast").assertExists()
     }
 
@@ -86,7 +88,7 @@ class TemplatesScreenTest {
 
     @Test fun `tapping existing template opens edit dialog pre-filled`() {
         val t = aMealTemplate(name = "Old pasta", quickAddKcal = 700)
-        render(templates = listOf(t))
+        render(templates = listOf(aMealTemplateWithKcal(t)))
         compose.onNodeWithTag("template_item_${t.id}").performClick()
         compose.onNodeWithTag("template_name_field").assertTextContains("Old pasta")
         compose.onNodeWithTag("template_kcal_field").assertTextContains("700")
@@ -96,7 +98,7 @@ class TemplatesScreenTest {
         val t = aMealTemplate(name = "Old name", quickAddKcal = 400)
         var result: Triple<String, String, Int>? = null
         render(
-            templates = listOf(t),
+            templates = listOf(aMealTemplateWithKcal(t)),
             onUpdate  = { id, name, kcal -> result = Triple(id, name, kcal) },
         )
         compose.onNodeWithTag("template_item_${t.id}").performClick()
@@ -111,7 +113,7 @@ class TemplatesScreenTest {
     @Test fun `edit dialog calls onDelete`() {
         val t = aMealTemplate(name = "To delete", quickAddKcal = 500)
         var deletedId: String? = null
-        render(templates = listOf(t), onDelete = { deletedId = it })
+        render(templates = listOf(aMealTemplateWithKcal(t)), onDelete = { deletedId = it })
         compose.onNodeWithTag("template_item_${t.id}").performClick()
         compose.onNodeWithTag("template_delete_button").performClick()
         assertEquals(t.id, deletedId)

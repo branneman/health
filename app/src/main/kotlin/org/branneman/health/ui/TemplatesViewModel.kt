@@ -14,6 +14,7 @@ import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
+import org.branneman.health.db.dao.MealTemplateWithKcal
 import org.branneman.health.db.entities.MealTemplateEntity
 
 class TemplatesViewModel private constructor(
@@ -34,10 +35,10 @@ class TemplatesViewModel private constructor(
         tokenStore = tokenStore,
     )
 
-    val templates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observeAll()
+    val templates: StateFlow<List<MealTemplateWithKcal>> = db.mealTemplateDao().observeAllWithKcal()
         .map { list ->
-            val pinned   = list.filter { it.sortOrder != null }.sortedBy { it.sortOrder }
-            val unpinned = list.filter { it.sortOrder == null }.sortedBy { it.name }
+            val pinned   = list.filter { it.template.sortOrder != null }.sortedBy { it.template.sortOrder }
+            val unpinned = list.filter { it.template.sortOrder == null }.sortedBy { it.template.name }
             pinned + unpinned
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

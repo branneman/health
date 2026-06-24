@@ -4,9 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import kotlin.test.assertTrue
+import org.branneman.health.aLogEntryWithKcal
 import org.branneman.health.aMealTemplate
 import org.branneman.health.aQuickAddEntry
 import org.branneman.health.aShortcut
+import org.branneman.health.db.dao.LogEntryWithKcal
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
@@ -24,7 +26,7 @@ class LogScreenTest {
     @get:Rule val compose = createComposeRule()
 
     private fun render(
-        entries: List<LogEntryEntity> = emptyList(),
+        entries: List<LogEntryWithKcal> = emptyList(),
         onDelete: (LogEntryEntity) -> Unit = {},
         onOpenLogFlow: () -> Unit = {},
     ) {
@@ -54,7 +56,7 @@ class LogScreenTest {
 
     @Test fun `entries appear in list`() {
         val entries = listOf(
-            aQuickAddEntry(loggedAt = "2026-06-11T13:00:00Z", quickAddKcal = 560, quickAddLabel = "Lunch"),
+            aLogEntryWithKcal(aQuickAddEntry(loggedAt = "2026-06-11T13:00:00Z", quickAddKcal = 560, quickAddLabel = "Lunch")),
         )
         render(entries = entries)
         compose.onNodeWithText("Lunch", substring = true).assertExists()
@@ -67,16 +69,17 @@ class LogScreenTest {
     }
 
     @Test fun `tapping entry calls onDelete`() {
-        val entry = aQuickAddEntry(loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 430, quickAddLabel = "Breakfast")
+        val rawEntry = aQuickAddEntry(loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 430, quickAddLabel = "Breakfast")
+        val entry = aLogEntryWithKcal(rawEntry)
         var deleted: LogEntryEntity? = null
         render(entries = listOf(entry), onDelete = { deleted = it })
         compose.onNodeWithText("Breakfast", substring = true).performClick()
         compose.onNodeWithText("Delete").performClick()
-        assert(deleted?.id == entry.id)
+        assert(deleted?.id == rawEntry.id)
     }
 
     private fun renderWithTemplates(
-        entries: List<LogEntryEntity> = emptyList(),
+        entries: List<LogEntryWithKcal> = emptyList(),
         pinned: List<MealTemplateEntity> = emptyList(),
         onDelete: (LogEntryEntity) -> Unit = {},
         onSetUpMealButtons: () -> Unit = {},
@@ -127,7 +130,7 @@ class LogScreenTest {
     }
 
     private fun renderWithShortcuts(
-        entries: List<LogEntryEntity> = emptyList(),
+        entries: List<LogEntryWithKcal> = emptyList(),
         shortcuts: List<ShortcutEntity> = emptyList(),
         onDelete: (LogEntryEntity) -> Unit = {},
         onSetUpDrinkButtons: () -> Unit = {},

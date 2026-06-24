@@ -17,6 +17,7 @@ import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
+import org.branneman.health.db.dao.LogEntryWithKcal
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
@@ -49,9 +50,9 @@ class LogViewModel private constructor(
     val pinnedTemplates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observePinned()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val entries: StateFlow<List<LogEntryEntity>> =
-        combine(db.logEntryDao().observeAll(), dateFlow()) { all, today ->
-            all.filter { it.loggedAt.startsWith(today.toString()) }
+    val entries: StateFlow<List<LogEntryWithKcal>> =
+        combine(db.logEntryDao().observeAllWithKcal(), dateFlow()) { all, today ->
+            all.filter { it.entry.loggedAt.startsWith(today.toString()) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
