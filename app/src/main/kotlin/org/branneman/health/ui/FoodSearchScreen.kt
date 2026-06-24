@@ -44,10 +44,11 @@ fun FoodSearchScreen(
     viewModel: FoodSearchViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    val query        by viewModel.query.collectAsStateWithLifecycle()
-    val results      by viewModel.results.collectAsStateWithLifecycle()
-    val selectedItem by viewModel.selectedItem.collectAsStateWithLifecycle()
-    val isOffline    by viewModel.isOffline.collectAsStateWithLifecycle()
+    val query           by viewModel.query.collectAsStateWithLifecycle()
+    val results         by viewModel.results.collectAsStateWithLifecycle()
+    val selectedItem    by viewModel.selectedItem.collectAsStateWithLifecycle()
+    val isOffline       by viewModel.isOffline.collectAsStateWithLifecycle()
+    val barcodeNotFound by viewModel.barcodeNotFound.collectAsStateWithLifecycle()
     var showScanner      by remember { mutableStateOf(false) }
     var scanNoResult     by remember { mutableStateOf(false) }
 
@@ -70,6 +71,7 @@ fun FoodSearchScreen(
         selectedItem    = selectedItem,
         isOffline       = isOffline,
         scanNoResult    = scanNoResult,
+        barcodeNotFound = barcodeNotFound,
         onQueryChange   = { viewModel.onQueryChange(it); scanNoResult = false },
         onSelectResult  = viewModel::selectResult,
         onBarcodeButton = {
@@ -103,6 +105,7 @@ fun FoodSearchContent(
     selectedItem: FoodItemEntity?,
     isOffline: Boolean,
     scanNoResult: Boolean = false,
+    barcodeNotFound: Boolean = false,
     onQueryChange: (String) -> Unit,
     onSelectResult: (FoodSearchResult) -> Unit,
     onBarcodeButton: () -> Unit,
@@ -140,6 +143,13 @@ fun FoodSearchContent(
         if (scanNoResult) {
             Text(
                 text  = "No barcode detected — search by name or enter manually",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+        if (barcodeNotFound) {
+            Text(
+                text  = "Product not found — search by name or enter manually",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )

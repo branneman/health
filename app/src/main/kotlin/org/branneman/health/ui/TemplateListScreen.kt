@@ -2,7 +2,6 @@ package org.branneman.health.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,19 +26,16 @@ fun TemplateListScreen(
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val ingredientTemplates by viewModel.ingredientTemplates.collectAsStateWithLifecycle()
 
-    Scaffold { padding ->
-        TemplateListContent(
-            templates                  = templates,
-            ingredientTemplates        = ingredientTemplates,
-            onLogTemplate              = { template, multiplier ->
-                viewModel.logFromTemplate(template, multiplier)
-                onLogged { viewModel.undoLog() }
-            },
-            onSelectIngredientTemplate = onSelectIngredientTemplate,
-            onBack                     = onBack,
-            modifier                   = Modifier.padding(padding),
-        )
-    }
+    TemplateListContent(
+        templates                  = templates,
+        ingredientTemplates        = ingredientTemplates,
+        onLogTemplate              = { template, multiplier ->
+            viewModel.logFromTemplate(template, multiplier)
+            onLogged { viewModel.undoLog() }
+        },
+        onSelectIngredientTemplate = onSelectIngredientTemplate,
+        onBack                     = onBack,
+    )
 }
 
 @Composable

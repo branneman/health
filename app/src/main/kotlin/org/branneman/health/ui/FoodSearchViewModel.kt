@@ -51,6 +51,9 @@ class FoodSearchViewModel private constructor(
     private val _isOffline = MutableStateFlow(false)
     val isOffline: StateFlow<Boolean> = _isOffline
 
+    private val _barcodeNotFound = MutableStateFlow(false)
+    val barcodeNotFound: StateFlow<Boolean> = _barcodeNotFound
+
     init {
         viewModelScope.launch {
             _query.debounce(300).distinctUntilChanged().collect { q ->
@@ -90,9 +93,13 @@ class FoodSearchViewModel private constructor(
         _query.value = ""
         _results.value = emptyList()
         _isOffline.value = false
+        _barcodeNotFound.value = false
     }
 
-    fun onQueryChange(q: String) { _query.value = q }
+    fun onQueryChange(q: String) {
+        _barcodeNotFound.value = false
+        _query.value = q
+    }
 
     fun onBarcodeScanned(barcode: String) {
         viewModelScope.launch {
@@ -118,6 +125,8 @@ class FoodSearchViewModel private constructor(
                 )
                 db.foodItemDao().upsert(entity)
                 _selectedItem.value = entity
+            } else {
+                _barcodeNotFound.value = true
             }
         }
     }
