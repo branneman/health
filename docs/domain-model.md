@@ -173,7 +173,7 @@ Quick reference for the main tables. Flyway migrations in
 - `product(id, barcode?, name, kcal/protein/carbs/fat per 100g, source)` — OFD mirror, server-only reference catalog
 - `food_item(id, barcode?, name, kcal/protein/carbs/fat per 100g, source)` — user's personal catalog, synced to device
 - `meal_template(id, name, sort_order?, quick_add_kcal?)` + `meal_template_item(template_id, food_item_id, grams)`
-- `log_entry(id, datetime, meal_type)` + `log_entry_item(log_entry_id, food_item_id, grams, snapshotted nutrition)` — nutrition snapshotted at log time; never changes after creation
+- `log_entry(id, datetime, meal_type)` + `log_entry_item(log_entry_id, food_item_id, grams, snapshotted nutrition)` — nutrition snapshotted at log time; `log_entry_item` rows never change after creation. Quick-add fields (`quick_add_kcal`, `quick_add_label`) on quick-add entries may be updated.
 
 **Users**
 - `users(id UUID PK, username, password_hash)` + `user_profile(user_id, weight_kg, height_cm, age, activity_level, target_deficit_kcal, wake_time, bedtime, …)`

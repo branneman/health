@@ -114,6 +114,12 @@ class LogViewModel private constructor(
             }
         }
     }
+
+    fun editEntry(entry: LogEntryEntity, kcal: Int, label: String?) {
+        viewModelScope.launch {
+            db.logEntryDao().updateQuickAdd(entry.id, kcal, label?.trim()?.ifEmpty { null })
+        }
+    }
 }
 
 internal fun dateFlow(clock: Clock = Clock.systemDefaultZone()): Flow<LocalDate> = flow {

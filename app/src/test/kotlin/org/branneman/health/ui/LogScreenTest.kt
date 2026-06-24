@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import kotlin.test.assertTrue
+import org.branneman.health.aLogEntry
 import org.branneman.health.aLogEntryWithKcal
 import org.branneman.health.aMealTemplate
 import org.branneman.health.aQuickAddEntry
@@ -28,11 +29,17 @@ class LogScreenTest {
     private fun render(
         entries: List<LogEntryWithKcal> = emptyList(),
         onDelete: (LogEntryEntity) -> Unit = {},
+        onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
         onOpenLogFlow: () -> Unit = {},
     ) {
         compose.setContent {
             MaterialTheme {
-                LogContent(entries = entries, onDelete = onDelete, onOpenLogFlow = onOpenLogFlow)
+                LogContent(
+                    entries       = entries,
+                    onDelete      = onDelete,
+                    onEdit        = onEdit,
+                    onOpenLogFlow = onOpenLogFlow,
+                )
             }
         }
     }
@@ -68,14 +75,53 @@ class LogScreenTest {
         compose.onNodeWithText("Nothing logged today.", substring = true).assertExists()
     }
 
-    @Test fun `tapping entry calls onDelete`() {
-        val rawEntry = aQuickAddEntry(loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 430, quickAddLabel = "Breakfast")
+    @Test fun `tapping food-item entry opens delete dialog and delete calls onDelete`() {
+        val rawEntry = aLogEntry(loggedAt = "2026-06-11T08:00:00Z", mealType = "breakfast")
         val entry = aLogEntryWithKcal(rawEntry)
         var deleted: LogEntryEntity? = null
         render(entries = listOf(entry), onDelete = { deleted = it })
         compose.onNodeWithText("Breakfast", substring = true).performClick()
         compose.onNodeWithText("Delete").performClick()
         assert(deleted?.id == rawEntry.id)
+    }
+
+    @Test fun `tapping quick-add entry opens edit dialog with pre-populated kcal`() {
+        val entry = aLogEntryWithKcal(
+            aQuickAddEntry(loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 430, quickAddLabel = "Lunch")
+        )
+        render(entries = listOf(entry))
+        compose.onNodeWithText("Lunch", substring = true).performClick()
+        compose.onNodeWithTag("edit_entry_kcal_field").assertExists()
+        compose.onNodeWithTag("edit_entry_kcal_field").assertTextContains("430")
+    }
+
+    @Test fun `save in edit dialog calls onEdit`() {
+        val rawEntry = aQuickAddEntry(
+            loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 430, quickAddLabel = "Lunch"
+        )
+        val entry = aLogEntryWithKcal(rawEntry)
+        var editedId: String? = null
+        var editedKcal: Int? = null
+        render(
+            entries = listOf(entry),
+            onEdit  = { e, kcal, _ -> editedId = e.id; editedKcal = kcal },
+        )
+        compose.onNodeWithText("Lunch", substring = true).performClick()
+        compose.onNodeWithTag("edit_entry_kcal_field").performTextClearance()
+        compose.onNodeWithTag("edit_entry_kcal_field").performTextInput("600")
+        compose.onNodeWithTag("edit_entry_save_button").performClick()
+        assertEquals(rawEntry.id, editedId)
+        assertEquals(600, editedKcal)
+    }
+
+    @Test fun `save button is disabled when kcal field is empty`() {
+        val entry = aLogEntryWithKcal(
+            aQuickAddEntry(loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 430)
+        )
+        render(entries = listOf(entry))
+        compose.onNodeWithText("Unknown", substring = true).performClick()
+        compose.onNodeWithTag("edit_entry_kcal_field").performTextClearance()
+        compose.onNodeWithTag("edit_entry_save_button").assertIsNotEnabled()
     }
 
     private fun renderWithTemplates(

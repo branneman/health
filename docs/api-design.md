@@ -12,8 +12,7 @@
   model. The in/out split is visible in the URL, not just in docs.
 - **No math on the client** — totals, aggregations, and deficits are computed server-side.
   UI logic (ordering, filtering, string formatting) is the client's responsibility.
-- **Log entries are immutable** — `POST` + `DELETE` only, no update. Nutrition is
-  snapshotted at log time so history is correct even if catalog data changes later.
+- **Food-item entries are immutable** — `POST` + `DELETE` only for entries with ingredient rows (`log_entry_item`). Nutrition values are snapshotted at log time so history is correct even if catalog data changes later. **Quick-add entries** (kcal + label only, no ingredient rows) may be edited in place via `PATCH /in/log/{id}`.
 - **`/out/` is read-only from the API** — Polar cron writes calories-out data server-side.
   Android only reads.
 - **Food items have no `DELETE`** — snapshots protect history. Stale catalog data can be
@@ -80,6 +79,7 @@ Both return `List<FoodItemDto>` / `FoodItemDto` with `source = "openfoodfacts"`.
 | `POST`   | `/in/log/template`      | Yes  | Log from a meal template (13 (Meal templates))      |
 | `GET`    | `/in/log`               | Yes  | List entries for `?date=YYYY-MM-DD`      |
 | `GET`    | `/in/log/{id}`          | Yes  | Get single log entry                     |
+| `PATCH`  | `/in/log/{id}`          | Yes  | Update kcal + label on a quick-add entry      |
 | `DELETE` | `/in/log/{id}`          | Yes  | Delete entry (correction mechanism)      |
 
 ### Calories out — Polar (read-only; not yet implemented)
@@ -310,7 +310,8 @@ template's name.
 
 All totals and per-item values are computed server-side from snapshotted nutrition data.  
 `GET /in/log?date=2026-06-03` returns an array ordered by `loggedAt`.  
-`DELETE /in/log/{id}` → `204 No Content`. No update — log entries are immutable once created.
+`DELETE /in/log/{id}` → `204 No Content`.
+`PATCH /in/log/{id}` → `204 No Content`. Body: `{"kcal": int, "label": string|null}`. Returns `422` if the entry is a food-item entry (has ingredient rows — those remain immutable).
 
 ---
 

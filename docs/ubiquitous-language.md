@@ -30,9 +30,8 @@ names the direction of calorie *flow*, not an action the user performed.
 
 ### Log Entry
 
-An immutable record of food or drink consumed at a point in time. Created via one of
-three paths: **quick-add**, **from template**, or **build from scratch**. Never edited
-in place — to correct a mistake, delete and re-log.
+A record of food or drink consumed at a point in time. Created via one of
+three paths: **quick-add**, **from template**, or **build from scratch**. Quick-add entries (kcal + optional label) may be edited. Food-item entries (with snapshotted ingredient rows) are immutable.
 
 A log entry is either:
 

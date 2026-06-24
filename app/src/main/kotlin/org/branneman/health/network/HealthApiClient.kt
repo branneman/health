@@ -10,6 +10,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -28,6 +29,7 @@ import org.branneman.health.AiConfigStatusDto
 import org.branneman.health.AiEstimateResponseDto
 import org.branneman.health.BuildConfig
 import org.branneman.health.QuickAddRequestDto
+import org.branneman.health.QuickAddUpdateRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.TodaySummaryDto
 import org.branneman.health.FoodItemDto
@@ -222,6 +224,17 @@ class HealthApiClient(
         }
         if (!response.status.isSuccess() && response.status != HttpStatusCode.NotFound) {
             throw Exception("DELETE /in/log/$id failed: ${response.status}")
+        }
+    }
+
+    suspend fun patchQuickAdd(token: String, id: String, dto: QuickAddUpdateRequestDto) {
+        val response = client.patch("$baseUrl/in/log/$id") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(dto)
+        }
+        if (!response.status.isSuccess()) {
+            throw Exception("PATCH /in/log/$id failed: ${response.status}")
         }
     }
 

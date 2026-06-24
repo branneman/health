@@ -21,6 +21,7 @@ import kotlin.time.Duration.Companion.hours
 import org.branneman.health.FoodItemRequestDto
 import org.branneman.health.FoodLogRequestDto
 import org.branneman.health.QuickAddRequestDto
+import org.branneman.health.QuickAddUpdateRequestDto
 import org.branneman.health.DailyEnergyDto
 import org.branneman.health.FoodItemDto
 import org.branneman.health.LogEntryDto
@@ -733,6 +734,33 @@ fun Application.module(
                 }
                 if (deleted) call.respond(HttpStatusCode.NoContent)
                 else call.respond(HttpStatusCode.NotFound)
+            }
+
+            patch("/in/log/{id}") {
+                val userId = UUID.fromString(call.principal<UserIdPrincipal>()!!.name)
+                val entryId = call.parameters["id"]
+                    ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                    ?: return@patch call.respond(HttpStatusCode.BadRequest)
+                val dto = call.receive<QuickAddUpdateRequestDto>()
+                if (dto.kcal <= 0) return@patch call.respond(HttpStatusCode.BadRequest)
+
+                val result = transaction {
+                    val row = LogEntry.selectAll()
+                        .where { (LogEntry.id eq entryId) and (LogEntry.userId eq userId) }
+                        .singleOrNull() ?: return@transaction "not_found"
+                    if (row[LogEntry.quickAddKcal] == null) return@transaction "food_item"
+                    LogEntry.update({ (LogEntry.id eq entryId) and (LogEntry.userId eq userId) }) {
+                        it[LogEntry.quickAddKcal]  = dto.kcal
+                        it[LogEntry.quickAddLabel] = dto.label
+                    }
+                    "ok"
+                }
+                when (result) {
+                    "not_found" -> call.respond(HttpStatusCode.NotFound)
+                    "food_item" -> call.respond(HttpStatusCode.UnprocessableEntity,
+                                       mapOf("error" to "not_a_quick_add_entry"))
+                    else        -> call.respond(HttpStatusCode.NoContent)
+                }
             }
 
             get("/summary/today") {

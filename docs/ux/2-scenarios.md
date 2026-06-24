@@ -324,8 +324,7 @@ without commenting on it.
 **Steps:**
 
 1. User taps the entry in today's list (or in history via the dashboard).
-2. Option: `Delete`. Log entries are immutable — no in-place edit. To correct, delete
-   and re-log using any path (S03–S10).
+2. For quick-add entries: tap to open edit dialog (kcal + label). For food-item entries: tap to confirm deletion.
 3. Deletion removes the entry and updates the day's total immediately.
 
 **Outcome:** Corrected entry in the log.
@@ -333,8 +332,7 @@ without commenting on it.
 **Past days:** Accessible from the history section of the dashboard. Same delete-and-relog
 flow applies.
 
-**Notes:** The immutability is an API-level constraint (snapshot integrity). The UX
-presents it as "delete to correct" without exposing the technical reason.
+**Notes:** Food-item entries are immutable (snapshot integrity — changing ingredient rows post-hoc would corrupt nutrition history). Quick-add entries can be edited because they contain only a kcal number and a label string, with no snapshotted nutrition to protect.
 
 ---
 

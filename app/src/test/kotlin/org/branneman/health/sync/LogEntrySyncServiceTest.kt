@@ -155,4 +155,35 @@ class LogEntrySyncServiceTest {
 
         assertEquals(1, db.logEntryDao().getByStatus(SyncStatus.PENDING_CREATE).size)
     }
+
+    @Test
+    fun `PENDING_UPDATE is patched and marked SYNCED on 204`() = runTest {
+        val entry = aQuickAddEntry(quickAddKcal = 600, quickAddLabel = "new label",
+                                   syncStatus = SyncStatus.PENDING_UPDATE)
+        db.logEntryDao().upsert(entry)
+
+        val api = mockApiClient { req ->
+            if (req.method.value == "PATCH") respond("", HttpStatusCode.NoContent)
+            else respond("", HttpStatusCode.InternalServerError)
+        }
+
+        LogEntrySyncService(api, db).sync("token")
+
+        assertEquals(1, db.logEntryDao().getByStatus(SyncStatus.SYNCED).size)
+        assertTrue(db.logEntryDao().getByStatus(SyncStatus.PENDING_UPDATE).isEmpty())
+    }
+
+    @Test
+    fun `PENDING_UPDATE stays PENDING_UPDATE on network error`() = runTest {
+        val entry = aQuickAddEntry(quickAddKcal = 600, syncStatus = SyncStatus.PENDING_UPDATE)
+        db.logEntryDao().upsert(entry)
+
+        val api = HealthApiClient("http://test", HttpClient(MockEngine { error("connection refused") }) {
+            install(ContentNegotiation) { json() }
+        })
+
+        LogEntrySyncService(api, db).sync("token")
+
+        assertEquals(1, db.logEntryDao().getByStatus(SyncStatus.PENDING_UPDATE).size)
+    }
 }

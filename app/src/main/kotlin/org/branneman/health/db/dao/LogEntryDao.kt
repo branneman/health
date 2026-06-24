@@ -76,6 +76,13 @@ interface LogEntryDao {
     @Query("UPDATE log_entry SET syncStatus = :status WHERE id = :id")
     suspend fun updateSyncStatus(id: String, status: SyncStatus)
 
+    @Query("""
+        UPDATE log_entry
+        SET quickAddKcal = :kcal, quickAddLabel = :label, syncStatus = 'PENDING_UPDATE'
+        WHERE id = :id
+    """)
+    suspend fun updateQuickAdd(id: String, kcal: Int, label: String?)
+
     @Query("DELETE FROM log_entry WHERE id = :id")
     suspend fun deleteById(id: String)
 

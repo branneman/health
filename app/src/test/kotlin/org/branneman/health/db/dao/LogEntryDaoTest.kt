@@ -103,4 +103,32 @@ class LogEntryDaoTest {
         dao.deleteAllForUser(userId)
         assertEquals(1, dao.observeAll().first().size)
     }
+
+    @Test
+    fun `updateQuickAdd sets new kcal and label and marks PENDING_UPDATE`() = runTest {
+        val entry = aQuickAddEntry(quickAddKcal = 400, quickAddLabel = "old label",
+                                   syncStatus = SyncStatus.SYNCED)
+        dao.upsert(entry)
+
+        dao.updateQuickAdd(entry.id, 600, "new label")
+
+        val updated = dao.observeAll().first().single()
+        assertEquals(600, updated.quickAddKcal)
+        assertEquals("new label", updated.quickAddLabel)
+        assertEquals(SyncStatus.PENDING_UPDATE, updated.syncStatus)
+    }
+
+    @Test
+    fun `updateQuickAdd sets null label when label is null`() = runTest {
+        val entry = aQuickAddEntry(quickAddKcal = 300, quickAddLabel = "had label",
+                                   syncStatus = SyncStatus.SYNCED)
+        dao.upsert(entry)
+
+        dao.updateQuickAdd(entry.id, 300, null)
+
+        val updated = dao.observeAll().first().single()
+        assertEquals(300, updated.quickAddKcal)
+        kotlin.test.assertNull(updated.quickAddLabel)
+        assertEquals(SyncStatus.PENDING_UPDATE, updated.syncStatus)
+    }
 }

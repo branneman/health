@@ -101,10 +101,7 @@ Optional input, treated gently (see principles — never nag, never punish).
 
 ## Correcting entries
 
-Log entries are **immutable** — no in-place edit. To correct a mistake: delete the
-entry and re-log using any logging path. This is an API-level constraint (snapshot
-integrity), not a UX choice; the UI presents it as "delete to correct" without
-surfacing the technical reason.
+**Quick-add entries** (from Quick-add kcal, Ask AI, template buttons, drink shortcuts) can be edited in place — tap the entry to open an edit dialog for kcal and label. **Food-item entries** (from Build from scratch) are immutable — to correct one, delete and re-log. Food-item entries snapshot ingredient nutrition at log time; editing them would corrupt history.
 
 - Every entry is **deletable** from today's list in one tap. Deletion is immediate
   and updates the day's calorie total instantly.

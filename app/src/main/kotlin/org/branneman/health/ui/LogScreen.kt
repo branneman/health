@@ -7,11 +7,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,13 +45,14 @@ fun LogScreen(
         val action = lastAction ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
             message     = action.message,
-            actionLabel = "Undo",
+            actionLabel = if (action is LogAction.Saved) null else "Undo",
             duration    = SnackbarDuration.Short,
         )
         if (result == SnackbarResult.ActionPerformed) {
             when (action) {
                 is LogAction.Added   -> viewModel.undoAdd()
                 is LogAction.Deleted -> viewModel.undoDelete()
+                is LogAction.Saved   -> Unit
             }
         }
         lastAction = null
@@ -75,6 +78,10 @@ fun LogScreen(
                 viewModel.deleteEntry(entry)
                 lastAction = LogAction.Deleted("Deleted")
             },
+            onEdit              = { entry, kcal, label ->
+                viewModel.editEntry(entry, kcal, label)
+                lastAction = LogAction.Saved("Saved")
+            },
             onSetUpMealButtons  = onSetUpMealButtons,
             onLogTemplate       = { template ->
                 viewModel.logFromTemplate(template)
@@ -95,12 +102,14 @@ private sealed interface LogAction {
     val message: String
     data class Added(override val message: String)   : LogAction
     data class Deleted(override val message: String) : LogAction
+    data class Saved(override val message: String)   : LogAction
 }
 
 @Composable
 fun LogContent(
     entries: List<LogEntryWithKcal>,
     onDelete: (LogEntryEntity) -> Unit,
+    onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
     pinnedTemplates: List<MealTemplateEntity> = emptyList(),
     shortcuts: List<ShortcutEntity> = emptyList(),
@@ -111,12 +120,22 @@ fun LogContent(
     onOpenLogFlow: () -> Unit = {},
 ) {
     var entryToDelete by remember { mutableStateOf<LogEntryWithKcal?>(null) }
+    var entryToEdit   by remember { mutableStateOf<LogEntryWithKcal?>(null) }
 
     entryToDelete?.let { ewk ->
         DeleteConfirmDialog(
             entry     = ewk,
             onConfirm = { onDelete(ewk.entry); entryToDelete = null },
             onDismiss = { entryToDelete = null },
+        )
+    }
+
+    entryToEdit?.let { ewk ->
+        EditEntryDialog(
+            entry     = ewk,
+            onSave    = { kcal, label -> onEdit(ewk.entry, kcal, label); entryToEdit = null },
+            onDelete  = { entryToDelete = ewk; entryToEdit = null },
+            onDismiss = { entryToEdit = null },
         )
     }
 
@@ -205,7 +224,13 @@ fun LogContent(
             val total = entries.sumOf { it.totalKcal }
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(entries, key = { it.entry.id }) { ewk ->
-                    LogEntryRow(entry = ewk, onClick = { entryToDelete = ewk })
+                    LogEntryRow(
+                        entry   = ewk,
+                        onClick = {
+                            if (ewk.entry.quickAddKcal != null) entryToEdit = ewk
+                            else entryToDelete = ewk
+                        },
+                    )
                     HorizontalDivider()
                 }
             }
@@ -267,5 +292,61 @@ private fun DeleteConfirmDialog(
         title            = { Text(title) },
         confirmButton    = { TextButton(onClick = onConfirm) { Text("Delete") } },
         dismissButton    = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun EditEntryDialog(
+    entry: LogEntryWithKcal,
+    onSave: (kcal: Int, label: String?) -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val time = remember(entry.entry.loggedAt) {
+        runCatching { OffsetDateTime.parse(entry.entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
+    }
+    var kcalText  by remember { mutableStateOf(entry.entry.quickAddKcal?.toString() ?: "") }
+    var labelText by remember { mutableStateOf(entry.entry.quickAddLabel ?: "") }
+
+    val kcalValue = kcalText.toIntOrNull()
+    val saveEnabled = kcalValue != null && kcalValue > 0
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title  = { Text(time) },
+        text   = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value         = labelText,
+                    onValueChange = { labelText = it },
+                    label         = { Text("Label (optional)") },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value         = kcalText,
+                    onValueChange = { kcalText = it },
+                    label         = { Text("kcal") },
+                    singleLine    = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier      = Modifier
+                        .fillMaxWidth()
+                        .testTag("edit_entry_kcal_field"),
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick  = { onSave(kcalValue!!, labelText.trim().ifEmpty { null }) },
+                enabled  = saveEnabled,
+                modifier = Modifier.testTag("edit_entry_save_button"),
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDelete)  { Text("Delete") }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
     )
 }

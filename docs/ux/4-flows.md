@@ -368,7 +368,8 @@ Each tap:
 └──────────────────────────────┘
 ```
 
-- No edit option (entries are immutable — see `3-features/logging.md`)
+- Tap a quick-add entry → edit dialog (kcal + label)
+- Tap a food-item entry → delete-confirm dialog (immutable — see `3-features/logging.md`)
 - Delete is immediate; no second confirmation
 - Budget recalculates as soon as entry is removed
 

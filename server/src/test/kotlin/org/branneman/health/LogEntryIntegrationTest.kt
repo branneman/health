@@ -174,4 +174,93 @@ class LogEntryIntegrationTest {
         assertEquals(HttpStatusCode.NotFound, r.status)
         transaction { Users.deleteWhere { Users.id eq otherId } }
     }
+
+    @Test fun `PATCH in-log updates kcal and label and returns 204`() = appTest {
+        val token = login()
+        val id = UUID.randomUUID().toString()
+        client.post("/in/log/quick-add") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"id":"$id","quickAddKcal":300,"quickAddLabel":"old","loggedAt":"2026-06-11T12:00:00Z"}""")
+        }
+
+        val patch = client.patch("/in/log/$id") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kcal":500,"label":"updated"}""")
+        }
+        assertEquals(HttpStatusCode.NoContent, patch.status)
+
+        val entries = client.get("/in/log") { bearerAuth(token) }
+        val arr = Json.parseToJsonElement(entries.bodyAsText()).jsonArray
+        val entry = arr.first { it.jsonObject["id"]!!.jsonPrimitive.content == id }.jsonObject
+        assertEquals(500, entry["quickAddKcal"]!!.jsonPrimitive.content.toInt())
+        assertEquals("updated", entry["quickAddLabel"]!!.jsonPrimitive.content)
+    }
+
+    @Test fun `PATCH in-log returns 404 for unknown entry`() = appTest {
+        val token = login()
+        val r = client.patch("/in/log/${UUID.randomUUID()}") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kcal":500,"label":null}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, r.status)
+    }
+
+    @Test fun `PATCH in-log returns 404 for another user's entry`() = appTest {
+        val token = login()
+        val otherId = UUID.randomUUID()
+        val entryId = UUID.randomUUID()
+        transaction {
+            Users.insert {
+                it[id]           = otherId
+                it[username]     = "other-patch@test.local"
+                it[passwordHash] = TEST_HASH
+            }
+            LogEntry.insert {
+                it[LogEntry.id]           = entryId
+                it[LogEntry.userId]       = otherId
+                it[LogEntry.loggedAt]     = OffsetDateTime.now(ZoneOffset.UTC)
+                it[LogEntry.mealType]     = "unknown"
+                it[LogEntry.quickAddKcal] = 300
+                it[LogEntry.createdAt]    = OffsetDateTime.now(ZoneOffset.UTC)
+            }
+        }
+        val r = client.patch("/in/log/$entryId") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kcal":500,"label":null}""")
+        }
+        assertEquals(HttpStatusCode.NotFound, r.status)
+        transaction {
+            LogEntry.deleteWhere { LogEntry.id eq entryId }
+            Users.deleteWhere { Users.id eq otherId }
+        }
+    }
+
+    @Test fun `PATCH in-log returns 422 for food-item entry`() = appTest {
+        val token = login()
+        val id = UUID.randomUUID()
+        transaction {
+            LogEntry.insert {
+                it[LogEntry.id]           = id
+                it[LogEntry.userId]       = testUserId
+                it[LogEntry.loggedAt]     = OffsetDateTime.now(ZoneOffset.UTC)
+                it[LogEntry.mealType]     = "unknown"
+                it[LogEntry.quickAddKcal] = null   // food-item entry
+                it[LogEntry.createdAt]    = OffsetDateTime.now(ZoneOffset.UTC)
+            }
+        }
+        val r = client.patch("/in/log/${id}") {
+            bearerAuth(token); contentType(ContentType.Application.Json)
+            setBody("""{"kcal":500,"label":null}""")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, r.status)
+        transaction { LogEntry.deleteWhere { LogEntry.id eq id } }
+    }
+
+    @Test fun `PATCH in-log returns 401 without token`() = appTest {
+        val r = client.patch("/in/log/${UUID.randomUUID()}") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"kcal":500,"label":null}""")
+        }
+        assertEquals(HttpStatusCode.Unauthorized, r.status)
+    }
 }

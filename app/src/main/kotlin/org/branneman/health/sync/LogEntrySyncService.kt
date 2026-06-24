@@ -3,6 +3,7 @@ package org.branneman.health.sync
 import org.branneman.health.FoodLogItemRequestDto
 import org.branneman.health.FoodLogRequestDto
 import org.branneman.health.QuickAddRequestDto
+import org.branneman.health.QuickAddUpdateRequestDto
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.network.HealthApiClient
@@ -43,6 +44,22 @@ class LogEntrySyncService(
                 }.onSuccess {
                     db.logEntryDao().updateSyncStatus(entity.id, SyncStatus.SYNCED)
                 }
+            }
+        }
+
+        db.logEntryDao().getByStatus(SyncStatus.PENDING_UPDATE).forEach { entity ->
+            if (entity.quickAddKcal == null) return@forEach
+            runCatching {
+                api.patchQuickAdd(
+                    token = token,
+                    id    = entity.id,
+                    dto   = QuickAddUpdateRequestDto(
+                        kcal  = entity.quickAddKcal,
+                        label = entity.quickAddLabel,
+                    ),
+                )
+            }.onSuccess {
+                db.logEntryDao().updateSyncStatus(entity.id, SyncStatus.SYNCED)
             }
         }
 

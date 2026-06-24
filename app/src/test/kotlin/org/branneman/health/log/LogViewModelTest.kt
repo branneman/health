@@ -11,9 +11,11 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import org.branneman.health.aQuickAddEntry
 import org.branneman.health.aShortcut
 import org.branneman.health.auth.TokenStore
 import org.branneman.health.db.HealthDatabase
+import org.branneman.health.db.SyncStatus
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -79,5 +81,27 @@ class LogViewModelTest {
         val entry = entries.single()
         assertEquals(150, entry.quickAddKcal)
         assertEquals("🍺 Pils", entry.quickAddLabel)
+    }
+
+    @Test
+    fun `editEntry updates kcal and label in Room`() = runTest {
+        val farFuture = OffsetDateTime.now().plusDays(30).toString()
+        tokenStore.save("test-token", farFuture, userId)
+
+        val entry = aQuickAddEntry(
+            userId       = userId,
+            quickAddKcal = 400,
+            quickAddLabel = "old",
+            syncStatus   = SyncStatus.SYNCED,
+        )
+        db.logEntryDao().upsert(entry)
+
+        viewModel.editEntry(entry, 600, "new label")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val updated = db.logEntryDao().observeAll().first().single()
+        assertEquals(600, updated.quickAddKcal)
+        assertEquals("new label", updated.quickAddLabel)
+        assertEquals(SyncStatus.PENDING_UPDATE, updated.syncStatus)
     }
 }
