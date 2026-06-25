@@ -26,6 +26,10 @@ fun AiConfigScreen(
     var apiKeyInput by remember { mutableStateOf("") }
     var keyVisible by remember { mutableStateOf(false) }
 
+    DisposableEffect(Unit) {
+        onDispose { viewModel.saveError.value = false }
+    }
+
     AiConfigContent(
         status             = status ?: AiConfigStatusDto(configured = false, expiresAt = null),
         apiKeyInput        = apiKeyInput,

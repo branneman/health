@@ -58,4 +58,11 @@ class AiConfigViewModel private constructor(
             status.value = AiConfigStatusDto(configured = false, expiresAt = null)
         }
     }
+
+    internal companion object {
+        fun forTest(
+            application: Application,
+            repository: AiRepository,
+        ) = AiConfigViewModel(application, repository)
+    }
 }
