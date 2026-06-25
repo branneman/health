@@ -20,6 +20,7 @@ import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.MealTemplateItemEntity
 import java.util.UUID
 import kotlin.math.roundToInt
+// Ingredient is defined in BuildFromScratchViewModel.kt but reused here
 
 class EditIngredientTemplateViewModel private constructor(
     application: Application,
@@ -47,6 +48,8 @@ class EditIngredientTemplateViewModel private constructor(
 
     fun loadTemplate(id: String?) {
         templateId = id
+        _name.value = ""
+        _ingredients.value = emptyList()
         if (id == null) return
         viewModelScope.launch {
             val template = db.mealTemplateDao().getById(id) ?: return@launch
@@ -111,5 +114,13 @@ class EditIngredientTemplateViewModel private constructor(
                 )
             }
         }
+    }
+
+    internal companion object {
+        fun forTest(
+            application: Application,
+            db:          HealthDatabase,
+            tokenStore:  TokenStore,
+        ) = EditIngredientTemplateViewModel(application, db, tokenStore)
     }
 }
