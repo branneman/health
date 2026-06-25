@@ -56,7 +56,9 @@ fun FoodSearchScreen(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) showScanner = true }
 
-    LaunchedEffect(Unit) { viewModel.resetSearch() }
+    DisposableEffect(Unit) {
+        onDispose { viewModel.resetSearch() }
+    }
 
     LaunchedEffect(selectedItem) {
         selectedItem?.let {

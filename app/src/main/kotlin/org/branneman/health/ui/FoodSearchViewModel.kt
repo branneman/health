@@ -177,4 +177,13 @@ class FoodSearchViewModel private constructor(
     fun consumeSelectedItem() { _selectedItem.value = null }
 
     private fun selectExisting(entity: FoodItemEntity) { _selectedItem.value = entity }
+
+    internal companion object {
+        fun forTest(
+            application: Application,
+            db:          HealthDatabase,
+            tokenStore:  TokenStore,
+            api:         HealthApiClient = HealthApiClient(),
+        ) = FoodSearchViewModel(application, db, tokenStore, api)
+    }
 }
