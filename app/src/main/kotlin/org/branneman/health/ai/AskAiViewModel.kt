@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -74,6 +75,7 @@ class AskAiViewModel private constructor(
 
     private var imageBytes: ByteArray? = null
     private var lastLogged: LogEntryEntity? = null
+    private var estimateJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -98,7 +100,7 @@ class AskAiViewModel private constructor(
     }
 
     fun estimate() {
-        viewModelScope.launch {
+        estimateJob = viewModelScope.launch {
             state.value = AskAiState.Loading
             val result = repository.estimate(
                 text       = text.value.trim().ifEmpty { null },
@@ -123,6 +125,8 @@ class AskAiViewModel private constructor(
     fun discard() { state.value = AskAiState.Idle }
 
     fun reset() {
+        estimateJob?.cancel()
+        estimateJob = null
         state.value = AskAiState.Idle
         text.value = ""
         imageBitmap.value = null

@@ -2,6 +2,7 @@ package org.branneman.health.ai
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -219,6 +220,34 @@ class AskAiViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         // After completion
         assertTrue(capturedDuringCall)
+    }
+
+    @Test
+    fun `reset cancels in-flight estimate so state remains Idle`() = runTest {
+        val estimateGate = CompletableDeferred<AiEstimateApiResult>()
+        val slowRepo = object : AiRepository {
+            override suspend fun getStatus() = AiConfigStatusDto(true, null)
+            override suspend fun saveKey(k: String, e: String?) = AiConfigStatusDto(true, null)
+            override suspend fun removeKey() = Unit
+            override suspend fun estimate(text: String?, imageBytes: ByteArray?): AiEstimateApiResult =
+                estimateGate.await()
+        }
+        val vm = makeVm(slowRepo)
+        vm.setText("tiramisu")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.estimate()
+        testDispatcher.scheduler.advanceUntilIdle()  // runs until suspended at estimateGate.await()
+        assertIs<AskAiState.Loading>(vm.state.value)
+
+        vm.reset()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertIs<AskAiState.Idle>(vm.state.value)
+
+        // Simulate the network call completing after reset — should have no effect
+        estimateGate.complete(AiEstimateApiResult.Success(AiEstimateResponseDto(500, "late result")))
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertIs<AskAiState.Idle>(vm.state.value)  // still Idle, not Result
     }
 
     private fun assertEquals(expected: Any?, actual: Any?) = kotlin.test.assertEquals(expected, actual)
