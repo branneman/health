@@ -47,6 +47,7 @@ import org.branneman.health.ui.ProfileSettingsScreen
 import org.branneman.health.ui.QuickAddScreen
 import org.branneman.health.ui.ScheduleSettingsScreen
 import org.branneman.health.ui.SettingsScreen
+import org.branneman.health.ui.SingleItemLogScreen
 import org.branneman.health.ui.TemplateListScreen
 import org.branneman.health.ui.TemplatesScreen
 
@@ -125,7 +126,7 @@ fun App() {
 
 private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal, Schedule, Templates, Ai, EditIngredientTemplate, TemplatesFoodSearch }
 
-private enum class LogPage { Main, TemplateList, QuickAdd, AskAi, BuildFromScratch, FoodSearch }
+private enum class LogPage { Main, TemplateList, QuickAdd, AskAi, BuildFromScratch, FoodSearch, SingleItemSearch, SingleItemGrams }
 
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
@@ -139,6 +140,8 @@ private fun MainNav(authViewModel: AuthViewModel) {
     var selectedFoodItemForTemplate by remember { mutableStateOf<FoodItemEntity?>(null) }
     var editingTemplateId           by remember { mutableStateOf<String?>(null) }
     var loadIngredientTemplateId    by remember { mutableStateOf<String?>(null) }
+    var selectedFoodItemForSingleLog by remember { mutableStateOf<FoodItemEntity?>(null) }
+    var singleItemAutoLaunchScan     by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentTab) {
         if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
@@ -148,6 +151,8 @@ private fun MainNav(authViewModel: AuthViewModel) {
             pendingLogUndoAction = null
             quickAddPrefill = null
             loadIngredientTemplateId = null
+            selectedFoodItemForSingleLog = null
+            singleItemAutoLaunchScan = false
         }
     }
 
@@ -251,14 +256,47 @@ private fun MainNav(authViewModel: AuthViewModel) {
                             onItemSelected = { item -> selectedFoodItemForLog = item; logPage = LogPage.BuildFromScratch },
                             onBack         = { logPage = LogPage.BuildFromScratch },
                         )
+                        LogPage.SingleItemSearch -> FoodSearchScreen(
+                            onItemSelected = { item ->
+                                selectedFoodItemForSingleLog = item
+                                logPage = LogPage.SingleItemGrams
+                            },
+                            onBack         = {
+                                selectedFoodItemForSingleLog = null
+                                singleItemAutoLaunchScan = false
+                                logPage = LogPage.Main
+                            },
+                            autoLaunchScan = singleItemAutoLaunchScan,
+                        )
+                        LogPage.SingleItemGrams -> {
+                            val item = selectedFoodItemForSingleLog
+                            if (item != null) {
+                                SingleItemLogScreen(
+                                    item         = item,
+                                    logViewModel = logVm,
+                                    onLogged     = { undoAction ->
+                                        pendingLogUndoAction = undoAction
+                                        selectedFoodItemForSingleLog = null
+                                        singleItemAutoLaunchScan = false
+                                        logPage = LogPage.Main
+                                    },
+                                    onBack       = {
+                                        selectedFoodItemForSingleLog = null
+                                        logPage = LogPage.SingleItemSearch
+                                    },
+                                )
+                            }
+                        }
                     }
                     if (showLogSheet) {
                         LogFlowSheet(
-                            onFromTemplate   = { showLogSheet = false; logPage = LogPage.TemplateList },
-                            onQuickAdd       = { showLogSheet = false; logPage = LogPage.QuickAdd },
-                            onAskAi          = { showLogSheet = false; logPage = LogPage.AskAi },
+                            onFromTemplate     = { showLogSheet = false; logPage = LogPage.TemplateList },
+                            onQuickAdd         = { showLogSheet = false; logPage = LogPage.QuickAdd },
+                            onAskAi            = { showLogSheet = false; logPage = LogPage.AskAi },
                             onBuildFromScratch = { showLogSheet = false; buildVm.reset(); logPage = LogPage.BuildFromScratch },
-                            onDismiss        = { showLogSheet = false },
+                            onSingleItem       = { showLogSheet = false; singleItemAutoLaunchScan = false; logPage = LogPage.SingleItemSearch },
+                            onScanAndLog       = { showLogSheet = false; singleItemAutoLaunchScan = true;  logPage = LogPage.SingleItemSearch },
+                            onDismiss          = { showLogSheet = false },
                         )
                     }
                 }
@@ -322,6 +360,8 @@ private fun LogFlowSheet(
     onQuickAdd: () -> Unit,
     onAskAi: () -> Unit,
     onBuildFromScratch: () -> Unit,
+    onSingleItem: () -> Unit,
+    onScanAndLog: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -362,6 +402,23 @@ private fun LogFlowSheet(
                 modifier = Modifier
                     .clickable(onClick = onBuildFromScratch)
                     .testTag("log_build_from_scratch"),
+            )
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text("Single item") },
+                trailingContent = { Text("›", style = MaterialTheme.typography.titleLarge) },
+                modifier = Modifier
+                    .clickable(onClick = onSingleItem)
+                    .testTag("log_single_item"),
+            )
+            HorizontalDivider()
+            ListItem(
+                headlineContent   = { Text("Scan & log") },
+                supportingContent = { Text("Scan barcode directly") },
+                trailingContent   = { Text("›", style = MaterialTheme.typography.titleLarge) },
+                modifier = Modifier
+                    .clickable(onClick = onScanAndLog)
+                    .testTag("log_scan_and_log"),
             )
         }
     }
