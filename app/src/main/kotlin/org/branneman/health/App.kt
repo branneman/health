@@ -282,6 +282,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                     },
                                     onBack       = {
                                         selectedFoodItemForSingleLog = null
+                                        singleItemAutoLaunchScan = false
                                         logPage = LogPage.SingleItemSearch
                                     },
                                 )
