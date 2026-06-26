@@ -41,6 +41,7 @@ import org.branneman.health.db.entities.FoodItemEntity
 fun FoodSearchScreen(
     onItemSelected: (FoodItemEntity) -> Unit,
     onBack: () -> Unit,
+    autoLaunchScan: Boolean = false,
     viewModel: FoodSearchViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -55,6 +56,17 @@ fun FoodSearchScreen(
     val cameraPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) showScanner = true }
+
+    LaunchedEffect(autoLaunchScan) {
+        if (autoLaunchScan) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_GRANTED) {
+                showScanner = true
+            } else {
+                cameraPermission.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose { viewModel.resetSearch() }
