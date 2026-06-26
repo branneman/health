@@ -104,4 +104,20 @@ class LogViewModelTest {
         assertEquals("new label", updated.quickAddLabel)
         assertEquals(SyncStatus.PENDING_UPDATE, updated.syncStatus)
     }
+
+    @Test
+    fun `logSingleItem creates a log entry with food name and computed kcal`() = runTest {
+        val farFuture = OffsetDateTime.now().plusDays(30).toString()
+        tokenStore.save("test-token", farFuture, userId)
+
+        viewModel.logSingleItem("Apple", 85)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
+        val entry = entries.single()
+        assertEquals(85, entry.quickAddKcal)
+        assertEquals("Apple", entry.quickAddLabel)
+        assertEquals("unknown", entry.mealType)
+        assertEquals(SyncStatus.PENDING_CREATE, entry.syncStatus)
+    }
 }

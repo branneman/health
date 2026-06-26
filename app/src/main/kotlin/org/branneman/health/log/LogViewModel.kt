@@ -90,6 +90,21 @@ class LogViewModel private constructor(
         }
     }
 
+    fun logSingleItem(label: String, kcal: Int) {
+        viewModelScope.launch {
+            val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val entity = LogEntryEntity(
+                userId        = userId,
+                loggedAt      = OffsetDateTime.now().toString(),
+                mealType      = "unknown",
+                quickAddKcal  = kcal,
+                quickAddLabel = label,
+            )
+            db.logEntryDao().upsert(entity)
+            _undoPending.value = entity to SyncStatus.PENDING_CREATE
+        }
+    }
+
     fun undoAdd() {
         viewModelScope.launch {
             _undoPending.value?.let { (entity, _) ->
