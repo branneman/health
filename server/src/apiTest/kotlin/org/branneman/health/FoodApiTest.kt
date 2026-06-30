@@ -47,8 +47,8 @@ class FoodApiTest : ApiTestBase() {
 
     @Test fun `barcode for unknown code returns 404`() = runTest {
         val token = login()
-        // 0000000000000 is synthetic and not in OFD
-        val resp = client.get("$serverUrl/food/barcode?barcode=0000000000000") { bearerAuth(token) }
+        // 0000000000001 has an invalid EAN-13 check digit (correct is 0), so OFD will never store it
+        val resp = client.get("$serverUrl/food/barcode?barcode=0000000000001") { bearerAuth(token) }
         assertEquals(HttpStatusCode.NotFound, resp.status)
     }
 
