@@ -49,6 +49,7 @@ class LogViewModel private constructor(
     private val _undoPending = MutableStateFlow<Pair<LogEntryEntity, SyncStatus>?>(null)
 
     private val _selectedDate = MutableStateFlow(effectiveDate())
+    val selectedDate: StateFlow<LocalDate> = _selectedDate
 
     fun setSelectedDate(date: LocalDate) { _selectedDate.value = date }
 

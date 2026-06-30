@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.launch
 import org.branneman.health.util.effectiveDate
 import org.branneman.health.auth.AuthState
@@ -195,6 +201,10 @@ private fun MainNav(authViewModel: AuthViewModel) {
                 Tab.Log -> {
                     when (logPage) {
                         LogPage.Main -> {
+                            DisposableEffect(Unit) {
+                                onDispose { logVm.setSelectedDate(effectiveDate()) }
+                            }
+
                             val pagerState = rememberPagerState(initialPage = 0, pageCount = { 365 })
                             var showDatePicker by remember { mutableStateOf(false) }
 
@@ -204,8 +214,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
 
                             Column(modifier = Modifier.fillMaxSize()) {
                                 DateNavigationHeader(
-                                    page       = pagerState.currentPage,
-                                    onPickDate = { showDatePicker = true },
+                                    page        = pagerState.currentPage,
+                                    currentDate = effectiveDate(),
+                                    onPickDate  = { showDatePicker = true },
                                 )
                                 HorizontalPager(
                                     state    = pagerState,
@@ -234,15 +245,15 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                 val today = effectiveDate()
                                 val initialMillis = today
                                     .minusDays(pagerState.currentPage.toLong())
-                                    .atStartOfDay(java.time.ZoneOffset.UTC)
+                                    .atStartOfDay(ZoneOffset.UTC)
                                     .toInstant().toEpochMilli()
                                 val pickerState = rememberDatePickerState(
                                     initialSelectedDateMillis = initialMillis,
                                     selectableDates = object : SelectableDates {
                                         override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                                            val picked = java.time.Instant.ofEpochMilli(utcTimeMillis)
-                                                .atZone(java.time.ZoneOffset.UTC).toLocalDate()
-                                            return !picked.isAfter(today)
+                                            val picked = Instant.ofEpochMilli(utcTimeMillis)
+                                                .atZone(ZoneOffset.UTC).toLocalDate()
+                                            return !picked.isAfter(today) && !picked.isBefore(today.minusDays(364))
                                         }
                                     },
                                 )
@@ -252,9 +263,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                         TextButton(onClick = {
                                             val millis = pickerState.selectedDateMillis
                                             if (millis != null) {
-                                                val picked = java.time.Instant.ofEpochMilli(millis)
-                                                    .atZone(java.time.ZoneOffset.UTC).toLocalDate()
-                                                val page = java.time.temporal.ChronoUnit.DAYS
+                                                val picked = Instant.ofEpochMilli(millis)
+                                                    .atZone(ZoneOffset.UTC).toLocalDate()
+                                                val page = ChronoUnit.DAYS
                                                     .between(picked, today).toInt().coerceIn(0, 364)
                                                 coroutineScope.launch { pagerState.animateScrollToPage(page) }
                                             }
@@ -428,14 +439,14 @@ private fun MainNav(authViewModel: AuthViewModel) {
 }
 
 @Composable
-private fun DateNavigationHeader(page: Int, onPickDate: () -> Unit) {
-    val today = remember { effectiveDate() }
+private fun DateNavigationHeader(page: Int, currentDate: LocalDate, onPickDate: () -> Unit) {
+    val today = remember(currentDate) { effectiveDate() }
     val label = remember(page) {
         when (page) {
             0    -> "Today"
             1    -> "Yesterday"
             else -> today.minusDays(page.toLong())
-                .format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM"))
+                .format(DateTimeFormatter.ofPattern("EEE d MMM"))
         }
     }
     Row(

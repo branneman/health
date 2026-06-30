@@ -3,6 +3,7 @@ package org.branneman.health.ui
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import java.time.LocalDate
 import kotlin.test.assertTrue
 import org.branneman.health.aLogEntry
 import org.branneman.health.aLogEntryWithKcal
@@ -28,6 +29,7 @@ class LogScreenTest {
 
     private fun render(
         entries: List<LogEntryWithKcal> = emptyList(),
+        selectedDate: LocalDate = LocalDate.now(),
         onDelete: (LogEntryEntity) -> Unit = {},
         onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
         onOpenLogFlow: () -> Unit = {},
@@ -36,6 +38,7 @@ class LogScreenTest {
             MaterialTheme {
                 LogContent(
                     entries       = entries,
+                    selectedDate  = selectedDate,
                     onDelete      = onDelete,
                     onEdit        = onEdit,
                     onOpenLogFlow = onOpenLogFlow,
@@ -143,6 +146,7 @@ class LogScreenTest {
 
     private fun renderWithTemplates(
         entries: List<LogEntryWithKcal> = emptyList(),
+        selectedDate: LocalDate = LocalDate.now(),
         pinned: List<MealTemplateEntity> = emptyList(),
         onDelete: (LogEntryEntity) -> Unit = {},
         onSetUpMealButtons: () -> Unit = {},
@@ -153,6 +157,7 @@ class LogScreenTest {
             MaterialTheme {
                 LogContent(
                     entries            = entries,
+                    selectedDate       = selectedDate,
                     pinnedTemplates    = pinned,
                     onDelete           = onDelete,
                     onSetUpMealButtons = onSetUpMealButtons,
@@ -194,6 +199,7 @@ class LogScreenTest {
 
     private fun renderWithShortcuts(
         entries: List<LogEntryWithKcal> = emptyList(),
+        selectedDate: LocalDate = LocalDate.now(),
         shortcuts: List<ShortcutEntity> = emptyList(),
         onDelete: (LogEntryEntity) -> Unit = {},
         onSetUpDrinkButtons: () -> Unit = {},
@@ -204,6 +210,7 @@ class LogScreenTest {
             MaterialTheme {
                 LogContent(
                     entries             = entries,
+                    selectedDate        = selectedDate,
                     shortcuts           = shortcuts,
                     onDelete            = onDelete,
                     onSetUpDrinkButtons = onSetUpDrinkButtons,
@@ -242,5 +249,21 @@ class LogScreenTest {
         renderWithShortcuts(shortcuts = listOf(shortcut), onLogShortcut = { logged = it })
         compose.onNodeWithText("🍺 Pils").performClick()
         assertEquals(shortcut, logged)
+    }
+
+    @Test fun `divider shows Today for today`() {
+        render(selectedDate = LocalDate.now())
+        compose.onNodeWithText("Today", substring = true).assertExists()
+    }
+
+    @Test fun `divider shows Yesterday for yesterday`() {
+        render(selectedDate = LocalDate.now().minusDays(1))
+        compose.onNodeWithText("Yesterday", substring = true).assertExists()
+    }
+
+    @Test fun `divider shows formatted date for older dates`() {
+        val date = LocalDate.of(2026, 6, 15)  // Mon 15 Jun
+        render(selectedDate = date)
+        compose.onNodeWithText("Mon 15 Jun", substring = true).assertExists()
     }
 }

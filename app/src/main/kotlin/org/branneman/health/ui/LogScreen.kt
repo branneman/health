@@ -17,11 +17,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import org.branneman.health.db.dao.LogEntryWithKcal
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
 import org.branneman.health.log.LogViewModel
+import org.branneman.health.util.effectiveDate
 
 @Composable
 fun LogScreen(
@@ -36,6 +39,7 @@ fun LogScreen(
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val pinnedTemplates by viewModel.pinnedTemplates.collectAsStateWithLifecycle()
+    val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var lastAction by remember { mutableStateOf<LogAction?>(null) }
 
@@ -72,6 +76,7 @@ fun LogScreen(
             entries             = entries,
             pinnedTemplates     = pinnedTemplates,
             shortcuts           = shortcuts,
+            selectedDate        = selectedDate,
             onDelete            = { entry ->
                 viewModel.deleteEntry(entry)
                 lastAction = LogAction.Deleted("Deleted")
@@ -108,6 +113,7 @@ fun LogContent(
     entries: List<LogEntryWithKcal>,
     onDelete: (LogEntryEntity) -> Unit,
     onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
+    selectedDate: LocalDate = effectiveDate(),
     modifier: Modifier = Modifier,
     pinnedTemplates: List<MealTemplateEntity> = emptyList(),
     shortcuts: List<ShortcutEntity> = emptyList(),
@@ -198,10 +204,16 @@ fun LogContent(
 
         Spacer(Modifier.height(16.dp))
 
+        val today = effectiveDate()
+        val dividerLabel = when {
+            selectedDate == today              -> "Today"
+            selectedDate == today.minusDays(1) -> "Yesterday"
+            else -> selectedDate.format(DateTimeFormatter.ofPattern("EEE d MMM"))
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             HorizontalDivider(modifier = Modifier.weight(1f))
             Text(
-                text     = "Today",
+                text     = dividerLabel,
                 style    = MaterialTheme.typography.labelSmall,
                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 8.dp),
