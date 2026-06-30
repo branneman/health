@@ -22,6 +22,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -58,7 +62,8 @@ import org.branneman.health.ui.DashboardScreen
 import org.branneman.health.ui.DrinkButtonsScreen
 import org.branneman.health.ui.EditIngredientTemplateScreen
 import org.branneman.health.ui.FoodSearchScreen
-import org.branneman.health.ui.LogScreen
+import org.branneman.health.ui.LogControls
+import org.branneman.health.ui.LogEntries
 import org.branneman.health.ui.LoginScreen
 import org.branneman.health.ui.MealButtonsScreen
 import org.branneman.health.ui.OnboardingScreen
@@ -210,48 +215,82 @@ private fun MainNav(authViewModel: AuthViewModel) {
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
                 Tab.Log -> {
-                    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 365 })
+                    val pagerState = rememberPagerState(initialPage = 364, pageCount = { 365 })
                     when (logPage) {
                         LogPage.Main -> {
                             var showDatePicker by remember { mutableStateOf(false) }
+                            val snackbarHostState = remember { SnackbarHostState() }
+                            var snackbarEvent by remember { mutableStateOf<Pair<String, (() -> Unit)?>?>(null) }
 
-                            LaunchedEffect(pagerState.currentPage) {
-                                logVm.setSelectedDate(effectiveDate().minusDays(pagerState.currentPage.toLong()))
+                            LaunchedEffect(snackbarEvent) {
+                                val event = snackbarEvent ?: return@LaunchedEffect
+                                val result = snackbarHostState.showSnackbar(
+                                    message     = event.first,
+                                    actionLabel = if (event.second != null) "Undo" else null,
+                                    duration    = SnackbarDuration.Short,
+                                )
+                                if (result == SnackbarResult.ActionPerformed) event.second?.invoke()
+                                snackbarEvent = null
                             }
 
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                DateNavigationHeader(
-                                    page        = pagerState.currentPage,
-                                    currentDate = effectiveDate(),
-                                    onPickDate  = { showDatePicker = true },
-                                )
-                                HorizontalPager(
-                                    state    = pagerState,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    LogScreen(
-                                        viewModel           = logVm,
-                                        onSetUpMealButtons  = {
-                                            currentTab   = Tab.Settings
-                                            settingsPage = SettingsPage.MealButtons
-                                        },
-                                        shortcuts           = logVm.shortcuts.collectAsStateWithLifecycle().value,
-                                        onSetUpDrinkButtons = {
-                                            currentTab   = Tab.Settings
-                                            settingsPage = SettingsPage.DrinkButtons
-                                        },
-                                        onLogShortcut           = { shortcut -> logVm.logFromShortcut(shortcut) },
-                                        onOpenLogFlow           = { showLogSheet = true },
-                                        externalUndo            = pendingLogUndoAction,
-                                        onExternalUndoConsumed  = { pendingLogUndoAction = null },
+                            LaunchedEffect(pendingLogUndoAction) {
+                                val undoAction = pendingLogUndoAction ?: return@LaunchedEffect
+                                val result = snackbarHostState.showSnackbar("Logged", "Undo", duration = SnackbarDuration.Short)
+                                if (result == SnackbarResult.ActionPerformed) undoAction()
+                                pendingLogUndoAction = null
+                            }
+
+                            LaunchedEffect(pagerState.currentPage) {
+                                logVm.setSelectedDate(effectiveDate().minusDays((364 - pagerState.currentPage).toLong()))
+                            }
+
+                            Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { scaffoldPadding ->
+                                Column(modifier = Modifier.fillMaxSize().padding(scaffoldPadding)) {
+                                    DateNavigationHeader(
+                                        page        = 364 - pagerState.currentPage,
+                                        currentDate = effectiveDate(),
+                                        onPickDate  = { showDatePicker = true },
                                     )
+                                    LogControls(
+                                        pinnedTemplates     = logVm.pinnedTemplates.collectAsStateWithLifecycle().value,
+                                        shortcuts           = logVm.shortcuts.collectAsStateWithLifecycle().value,
+                                        onSetUpMealButtons  = { currentTab = Tab.Settings; settingsPage = SettingsPage.MealButtons },
+                                        onLogTemplate       = { template ->
+                                            logVm.logFromTemplate(template)
+                                            snackbarEvent = "Logged" to logVm::undoAdd
+                                        },
+                                        onSetUpDrinkButtons = { currentTab = Tab.Settings; settingsPage = SettingsPage.DrinkButtons },
+                                        onLogShortcut       = { shortcut ->
+                                            logVm.logFromShortcut(shortcut)
+                                            snackbarEvent = "Logged" to logVm::undoAdd
+                                        },
+                                        onOpenLogFlow       = { showLogSheet = true },
+                                    )
+                                    HorizontalPager(
+                                        state    = pagerState,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        LogEntries(
+                                            entries      = logVm.entries.collectAsStateWithLifecycle().value,
+                                            selectedDate = logVm.selectedDate.collectAsStateWithLifecycle().value,
+                                            onDelete     = { entry ->
+                                                logVm.deleteEntry(entry)
+                                                snackbarEvent = "Deleted" to logVm::undoDelete
+                                            },
+                                            onEdit       = { entry, kcal, label ->
+                                                logVm.editEntry(entry, kcal, label)
+                                                snackbarEvent = "Saved" to null
+                                            },
+                                            onReorder    = { updates -> logVm.reorderEntries(updates) },
+                                        )
+                                    }
                                 }
                             }
 
                             if (showDatePicker) {
                                 val today = effectiveDate()
                                 val initialMillis = today
-                                    .minusDays(pagerState.currentPage.toLong())
+                                    .minusDays((364 - pagerState.currentPage).toLong())
                                     .atStartOfDay(ZoneOffset.UTC)
                                     .toInstant().toEpochMilli()
                                 val pickerState = rememberDatePickerState(
@@ -272,8 +311,8 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                             if (millis != null) {
                                                 val picked = Instant.ofEpochMilli(millis)
                                                     .atZone(ZoneOffset.UTC).toLocalDate()
-                                                val page = ChronoUnit.DAYS
-                                                    .between(picked, today).toInt().coerceIn(0, 364)
+                                                val daysAgo = ChronoUnit.DAYS.between(picked, today).toInt().coerceIn(0, 364)
+                                                val page = (364 - daysAgo).coerceIn(0, 364)
                                                 coroutineScope.launch { pagerState.animateScrollToPage(page) }
                                             }
                                             showDatePicker = false

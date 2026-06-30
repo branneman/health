@@ -109,7 +109,7 @@ fun LogScreen(
     }
 }
 
-private sealed interface LogAction {
+internal sealed interface LogAction {
     val message: String
     data class Added(override val message: String)   : LogAction
     data class Deleted(override val message: String) : LogAction
@@ -117,47 +117,17 @@ private sealed interface LogAction {
 }
 
 @Composable
-fun LogContent(
-    entries: List<LogEntryWithKcal>,
-    onDelete: (LogEntryEntity) -> Unit,
-    onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
-    onReorder: (List<Pair<String, Int>>) -> Unit = {},
-    selectedDate: LocalDate = effectiveDate(),
-    modifier: Modifier = Modifier,
-    pinnedTemplates: List<MealTemplateEntity> = emptyList(),
-    shortcuts: List<ShortcutEntity> = emptyList(),
+internal fun LogControls(
+    pinnedTemplates: List<MealTemplateEntity>,
+    shortcuts: List<ShortcutEntity>,
     onSetUpMealButtons: () -> Unit = {},
     onLogTemplate: (MealTemplateEntity) -> Unit = {},
     onSetUpDrinkButtons: () -> Unit = {},
     onLogShortcut: (ShortcutEntity) -> Unit = {},
     onOpenLogFlow: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
-    var entryToDelete by remember { mutableStateOf<LogEntryWithKcal?>(null) }
-    var entryToEdit   by remember { mutableStateOf<LogEntryWithKcal?>(null) }
-
-    entryToDelete?.let { ewk ->
-        DeleteConfirmDialog(
-            entry     = ewk,
-            onConfirm = { onDelete(ewk.entry); entryToDelete = null },
-            onDismiss = { entryToDelete = null },
-        )
-    }
-
-    entryToEdit?.let { ewk ->
-        EditEntryDialog(
-            entry     = ewk,
-            onSave    = { kcal, label -> onEdit(ewk.entry, kcal, label); entryToEdit = null },
-            onDelete  = { entryToDelete = ewk; entryToEdit = null },
-            onDismiss = { entryToEdit = null },
-        )
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        // --- Meal button row ---
+    Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         if (pinnedTemplates.isEmpty()) {
             OutlinedButton(
                 onClick  = onSetUpMealButtons,
@@ -182,7 +152,6 @@ fun LogContent(
 
         Spacer(Modifier.height(8.dp))
 
-        // Drink shortcuts row
         if (shortcuts.isEmpty()) {
             OutlinedButton(
                 onClick  = onSetUpDrinkButtons,
@@ -200,7 +169,7 @@ fun LogContent(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         Button(
             onClick  = onOpenLogFlow,
@@ -210,8 +179,40 @@ fun LogContent(
         ) {
             Text("Log  ›")
         }
+    }
+}
 
-        Spacer(Modifier.height(16.dp))
+@Composable
+fun LogEntries(
+    entries: List<LogEntryWithKcal>,
+    selectedDate: LocalDate = effectiveDate(),
+    onDelete: (LogEntryEntity) -> Unit,
+    onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
+    onReorder: (List<Pair<String, Int>>) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    var entryToDelete by remember { mutableStateOf<LogEntryWithKcal?>(null) }
+    var entryToEdit   by remember { mutableStateOf<LogEntryWithKcal?>(null) }
+
+    entryToDelete?.let { ewk ->
+        DeleteConfirmDialog(
+            entry     = ewk,
+            onConfirm = { onDelete(ewk.entry); entryToDelete = null },
+            onDismiss = { entryToDelete = null },
+        )
+    }
+
+    entryToEdit?.let { ewk ->
+        EditEntryDialog(
+            entry     = ewk,
+            onSave    = { kcal, label -> onEdit(ewk.entry, kcal, label); entryToEdit = null },
+            onDelete  = { entryToDelete = ewk; entryToEdit = null },
+            onDismiss = { entryToEdit = null },
+        )
+    }
+
+    Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Spacer(Modifier.height(8.dp))
 
         val today = effectiveDate()
         val dividerLabel = when {
@@ -241,7 +242,6 @@ fun LogContent(
             )
         } else {
             val total = entries.sumOf { it.totalKcal }
-
             var orderedEntries by remember(entries) { mutableStateOf(entries) }
             val listState = rememberLazyListState()
             val reorderState = rememberReorderableLazyListState(listState) { from, to ->
@@ -281,7 +281,6 @@ fun LogContent(
                                 }
                             },
                         )
-                        HorizontalDivider()
                     }
                 }
             }
@@ -294,6 +293,43 @@ fun LogContent(
                     .padding(top = 8.dp),
             )
         }
+    }
+}
+
+@Composable
+fun LogContent(
+    entries: List<LogEntryWithKcal>,
+    onDelete: (LogEntryEntity) -> Unit,
+    onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
+    onReorder: (List<Pair<String, Int>>) -> Unit = {},
+    selectedDate: LocalDate = effectiveDate(),
+    modifier: Modifier = Modifier,
+    pinnedTemplates: List<MealTemplateEntity> = emptyList(),
+    shortcuts: List<ShortcutEntity> = emptyList(),
+    onSetUpMealButtons: () -> Unit = {},
+    onLogTemplate: (MealTemplateEntity) -> Unit = {},
+    onSetUpDrinkButtons: () -> Unit = {},
+    onLogShortcut: (ShortcutEntity) -> Unit = {},
+    onOpenLogFlow: () -> Unit = {},
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        LogControls(
+            pinnedTemplates     = pinnedTemplates,
+            shortcuts           = shortcuts,
+            onSetUpMealButtons  = onSetUpMealButtons,
+            onLogTemplate       = onLogTemplate,
+            onSetUpDrinkButtons = onSetUpDrinkButtons,
+            onLogShortcut       = onLogShortcut,
+            onOpenLogFlow       = onOpenLogFlow,
+        )
+        LogEntries(
+            entries      = entries,
+            selectedDate = selectedDate,
+            onDelete     = onDelete,
+            onEdit       = onEdit,
+            onReorder    = onReorder,
+            modifier     = Modifier.weight(1f),
+        )
     }
 }
 
