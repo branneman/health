@@ -117,7 +117,7 @@
                            | map('regex_replace', '^user_(.+)_password$', '\\1')
                            | list }}"
 
-    - name: Hash password for {{ item }}
+    - name: Hash passwords for app users
       command: >
         python3 -c "import bcrypt;
         h=bcrypt.hashpw('{{ lookup('vars', 'user_' + item + '_password') }}'.encode(),
@@ -129,7 +129,7 @@
       no_log: true
       delegate_to: localhost
 
-    - name: Upsert user {{ item.item }}
+    - name: Upsert app users
       command: >
         docker exec health_postgres psql -U health -d health -c
         "INSERT INTO users (username, password_hash)
@@ -151,7 +151,7 @@
       no_log: true
       delegate_to: localhost
 
-    - name: Upsert test account {{ item.item.email }}
+    - name: Upsert test accounts
       command: >
         docker exec health_postgres psql -U health -d health -c
         "INSERT INTO users (id, username, password_hash)
