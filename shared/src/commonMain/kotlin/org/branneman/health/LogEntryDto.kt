@@ -19,5 +19,6 @@ data class LogEntryDto(
     val mealType: String,
     val quickAddKcal: Int?,
     val quickAddLabel: String?,
+    val sortOrder: Int = 0,
     val items: List<LogEntryItemDto>,
 )

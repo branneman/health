@@ -84,12 +84,14 @@ class LogViewModel private constructor(
         val kcal = template.quickAddKcal ?: return
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val nextOrder = entries.value.size
             val entity = LogEntryEntity(
                 userId        = userId,
                 loggedAt      = loggedAtForSelectedDate(),
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = template.name,
+                sortOrder     = nextOrder,
             )
             db.logEntryDao().upsert(entity)
             _undoPending.value = entity to SyncStatus.PENDING_CREATE
@@ -99,12 +101,14 @@ class LogViewModel private constructor(
     fun logFromShortcut(shortcut: ShortcutEntity) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val nextOrder = entries.value.size
             val entity = LogEntryEntity(
                 userId        = userId,
                 loggedAt      = loggedAtForSelectedDate(),
                 mealType      = "unknown",
                 quickAddKcal  = shortcut.kcal,
                 quickAddLabel = "${shortcut.emoji} ${shortcut.label}",
+                sortOrder     = nextOrder,
             )
             db.logEntryDao().upsert(entity)
             _undoPending.value = entity to SyncStatus.PENDING_CREATE
@@ -114,15 +118,23 @@ class LogViewModel private constructor(
     fun logSingleItem(label: String, kcal: Int) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val nextOrder = entries.value.size
             val entity = LogEntryEntity(
                 userId        = userId,
                 loggedAt      = loggedAtForSelectedDate(),
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = label,
+                sortOrder     = nextOrder,
             )
             db.logEntryDao().upsert(entity)
             _undoPending.value = entity to SyncStatus.PENDING_CREATE
+        }
+    }
+
+    fun reorderEntries(updates: List<Pair<String, Int>>) {
+        viewModelScope.launch {
+            db.logEntryDao().updateSortOrders(updates)
         }
     }
 

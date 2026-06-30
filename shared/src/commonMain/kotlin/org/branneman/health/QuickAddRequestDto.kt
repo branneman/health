@@ -8,4 +8,5 @@ data class QuickAddRequestDto(
     val quickAddKcal: Int,
     val quickAddLabel: String? = null,
     val loggedAt: String? = null,
+    val sortOrder: Int = 0,
 )

@@ -238,6 +238,14 @@ class HealthApiClient(
         }
     }
 
+    suspend fun patchSortOrder(token: String, id: String, sortOrder: Int) {
+        client.patch("$baseUrl/in/log/$id/sort-order") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody("""{"sortOrder":$sortOrder}""")
+        }
+    }
+
     suspend fun getTodaySummary(token: String, date: String): TodaySummaryDto =
         client.get("$baseUrl/summary/today") {
             header(HttpHeaders.Authorization, "Bearer $token")

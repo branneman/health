@@ -77,6 +77,7 @@ object LogEntry : Table("log_entry") {
     val createdAt     = timestampWithTimeZone("created_at")
     val quickAddKcal  = integer("quick_add_kcal").nullable()
     val quickAddLabel = text("quick_add_label").nullable()
+    val sortOrder     = integer("sort_order").default(0)
     override val primaryKey = PrimaryKey(id)
 }
 

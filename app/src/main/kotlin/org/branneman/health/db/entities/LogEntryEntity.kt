@@ -13,6 +13,7 @@ data class LogEntryEntity(
     val mealType: String,
     val quickAddKcal: Int?,
     val quickAddLabel: String?,
+    val sortOrder: Int = 0,
     val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
     val createdAt: Long = System.currentTimeMillis(),
 )

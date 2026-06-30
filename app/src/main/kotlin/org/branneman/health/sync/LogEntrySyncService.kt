@@ -23,6 +23,7 @@ class LogEntrySyncService(
                             quickAddKcal  = entity.quickAddKcal,
                             quickAddLabel = entity.quickAddLabel,
                             loggedAt      = entity.loggedAt,
+                            sortOrder     = entity.sortOrder,
                         )
                     )
                 }.onSuccess {
@@ -39,6 +40,7 @@ class LogEntrySyncService(
                             mealType = entity.mealType,
                             loggedAt = entity.loggedAt,
                             items    = items.map { FoodLogItemRequestDto(it.foodItemId, it.grams) },
+                            sortOrder = entity.sortOrder,
                         )
                     )
                 }.onSuccess {
@@ -48,16 +50,18 @@ class LogEntrySyncService(
         }
 
         db.logEntryDao().getByStatus(SyncStatus.PENDING_UPDATE).forEach { entity ->
-            if (entity.quickAddKcal == null) return@forEach
             runCatching {
-                api.patchQuickAdd(
-                    token = token,
-                    id    = entity.id,
-                    dto   = QuickAddUpdateRequestDto(
-                        kcal  = entity.quickAddKcal,
-                        label = entity.quickAddLabel,
-                    ),
-                )
+                api.patchSortOrder(token, entity.id, entity.sortOrder)
+                if (entity.quickAddKcal != null) {
+                    api.patchQuickAdd(
+                        token = token,
+                        id    = entity.id,
+                        dto   = QuickAddUpdateRequestDto(
+                            kcal  = entity.quickAddKcal,
+                            label = entity.quickAddLabel,
+                        ),
+                    )
+                }
             }.onSuccess {
                 db.logEntryDao().updateSyncStatus(entity.id, SyncStatus.SYNCED)
             }

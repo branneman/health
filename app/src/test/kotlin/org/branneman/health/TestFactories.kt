@@ -72,9 +72,11 @@ fun aLogEntry(
     userId: String = uuid(),
     loggedAt: String = "2026-01-01T08:00:00Z",
     mealType: String = "breakfast",
+    sortOrder: Int = 0,
 ) = LogEntryEntity(
     id = id, userId = userId, loggedAt = loggedAt, mealType = mealType,
-    quickAddKcal = null, quickAddLabel = null, syncStatus = SyncStatus.PENDING_CREATE,
+    quickAddKcal = null, quickAddLabel = null, sortOrder = sortOrder,
+    syncStatus = SyncStatus.PENDING_CREATE,
 )
 
 fun aQuickAddEntry(
@@ -83,6 +85,7 @@ fun aQuickAddEntry(
     loggedAt: String = "2026-01-01T08:00:00Z",
     quickAddKcal: Int = 350,
     quickAddLabel: String? = null,
+    sortOrder: Int = 0,
     syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
 ) = LogEntryEntity(
     id            = id,
@@ -91,6 +94,7 @@ fun aQuickAddEntry(
     mealType      = "unknown",
     quickAddKcal  = quickAddKcal,
     quickAddLabel = quickAddLabel,
+    sortOrder     = sortOrder,
     syncStatus    = syncStatus,
 )
 

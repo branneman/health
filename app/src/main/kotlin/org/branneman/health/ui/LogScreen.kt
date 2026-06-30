@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -25,6 +26,8 @@ import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
 import org.branneman.health.log.LogViewModel
 import org.branneman.health.util.effectiveDate
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun LogScreen(
@@ -85,6 +88,7 @@ fun LogScreen(
                 viewModel.editEntry(entry, kcal, label)
                 lastAction = LogAction.Saved("Saved")
             },
+            onReorder           = { updates -> viewModel.reorderEntries(updates) },
             onSetUpMealButtons  = onSetUpMealButtons,
             onLogTemplate       = { template ->
                 viewModel.logFromTemplate(template)
@@ -113,6 +117,7 @@ fun LogContent(
     entries: List<LogEntryWithKcal>,
     onDelete: (LogEntryEntity) -> Unit,
     onEdit: (LogEntryEntity, Int, String?) -> Unit = { _, _, _ -> },
+    onReorder: (List<Pair<String, Int>>) -> Unit = {},
     selectedDate: LocalDate = effectiveDate(),
     modifier: Modifier = Modifier,
     pinnedTemplates: List<MealTemplateEntity> = emptyList(),
@@ -232,15 +237,46 @@ fun LogContent(
             )
         } else {
             val total = entries.sumOf { it.totalKcal }
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(entries, key = { it.entry.id }) { ewk ->
-                    LogEntryRow(
-                        entry   = ewk,
-                        onClick = {
-                            if (ewk.entry.quickAddKcal != null) entryToEdit = ewk
-                            else entryToDelete = ewk
-                        },
-                    )
+
+            var orderedEntries by remember(entries) { mutableStateOf(entries) }
+            val listState = rememberLazyListState()
+            val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+                orderedEntries = orderedEntries.toMutableList().apply {
+                    add(to.index, removeAt(from.index))
+                }
+            }
+
+            LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+                items(orderedEntries, key = { it.entry.id }) { ewk ->
+                    ReorderableItem(reorderState, key = ewk.entry.id) { isDragging ->
+                        LogEntryRow(
+                            entry      = ewk,
+                            onClick    = {
+                                if (ewk.entry.quickAddKcal != null) entryToEdit = ewk
+                                else entryToDelete = ewk
+                            },
+                            isDragging = isDragging,
+                            dragHandle = {
+                                Box(
+                                    modifier = Modifier
+                                        .draggableHandle(
+                                            onDragStopped = {
+                                                val updates = orderedEntries.mapIndexed { i, e -> e.entry.id to i }
+                                                onReorder(updates)
+                                            }
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text  = "⠿",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
+                        )
+                    }
                     HorizontalDivider()
                 }
             }
@@ -257,7 +293,12 @@ fun LogContent(
 }
 
 @Composable
-private fun LogEntryRow(entry: LogEntryWithKcal, onClick: () -> Unit) {
+private fun LogEntryRow(
+    entry: LogEntryWithKcal,
+    onClick: () -> Unit,
+    isDragging: Boolean = false,
+    dragHandle: (@Composable () -> Unit)? = null,
+) {
     Row(
         modifier              = Modifier
             .fillMaxWidth()
@@ -266,12 +307,17 @@ private fun LogEntryRow(entry: LogEntryWithKcal, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically,
     ) {
-        Text(text = entry.displayLabel, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text     = entry.displayLabel,
+            style    = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
         Text(
             text  = "${entry.totalKcal} kcal",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (dragHandle != null) dragHandle()
     }
 }
 

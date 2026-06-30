@@ -168,4 +168,37 @@ class LogEntryDaoTest {
         assertEquals(1, result.size)
         assertEquals(400, result[0].totalKcal)
     }
+
+    @Test
+    fun `observeForDate orders entries by sortOrder ascending`() = runTest {
+        val userId = uuid()
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T08:00:00Z",
+                                  quickAddKcal = 400, sortOrder = 2))
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T09:00:00Z",
+                                  quickAddKcal = 600, sortOrder = 0))
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T10:00:00Z",
+                                  quickAddKcal = 200, sortOrder = 1))
+
+        val result = dao.observeForDate(userId, "2026-06-11%").first()
+
+        assertEquals(listOf(600, 200, 400), result.map { it.totalKcal })
+    }
+
+    @Test
+    fun `updateSortOrders persists new order and marks PENDING_UPDATE`() = runTest {
+        val e1 = aQuickAddEntry(userId = uuid(), loggedAt = "2026-06-11T08:00:00Z",
+                                 sortOrder = 0, syncStatus = SyncStatus.SYNCED)
+        val e2 = aQuickAddEntry(userId = e1.userId, loggedAt = "2026-06-11T09:00:00Z",
+                                 sortOrder = 1, syncStatus = SyncStatus.SYNCED)
+        dao.upsert(e1)
+        dao.upsert(e2)
+
+        dao.updateSortOrders(listOf(e1.id to 1, e2.id to 0))
+
+        val result = dao.observeForDate(e1.userId, "2026-06-11%").first()
+        assertEquals(e2.id, result[0].entry.id)
+        assertEquals(e1.id, result[1].entry.id)
+        assertEquals(SyncStatus.PENDING_UPDATE, result[0].entry.syncStatus)
+        assertEquals(SyncStatus.PENDING_UPDATE, result[1].entry.syncStatus)
+    }
 }

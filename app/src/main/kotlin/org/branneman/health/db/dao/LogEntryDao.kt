@@ -16,9 +16,9 @@ data class LogEntryWithKcal(
 }
 
 @Dao
-interface LogEntryDao {
+abstract class LogEntryDao {
     @Query("SELECT * FROM log_entry WHERE syncStatus != 'PENDING_DELETE' ORDER BY loggedAt DESC")
-    fun observeAll(): Flow<List<LogEntryEntity>>
+    abstract fun observeAll(): Flow<List<LogEntryEntity>>
 
     @Query("""
         SELECT le.*, COALESCE((
@@ -29,7 +29,7 @@ interface LogEntryDao {
         WHERE le.syncStatus != 'PENDING_DELETE'
         ORDER BY le.loggedAt DESC
     """)
-    fun observeAllWithKcal(): Flow<List<LogEntryWithKcal>>
+    abstract fun observeAllWithKcal(): Flow<List<LogEntryWithKcal>>
 
     @Query("""
         SELECT le.*, COALESCE((
@@ -38,12 +38,12 @@ interface LogEntryDao {
         ), 0) AS itemKcal
         FROM log_entry le
         WHERE le.userId = :userId AND le.loggedAt LIKE :datePrefix AND le.syncStatus != 'PENDING_DELETE'
-        ORDER BY le.loggedAt ASC
+        ORDER BY le.sortOrder ASC
     """)
-    fun observeForDate(userId: String, datePrefix: String): Flow<List<LogEntryWithKcal>>
+    abstract fun observeForDate(userId: String, datePrefix: String): Flow<List<LogEntryWithKcal>>
 
     @Query("SELECT COALESCE(SUM(quickAddKcal), 0) FROM log_entry WHERE userId = :userId AND loggedAt LIKE :datePattern AND syncStatus != 'PENDING_DELETE'")
-    suspend fun sumQuickAddKcalForDate(userId: String, datePattern: String): Int
+    abstract suspend fun sumQuickAddKcalForDate(userId: String, datePattern: String): Int
 
     @Query("""
         SELECT COALESCE(CAST(SUM(lei.grams * lei.kcalPer100g / 100.0) AS INTEGER), 0)
@@ -51,7 +51,7 @@ interface LogEntryDao {
         INNER JOIN log_entry le ON lei.logEntryId = le.id
         WHERE le.userId = :userId AND le.loggedAt LIKE :datePattern AND le.syncStatus != 'PENDING_DELETE'
     """)
-    suspend fun sumItemKcalForDate(userId: String, datePattern: String): Int
+    abstract suspend fun sumItemKcalForDate(userId: String, datePattern: String): Int
 
     @Query("""
         SELECT COALESCE(SUM(le.quickAddKcal), 0) + COALESCE((
@@ -64,42 +64,50 @@ interface LogEntryDao {
         FROM log_entry le
         WHERE le.userId = :userId AND le.loggedAt LIKE :datePattern AND le.syncStatus != 'PENDING_DELETE'
     """)
-    fun observeTotalKcalForDate(userId: String, datePattern: String): Flow<Int>
+    abstract fun observeTotalKcalForDate(userId: String, datePattern: String): Flow<Int>
 
     @Query("SELECT * FROM log_entry WHERE syncStatus = :status")
-    suspend fun getByStatus(status: SyncStatus): List<LogEntryEntity>
+    abstract suspend fun getByStatus(status: SyncStatus): List<LogEntryEntity>
 
     @Query("SELECT * FROM log_entry_item WHERE logEntryId = :entryId")
-    suspend fun getItemsForEntry(entryId: String): List<LogEntryItemEntity>
+    abstract suspend fun getItemsForEntry(entryId: String): List<LogEntryItemEntity>
 
     @Upsert
-    suspend fun upsert(entity: LogEntryEntity)
+    abstract suspend fun upsert(entity: LogEntryEntity)
 
     @Upsert
-    suspend fun upsertItem(item: LogEntryItemEntity)
+    abstract suspend fun upsertItem(item: LogEntryItemEntity)
 
     @Upsert
-    suspend fun upsertAll(entries: List<LogEntryEntity>)
+    abstract suspend fun upsertAll(entries: List<LogEntryEntity>)
 
     @Upsert
-    suspend fun upsertAllItems(items: List<LogEntryItemEntity>)
+    abstract suspend fun upsertAllItems(items: List<LogEntryItemEntity>)
 
     @Query("UPDATE log_entry SET syncStatus = :status WHERE id = :id")
-    suspend fun updateSyncStatus(id: String, status: SyncStatus)
+    abstract suspend fun updateSyncStatus(id: String, status: SyncStatus)
 
     @Query("""
         UPDATE log_entry
         SET quickAddKcal = :kcal, quickAddLabel = :label, syncStatus = 'PENDING_UPDATE'
         WHERE id = :id
     """)
-    suspend fun updateQuickAdd(id: String, kcal: Int, label: String?)
+    abstract suspend fun updateQuickAdd(id: String, kcal: Int, label: String?)
+
+    @Query("UPDATE log_entry SET sortOrder = :order, syncStatus = 'PENDING_UPDATE' WHERE id = :id")
+    abstract suspend fun updateSortOrder(id: String, order: Int)
+
+    @Transaction
+    open suspend fun updateSortOrders(updates: List<Pair<String, Int>>) {
+        updates.forEach { (id, order) -> updateSortOrder(id, order) }
+    }
 
     @Query("DELETE FROM log_entry WHERE id = :id")
-    suspend fun deleteById(id: String)
+    abstract suspend fun deleteById(id: String)
 
     @Query("DELETE FROM log_entry WHERE userId = :userId")
-    suspend fun deleteAllForUser(userId: String)
+    abstract suspend fun deleteAllForUser(userId: String)
 
     @Query("DELETE FROM log_entry_item WHERE logEntryId IN (SELECT id FROM log_entry WHERE userId = :userId)")
-    suspend fun deleteAllItemsForUser(userId: String)
+    abstract suspend fun deleteAllItemsForUser(userId: String)
 }

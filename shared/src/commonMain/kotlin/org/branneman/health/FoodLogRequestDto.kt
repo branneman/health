@@ -11,4 +11,5 @@ data class FoodLogRequestDto(
     val mealType: String,
     val loggedAt: String?,
     val items: List<FoodLogItemRequestDto>,
+    val sortOrder: Int = 0,
 )

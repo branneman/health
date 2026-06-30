@@ -70,6 +70,9 @@ import org.jetbrains.exposed.sql.upsert
 import java.time.OffsetDateTime
 import java.util.UUID
 
+@kotlinx.serialization.Serializable
+private data class SortOrderRequestDto(val sortOrder: Int)
+
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
@@ -588,6 +591,7 @@ fun Application.module(
                             mealType      = eRow[LogEntry.mealType],
                             quickAddKcal  = eRow[LogEntry.quickAddKcal],
                             quickAddLabel = eRow[LogEntry.quickAddLabel],
+                            sortOrder     = eRow[LogEntry.sortOrder],
                             items         = items,
                         )
                     }
@@ -617,6 +621,7 @@ fun Application.module(
                         it[LogEntry.mealType]      = "unknown"
                         it[LogEntry.quickAddKcal]  = dto.quickAddKcal
                         it[LogEntry.quickAddLabel] = dto.quickAddLabel
+                        it[LogEntry.sortOrder]     = dto.sortOrder
                         it[LogEntry.createdAt]     = OffsetDateTime.now()
                     }
                     true
@@ -629,6 +634,7 @@ fun Application.module(
                     mealType      = "unknown",
                     quickAddKcal  = dto.quickAddKcal,
                     quickAddLabel = dto.quickAddLabel,
+                    sortOrder     = dto.sortOrder,
                     items         = emptyList(),
                 ))
             }
@@ -676,13 +682,14 @@ fun Application.module(
                     }
 
                     LogEntry.insert {
-                        it[LogEntry.id]           = id
-                        it[LogEntry.userId]       = userId
-                        it[LogEntry.loggedAt]     = loggedAt
-                        it[LogEntry.mealType]     = dto.mealType
-                        it[LogEntry.quickAddKcal] = null
-                        it[LogEntry.quickAddLabel]= null
-                        it[LogEntry.createdAt]    = OffsetDateTime.now()
+                        it[LogEntry.id]            = id
+                        it[LogEntry.userId]        = userId
+                        it[LogEntry.loggedAt]      = loggedAt
+                        it[LogEntry.mealType]      = dto.mealType
+                        it[LogEntry.quickAddKcal]  = null
+                        it[LogEntry.quickAddLabel] = null
+                        it[LogEntry.sortOrder]     = dto.sortOrder
+                        it[LogEntry.createdAt]     = OffsetDateTime.now()
                     }
                     snapshots.forEach { snap ->
                         LogEntryItem.insert {
@@ -761,6 +768,21 @@ fun Application.module(
                                        mapOf("error" to "not_a_quick_add_entry"))
                     else        -> call.respond(HttpStatusCode.NoContent)
                 }
+            }
+
+            patch("/in/log/{id}/sort-order") {
+                val userId = call.principal<UserIdPrincipal>()!!.name.let(UUID::fromString)
+                val id     = call.parameters["id"]
+                    ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                    ?: return@patch call.respond(HttpStatusCode.BadRequest)
+                val dto    = runCatching { call.receive<SortOrderRequestDto>() }.getOrNull()
+                    ?: return@patch call.respond(HttpStatusCode.BadRequest)
+                transaction {
+                    LogEntry.update({ (LogEntry.id eq id) and (LogEntry.userId eq userId) }) {
+                        it[LogEntry.sortOrder] = dto.sortOrder
+                    }
+                }
+                call.respond(HttpStatusCode.NoContent)
             }
 
             get("/summary/today") {

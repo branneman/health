@@ -22,7 +22,7 @@ import org.branneman.health.db.entities.*
         SportTonightEntity::class,
         DynamicBudgetParamsEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class HealthDatabase : RoomDatabase() {

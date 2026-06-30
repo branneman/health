@@ -263,4 +263,43 @@ class LogEntryIntegrationTest {
         }
         assertEquals(HttpStatusCode.Unauthorized, r.status)
     }
+
+    @Test fun `POST quick-add stores and returns sort_order`() = appTest {
+        val token = login()
+        val id = UUID.randomUUID().toString()
+
+        val postResponse = client.post("/in/log/quick-add") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"$id","quickAddKcal":350,"sortOrder":5}""")
+        }
+        assertEquals(HttpStatusCode.Created, postResponse.status)
+
+        val getResponse = client.get("/in/log") {
+            bearerAuth(token)
+        }
+        val body = getResponse.bodyAsText()
+        assertTrue(body.contains("\"sortOrder\":5") || body.contains("\"sort_order\":5"))
+    }
+
+    @Test fun `PATCH in-log sort-order updates sort order and returns 204`() = appTest {
+        val token = login()
+        val id = UUID.randomUUID().toString()
+        client.post("/in/log/quick-add") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"id":"$id","quickAddKcal":350,"sortOrder":0}""")
+        }
+
+        val patch = client.patch("/in/log/$id/sort-order") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody("""{"sortOrder":3}""")
+        }
+        assertEquals(HttpStatusCode.NoContent, patch.status)
+
+        val getResponse = client.get("/in/log") { bearerAuth(token) }
+        val body = getResponse.bodyAsText()
+        assertTrue(body.contains("\"sortOrder\":3") || body.contains("\"sort_order\":3"))
+    }
 }
