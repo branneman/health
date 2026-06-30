@@ -26,6 +26,7 @@ import org.branneman.health.db.entities.ShortcutEntity
 import org.branneman.health.util.effectiveDate
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LogViewModel private constructor(
@@ -53,6 +54,17 @@ class LogViewModel private constructor(
 
     fun setSelectedDate(date: LocalDate) { _selectedDate.value = date }
 
+    internal fun loggedAtForSelectedDate(): String {
+        val date = _selectedDate.value
+        return if (date == effectiveDate()) {
+            OffsetDateTime.now().toString()
+        } else {
+            val noon   = date.atTime(12, 0)
+            val offset = ZoneId.systemDefault().rules.getOffset(noon)
+            OffsetDateTime.of(noon, offset).toString()
+        }
+    }
+
     private val userId: Flow<String> = tokenStore.tokenFlow.mapNotNull { it?.userId }
 
     val pinnedTemplates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observePinned()
@@ -74,7 +86,7 @@ class LogViewModel private constructor(
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
             val entity = LogEntryEntity(
                 userId        = userId,
-                loggedAt      = OffsetDateTime.now().toString(),
+                loggedAt      = loggedAtForSelectedDate(),
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = template.name,
@@ -89,7 +101,7 @@ class LogViewModel private constructor(
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
             val entity = LogEntryEntity(
                 userId        = userId,
-                loggedAt      = OffsetDateTime.now().toString(),
+                loggedAt      = loggedAtForSelectedDate(),
                 mealType      = "unknown",
                 quickAddKcal  = shortcut.kcal,
                 quickAddLabel = "${shortcut.emoji} ${shortcut.label}",
@@ -104,7 +116,7 @@ class LogViewModel private constructor(
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
             val entity = LogEntryEntity(
                 userId        = userId,
-                loggedAt      = OffsetDateTime.now().toString(),
+                loggedAt      = loggedAtForSelectedDate(),
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = label,

@@ -11,7 +11,6 @@ import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.entities.LogEntryEntity
-import java.time.OffsetDateTime
 
 class QuickAddViewModel private constructor(
     application: Application,
@@ -33,16 +32,15 @@ class QuickAddViewModel private constructor(
 
     private val _lastAdded = MutableStateFlow<LogEntryEntity?>(null)
 
-    fun log(kcalStr: String, label: String) {
-        val kcal = kcalStr.trim().toIntOrNull()?.takeIf { it > 0 } ?: return
+    fun logQuickAdd(kcal: Int, label: String?, loggedAt: String) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
             val entity = LogEntryEntity(
                 userId        = userId,
-                loggedAt      = OffsetDateTime.now().toString(),
+                loggedAt      = loggedAt,
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
-                quickAddLabel = label.trim().ifEmpty { null },
+                quickAddLabel = label?.trim()?.ifEmpty { null },
             )
             db.logEntryDao().upsert(entity)
             _lastAdded.value = entity

@@ -19,13 +19,16 @@ fun QuickAddScreen(
     onLogged: (undoAction: () -> Unit) -> Unit = {},
     initialKcal: Int? = null,
     initialLabel: String? = null,
+    loggedAt: String = "",
     viewModel: QuickAddViewModel = viewModel(),
 ) {
     Scaffold { padding ->
         QuickAddContent(
-            onLog        = { kcal, label ->
-                viewModel.log(kcal, label)
-                onLogged { viewModel.undoLog() }
+            onLog        = { kcalStr, label ->
+                kcalStr.trim().toIntOrNull()?.takeIf { it > 0 }?.let { kcal ->
+                    viewModel.logQuickAdd(kcal, label.ifEmpty { null }, loggedAt)
+                    onLogged { viewModel.undoLog() }
+                }
             },
             onBack       = onBack,
             modifier     = Modifier.padding(padding),

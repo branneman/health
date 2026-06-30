@@ -17,7 +17,6 @@ import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.LogEntryItemEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.MealTemplateItemEntity
-import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -88,7 +87,7 @@ class BuildFromScratchViewModel private constructor(
         }
     }
 
-    fun log(mealType: String) {
+    fun log(mealType: String, loggedAt: String) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
             val entryId = UUID.randomUUID().toString()
@@ -96,7 +95,7 @@ class BuildFromScratchViewModel private constructor(
                 LogEntryEntity(
                     id            = entryId,
                     userId        = userId,
-                    loggedAt      = OffsetDateTime.now().toString(),
+                    loggedAt      = loggedAt,
                     mealType      = mealType,
                     quickAddKcal  = null,
                     quickAddLabel = null,

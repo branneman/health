@@ -53,42 +53,28 @@ class QuickAddViewModelTest {
 
     @After fun tearDown() { db.close(); Dispatchers.resetMain() }
 
-    @Test fun `log writes entry with kcal and null label when blank`() = runTest {
+    @Test fun `logQuickAdd writes entry with kcal and null label when blank`() = runTest {
         val farFuture = OffsetDateTime.now().plusDays(30).toString()
         tokenStore.save("token", farFuture, userId)
-        viewModel.log("500", "")
+        viewModel.logQuickAdd(500, null, OffsetDateTime.now().toString())
         val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(500, entries.single().quickAddKcal)
         assertNull(entries.single().quickAddLabel)
     }
 
-    @Test fun `log writes entry with label when provided`() = runTest {
+    @Test fun `logQuickAdd writes entry with label when provided`() = runTest {
         val farFuture = OffsetDateTime.now().plusDays(30).toString()
         tokenStore.save("token", farFuture, userId)
-        viewModel.log("800", "Pasta at work")
+        viewModel.logQuickAdd(800, "Pasta at work", OffsetDateTime.now().toString())
         val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(800, entries.single().quickAddKcal)
         assertEquals("Pasta at work", entries.single().quickAddLabel)
     }
 
-    @Test fun `log does nothing for zero kcal`() = runTest {
-        val farFuture = OffsetDateTime.now().plusDays(30).toString()
-        tokenStore.save("token", farFuture, userId)
-        viewModel.log("0", "label")
-        assertTrue(db.logEntryDao().observeAll().first().isEmpty())
-    }
-
-    @Test fun `log does nothing for non-numeric kcal`() = runTest {
-        val farFuture = OffsetDateTime.now().plusDays(30).toString()
-        tokenStore.save("token", farFuture, userId)
-        viewModel.log("", "label")
-        assertTrue(db.logEntryDao().observeAll().first().isEmpty())
-    }
-
     @Test fun `undoLog removes last logged entry`() = runTest {
         val farFuture = OffsetDateTime.now().plusDays(30).toString()
         tokenStore.save("token", farFuture, userId)
-        viewModel.log("400", "Snack")
+        viewModel.logQuickAdd(400, "Snack", OffsetDateTime.now().toString())
         db.logEntryDao().observeAll().first { it.isNotEmpty() }
         viewModel.undoLog()
         assertTrue(db.logEntryDao().observeAll().first { it.isEmpty() }.isEmpty())

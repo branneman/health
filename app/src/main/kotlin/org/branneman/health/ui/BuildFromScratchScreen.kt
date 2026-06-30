@@ -23,6 +23,7 @@ fun BuildFromScratchScreen(
     onSavedAsTemplate: (name: String) -> Unit,
     onBack: (bailOutKcal: Int?) -> Unit,
     initialTemplateId: String? = null,
+    loggedAt: String = "",
     viewModel: BuildFromScratchViewModel = viewModel(),
 ) {
     val ingredients by viewModel.ingredients.collectAsStateWithLifecycle()
@@ -51,7 +52,7 @@ fun BuildFromScratchScreen(
             pendingItem = null
         },
         onLog            = { mealType ->
-            viewModel.log(mealType)
+            viewModel.log(mealType, loggedAt)
             onLogged(mealType)
         },
         onSaveAsTemplate = { name ->

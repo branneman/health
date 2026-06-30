@@ -164,6 +164,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
     var loadIngredientTemplateId    by remember { mutableStateOf<String?>(null) }
     var selectedFoodItemForSingleLog by remember { mutableStateOf<FoodItemEntity?>(null) }
     var singleItemAutoLaunchScan     by remember { mutableStateOf(false) }
+    var currentLoggedAt              by remember { mutableStateOf("") }
 
     LaunchedEffect(currentTab) {
         if (currentTab != Tab.Settings) settingsPage = SettingsPage.Main
@@ -175,6 +176,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
             loadIngredientTemplateId = null
             selectedFoodItemForSingleLog = null
             singleItemAutoLaunchScan = false
+            currentLoggedAt = ""
         }
     }
 
@@ -286,6 +288,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                             },
                             onSelectIngredientTemplate = { templateId ->
                                 buildVm.reset()
+                                currentLoggedAt = logVm.loggedAtForSelectedDate()
                                 loadIngredientTemplateId = templateId
                                 logPage = LogPage.BuildFromScratch
                             },
@@ -299,6 +302,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                             },
                             initialKcal    = quickAddPrefill?.first,
                             initialLabel   = quickAddPrefill?.second,
+                            loggedAt       = currentLoggedAt,
                         )
                         LogPage.AskAi -> AskAiScreen(
                             onBack         = { logPage = LogPage.Main },
@@ -334,6 +338,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                     logPage = LogPage.Main
                                 }
                             },
+                            loggedAt                  = currentLoggedAt,
                             viewModel                 = buildVm,
                         )
                         LogPage.FoodSearch -> FoodSearchScreen(
@@ -376,9 +381,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
                     if (showLogSheet) {
                         LogFlowSheet(
                             onFromTemplate     = { showLogSheet = false; logPage = LogPage.TemplateList },
-                            onQuickAdd         = { showLogSheet = false; logPage = LogPage.QuickAdd },
-                            onAskAi            = { showLogSheet = false; logPage = LogPage.AskAi },
-                            onBuildFromScratch = { showLogSheet = false; buildVm.reset(); logPage = LogPage.BuildFromScratch },
+                            onQuickAdd         = { showLogSheet = false; currentLoggedAt = logVm.loggedAtForSelectedDate(); logPage = LogPage.QuickAdd },
+                            onAskAi            = { showLogSheet = false; currentLoggedAt = logVm.loggedAtForSelectedDate(); logPage = LogPage.AskAi },
+                            onBuildFromScratch = { showLogSheet = false; buildVm.reset(); currentLoggedAt = logVm.loggedAtForSelectedDate(); logPage = LogPage.BuildFromScratch },
                             onSingleItem       = { showLogSheet = false; singleItemAutoLaunchScan = false; logPage = LogPage.SingleItemSearch },
                             onScanAndLog       = { showLogSheet = false; singleItemAutoLaunchScan = true;  logPage = LogPage.SingleItemSearch },
                             onDismiss          = { showLogSheet = false },

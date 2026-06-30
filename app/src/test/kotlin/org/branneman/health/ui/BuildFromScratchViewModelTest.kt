@@ -21,6 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.time.OffsetDateTime
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -89,7 +90,7 @@ class BuildFromScratchViewModelTest {
         val item = aFoodItem(kcalPer100g = 200.0)
         db.foodItemDao().upsert(item)
         vm.addIngredient(item, 100.0)
-        vm.log("lunch")
+        vm.log("lunch", OffsetDateTime.now().toString())
         val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(1, entries.size)
         assertEquals("lunch", entries[0].mealType)
