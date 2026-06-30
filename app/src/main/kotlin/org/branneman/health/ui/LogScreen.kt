@@ -1,5 +1,6 @@
 package org.branneman.health.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -13,7 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -265,6 +269,7 @@ fun LogContent(
                                                 onReorder(updates)
                                             }
                                         )
+                                        .semantics { contentDescription = "Drag to reorder" }
                                         .padding(horizontal = 8.dp, vertical = 12.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -276,8 +281,8 @@ fun LogContent(
                                 }
                             },
                         )
+                        HorizontalDivider()
                     }
-                    HorizontalDivider()
                 }
             }
             Text(
@@ -302,6 +307,7 @@ private fun LogEntryRow(
     Row(
         modifier              = Modifier
             .fillMaxWidth()
+            .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

@@ -185,6 +185,38 @@ class LogEntryDaoTest {
     }
 
     @Test
+    fun `maxSortOrderForDate returns -1 when no entries exist`() = runTest {
+        val userId = uuid()
+        val result = dao.maxSortOrderForDate(userId, "2026-06-11%")
+        assertEquals(-1, result)
+    }
+
+    @Test
+    fun `maxSortOrderForDate returns correct max when entries exist`() = runTest {
+        val userId = uuid()
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T08:00:00Z", sortOrder = 0))
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T09:00:00Z", sortOrder = 2))
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T10:00:00Z", sortOrder = 1))
+
+        val result = dao.maxSortOrderForDate(userId, "2026-06-11%")
+
+        assertEquals(2, result)
+    }
+
+    @Test
+    fun `maxSortOrderForDate excludes PENDING_DELETE entries`() = runTest {
+        val userId = uuid()
+        val id = uuid()
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T08:00:00Z", sortOrder = 0))
+        dao.upsert(aQuickAddEntry(id = id, userId = userId, loggedAt = "2026-06-11T09:00:00Z", sortOrder = 5))
+        dao.updateSyncStatus(id, SyncStatus.PENDING_DELETE)
+
+        val result = dao.maxSortOrderForDate(userId, "2026-06-11%")
+
+        assertEquals(0, result)
+    }
+
+    @Test
     fun `updateSortOrders persists new order and marks PENDING_UPDATE`() = runTest {
         val e1 = aQuickAddEntry(userId = uuid(), loggedAt = "2026-06-11T08:00:00Z",
                                  sortOrder = 0, syncStatus = SyncStatus.SYNCED)

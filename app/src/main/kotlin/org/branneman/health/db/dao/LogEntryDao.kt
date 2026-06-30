@@ -66,6 +66,9 @@ abstract class LogEntryDao {
     """)
     abstract fun observeTotalKcalForDate(userId: String, datePattern: String): Flow<Int>
 
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM log_entry WHERE userId = :userId AND loggedAt LIKE :datePrefix AND syncStatus != 'PENDING_DELETE'")
+    abstract suspend fun maxSortOrderForDate(userId: String, datePrefix: String): Int
+
     @Query("SELECT * FROM log_entry WHERE syncStatus = :status")
     abstract suspend fun getByStatus(status: SyncStatus): List<LogEntryEntity>
 

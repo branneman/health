@@ -84,7 +84,8 @@ class LogViewModel private constructor(
         val kcal = template.quickAddKcal ?: return
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
-            val nextOrder = entries.value.size
+            val datePrefix = _selectedDate.value.toString()
+            val nextOrder = db.logEntryDao().maxSortOrderForDate(userId, "$datePrefix%") + 1
             val entity = LogEntryEntity(
                 userId        = userId,
                 loggedAt      = loggedAtForSelectedDate(),
@@ -101,7 +102,8 @@ class LogViewModel private constructor(
     fun logFromShortcut(shortcut: ShortcutEntity) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
-            val nextOrder = entries.value.size
+            val datePrefix = _selectedDate.value.toString()
+            val nextOrder = db.logEntryDao().maxSortOrderForDate(userId, "$datePrefix%") + 1
             val entity = LogEntryEntity(
                 userId        = userId,
                 loggedAt      = loggedAtForSelectedDate(),
@@ -118,7 +120,8 @@ class LogViewModel private constructor(
     fun logSingleItem(label: String, kcal: Int) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
-            val nextOrder = entries.value.size
+            val datePrefix = _selectedDate.value.toString()
+            val nextOrder = db.logEntryDao().maxSortOrderForDate(userId, "$datePrefix%") + 1
             val entity = LogEntryEntity(
                 userId        = userId,
                 loggedAt      = loggedAtForSelectedDate(),

@@ -239,11 +239,12 @@ class HealthApiClient(
     }
 
     suspend fun patchSortOrder(token: String, id: String, sortOrder: Int) {
-        client.patch("$baseUrl/in/log/$id/sort-order") {
+        val response = client.patch("$baseUrl/in/log/$id/sort-order") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody("""{"sortOrder":$sortOrder}""")
         }
+        if (!response.status.isSuccess()) throw Exception("PATCH sort-order $id failed: ${response.status}")
     }
 
     suspend fun getTodaySummary(token: String, date: String): TodaySummaryDto =
