@@ -210,9 +210,9 @@ private fun MainNav(authViewModel: AuthViewModel) {
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
                 Tab.Log -> {
+                    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 365 })
                     when (logPage) {
                         LogPage.Main -> {
-                            val pagerState = rememberPagerState(initialPage = 0, pageCount = { 365 })
                             var showDatePicker by remember { mutableStateOf(false) }
 
                             LaunchedEffect(pagerState.currentPage) {
