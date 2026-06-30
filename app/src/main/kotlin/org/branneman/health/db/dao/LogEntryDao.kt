@@ -31,6 +31,17 @@ interface LogEntryDao {
     """)
     fun observeAllWithKcal(): Flow<List<LogEntryWithKcal>>
 
+    @Query("""
+        SELECT le.*, COALESCE((
+            SELECT CAST(SUM(lei.grams * lei.kcalPer100g / 100.0) AS INTEGER)
+            FROM log_entry_item lei WHERE lei.logEntryId = le.id
+        ), 0) AS itemKcal
+        FROM log_entry le
+        WHERE le.userId = :userId AND le.loggedAt LIKE :datePrefix AND le.syncStatus != 'PENDING_DELETE'
+        ORDER BY le.loggedAt ASC
+    """)
+    fun observeForDate(userId: String, datePrefix: String): Flow<List<LogEntryWithKcal>>
+
     @Query("SELECT COALESCE(SUM(quickAddKcal), 0) FROM log_entry WHERE userId = :userId AND loggedAt LIKE :datePattern AND syncStatus != 'PENDING_DELETE'")
     suspend fun sumQuickAddKcalForDate(userId: String, datePattern: String): Int
 

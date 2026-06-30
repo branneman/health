@@ -131,4 +131,41 @@ class LogEntryDaoTest {
         kotlin.test.assertNull(updated.quickAddLabel)
         assertEquals(SyncStatus.PENDING_UPDATE, updated.syncStatus)
     }
+
+    @Test
+    fun `observeForDate returns only entries for the given date`() = runTest {
+        val userId = uuid()
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 400))
+        dao.upsert(aQuickAddEntry(userId = userId, loggedAt = "2026-06-10T19:00:00Z", quickAddKcal = 800))
+
+        val result = dao.observeForDate(userId, "2026-06-11%").first()
+
+        assertEquals(1, result.size)
+        assertEquals(400, result[0].totalKcal)
+    }
+
+    @Test
+    fun `observeForDate excludes PENDING_DELETE entries`() = runTest {
+        val userId = uuid()
+        val id = uuid()
+        dao.upsert(aQuickAddEntry(id = id, userId = userId, loggedAt = "2026-06-11T08:00:00Z"))
+        dao.updateSyncStatus(id, SyncStatus.PENDING_DELETE)
+
+        val result = dao.observeForDate(userId, "2026-06-11%").first()
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `observeForDate excludes other users entries`() = runTest {
+        val userId = uuid()
+        val otherId = uuid()
+        dao.upsert(aQuickAddEntry(userId = userId,  loggedAt = "2026-06-11T08:00:00Z", quickAddKcal = 400))
+        dao.upsert(aQuickAddEntry(userId = otherId, loggedAt = "2026-06-11T09:00:00Z", quickAddKcal = 600))
+
+        val result = dao.observeForDate(userId, "2026-06-11%").first()
+
+        assertEquals(1, result.size)
+        assertEquals(400, result[0].totalKcal)
+    }
 }

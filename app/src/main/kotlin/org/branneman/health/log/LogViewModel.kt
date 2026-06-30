@@ -3,12 +3,15 @@ package org.branneman.health.log
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.branneman.health.HealthApplication
@@ -20,9 +23,11 @@ import org.branneman.health.db.dao.LogEntryWithKcal
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
-import org.branneman.health.util.effectiveDateFlow
+import org.branneman.health.util.effectiveDate
+import java.time.LocalDate
 import java.time.OffsetDateTime
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class LogViewModel private constructor(
     application: Application,
     private val db: HealthDatabase,
@@ -43,17 +48,21 @@ class LogViewModel private constructor(
 
     private val _undoPending = MutableStateFlow<Pair<LogEntryEntity, SyncStatus>?>(null)
 
+    private val _selectedDate = MutableStateFlow(effectiveDate())
+
+    fun setSelectedDate(date: LocalDate) { _selectedDate.value = date }
+
+    private val userId: Flow<String> = tokenStore.tokenFlow.mapNotNull { it?.userId }
+
     val pinnedTemplates: StateFlow<List<MealTemplateEntity>> = db.mealTemplateDao().observePinned()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val entries: StateFlow<List<LogEntryWithKcal>> =
-        effectiveDateFlow(application)
-            .flatMapLatest { today ->
-                db.logEntryDao().observeAllWithKcal().map { all ->
-                    all.filter { it.entry.loggedAt.startsWith(today.toString()) }
-                }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        combine(_selectedDate, userId) { date, uid ->
+            db.logEntryDao().observeForDate(uid, "$date%")
+        }
+        .flatMapLatest { it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val shortcuts: StateFlow<List<ShortcutEntity>> = db.shortcutDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

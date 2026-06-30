@@ -1,10 +1,18 @@
 package org.branneman.health
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -13,18 +21,24 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
+import org.branneman.health.util.effectiveDate
 import org.branneman.health.auth.AuthState
 import org.branneman.health.auth.AuthViewModel
 import org.branneman.health.db.entities.FoodItemEntity
@@ -128,8 +142,10 @@ private enum class SettingsPage { Main, MealButtons, DrinkButtons, Profile, Goal
 
 private enum class LogPage { Main, TemplateList, QuickAdd, AskAi, BuildFromScratch, FoodSearch, SingleItemSearch, SingleItemGrams }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainNav(authViewModel: AuthViewModel) {
+    val coroutineScope = rememberCoroutineScope()
     var currentTab by remember { mutableStateOf(Tab.Dashboard) }
     var settingsPage by remember { mutableStateOf(SettingsPage.Main) }
     var logPage by remember { mutableStateOf(LogPage.Main) }
@@ -178,22 +194,79 @@ private fun MainNav(authViewModel: AuthViewModel) {
                 Tab.Dashboard -> DashboardScreen()
                 Tab.Log -> {
                     when (logPage) {
-                        LogPage.Main -> LogScreen(
-                            viewModel          = logVm,
-                            onSetUpMealButtons = {
-                                currentTab   = Tab.Settings
-                                settingsPage = SettingsPage.MealButtons
-                            },
-                            shortcuts          = logVm.shortcuts.collectAsStateWithLifecycle().value,
-                            onSetUpDrinkButtons = {
-                                currentTab   = Tab.Settings
-                                settingsPage = SettingsPage.DrinkButtons
-                            },
-                            onLogShortcut           = { shortcut -> logVm.logFromShortcut(shortcut) },
-                            onOpenLogFlow           = { showLogSheet = true },
-                            externalUndo            = pendingLogUndoAction,
-                            onExternalUndoConsumed  = { pendingLogUndoAction = null },
-                        )
+                        LogPage.Main -> {
+                            val pagerState = rememberPagerState(initialPage = 0, pageCount = { 365 })
+                            var showDatePicker by remember { mutableStateOf(false) }
+
+                            LaunchedEffect(pagerState.currentPage) {
+                                logVm.setSelectedDate(effectiveDate().minusDays(pagerState.currentPage.toLong()))
+                            }
+
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                DateNavigationHeader(
+                                    page       = pagerState.currentPage,
+                                    onPickDate = { showDatePicker = true },
+                                )
+                                HorizontalPager(
+                                    state    = pagerState,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    LogScreen(
+                                        viewModel           = logVm,
+                                        onSetUpMealButtons  = {
+                                            currentTab   = Tab.Settings
+                                            settingsPage = SettingsPage.MealButtons
+                                        },
+                                        shortcuts           = logVm.shortcuts.collectAsStateWithLifecycle().value,
+                                        onSetUpDrinkButtons = {
+                                            currentTab   = Tab.Settings
+                                            settingsPage = SettingsPage.DrinkButtons
+                                        },
+                                        onLogShortcut           = { shortcut -> logVm.logFromShortcut(shortcut) },
+                                        onOpenLogFlow           = { showLogSheet = true },
+                                        externalUndo            = pendingLogUndoAction,
+                                        onExternalUndoConsumed  = { pendingLogUndoAction = null },
+                                    )
+                                }
+                            }
+
+                            if (showDatePicker) {
+                                val today = effectiveDate()
+                                val initialMillis = today
+                                    .minusDays(pagerState.currentPage.toLong())
+                                    .atStartOfDay(java.time.ZoneOffset.UTC)
+                                    .toInstant().toEpochMilli()
+                                val pickerState = rememberDatePickerState(
+                                    initialSelectedDateMillis = initialMillis,
+                                    selectableDates = object : SelectableDates {
+                                        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                                            val picked = java.time.Instant.ofEpochMilli(utcTimeMillis)
+                                                .atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                                            return !picked.isAfter(today)
+                                        }
+                                    },
+                                )
+                                DatePickerDialog(
+                                    onDismissRequest = { showDatePicker = false },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            val millis = pickerState.selectedDateMillis
+                                            if (millis != null) {
+                                                val picked = java.time.Instant.ofEpochMilli(millis)
+                                                    .atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                                                val page = java.time.temporal.ChronoUnit.DAYS
+                                                    .between(picked, today).toInt().coerceIn(0, 364)
+                                                coroutineScope.launch { pagerState.animateScrollToPage(page) }
+                                            }
+                                            showDatePicker = false
+                                        }) { Text("OK") }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                                    },
+                                ) { DatePicker(state = pickerState) }
+                            }
+                        }
                         LogPage.TemplateList -> TemplateListScreen(
                             onBack   = { logPage = LogPage.Main },
                             onLogged = { undoAction ->
@@ -351,6 +424,27 @@ private fun MainNav(authViewModel: AuthViewModel) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DateNavigationHeader(page: Int, onPickDate: () -> Unit) {
+    val today = remember { effectiveDate() }
+    val label = remember(page) {
+        when (page) {
+            0    -> "Today"
+            1    -> "Yesterday"
+            else -> today.minusDays(page.toLong())
+                .format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM"))
+        }
+    }
+    Row(
+        modifier              = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        AssistChip(onClick = onPickDate, label = { Text(label) })
     }
 }
 
