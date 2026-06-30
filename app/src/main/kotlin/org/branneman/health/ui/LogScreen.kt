@@ -22,8 +22,6 @@ import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
 import org.branneman.health.log.LogViewModel
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun LogScreen(
@@ -215,7 +213,7 @@ fun LogContent(
 
         if (entries.isEmpty()) {
             Text(
-                text     = "Nothing logged today.",
+                text     = "Nothing logged.",
                 style    = MaterialTheme.typography.bodyMedium,
                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp),
@@ -235,7 +233,7 @@ fun LogContent(
                 }
             }
             Text(
-                text     = "$total kcal logged today",
+                text     = "$total kcal logged",
                 style    = MaterialTheme.typography.bodySmall,
                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -246,13 +244,8 @@ fun LogContent(
     }
 }
 
-private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
-
 @Composable
 private fun LogEntryRow(entry: LogEntryWithKcal, onClick: () -> Unit) {
-    val time = remember(entry.entry.loggedAt) {
-        runCatching { OffsetDateTime.parse(entry.entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
-    }
     Row(
         modifier              = Modifier
             .fillMaxWidth()
@@ -261,14 +254,7 @@ private fun LogEntryRow(entry: LogEntryWithKcal, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically,
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text  = time,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(text = entry.displayLabel, style = MaterialTheme.typography.bodyMedium)
-        }
+        Text(text = entry.displayLabel, style = MaterialTheme.typography.bodyMedium)
         Text(
             text  = "${entry.totalKcal} kcal",
             style = MaterialTheme.typography.bodySmall,
@@ -283,10 +269,7 @@ private fun DeleteConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val time = remember(entry.entry.loggedAt) {
-        runCatching { OffsetDateTime.parse(entry.entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
-    }
-    val title = "${entry.displayLabel} — ${entry.totalKcal} kcal — $time"
+    val title = "${entry.displayLabel} — ${entry.totalKcal} kcal"
     AlertDialog(
         onDismissRequest = onDismiss,
         title            = { Text(title) },
@@ -302,9 +285,6 @@ private fun EditEntryDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val time = remember(entry.entry.loggedAt) {
-        runCatching { OffsetDateTime.parse(entry.entry.loggedAt).format(timeFmt) }.getOrDefault("--:--")
-    }
     var kcalText  by remember { mutableStateOf(entry.entry.quickAddKcal?.toString() ?: "") }
     var labelText by remember { mutableStateOf(entry.entry.quickAddLabel ?: "") }
 
@@ -313,7 +293,7 @@ private fun EditEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title  = { Text(time) },
+        title  = { Text(entry.entry.quickAddLabel ?: "Edit entry") },
         text   = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(

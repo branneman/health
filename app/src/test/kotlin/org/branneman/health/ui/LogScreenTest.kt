@@ -72,7 +72,24 @@ class LogScreenTest {
 
     @Test fun `empty state shows nothing-logged message`() {
         render(entries = emptyList())
-        compose.onNodeWithText("Nothing logged today.", substring = true).assertExists()
+        compose.onNodeWithText("Nothing logged.", substring = true).assertExists()
+    }
+
+    @Test fun `entry row does not show a timestamp`() {
+        val entries = listOf(
+            aLogEntryWithKcal(aQuickAddEntry(loggedAt = "2026-06-11T13:00:00Z", quickAddKcal = 560, quickAddLabel = "Lunch")),
+        )
+        render(entries = entries)
+        compose.onNodeWithText("13:00", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun `footer shows kcal logged without the word today`() {
+        val entries = listOf(
+            aLogEntryWithKcal(aQuickAddEntry(quickAddKcal = 400)),
+        )
+        render(entries = entries)
+        compose.onNodeWithText("400 kcal logged", substring = true).assertExists()
+        compose.onNodeWithText("today", substring = true).assertDoesNotExist()
     }
 
     @Test fun `tapping food-item entry opens delete dialog and delete calls onDelete`() {
