@@ -21,6 +21,7 @@ fun TemplateListScreen(
     onBack: () -> Unit,
     onLogged: (undoAction: () -> Unit) -> Unit = {},
     onSelectIngredientTemplate: (String) -> Unit = {},
+    loggedAt: String,
     viewModel: TemplateListViewModel = viewModel(),
 ) {
     val templates by viewModel.templates.collectAsStateWithLifecycle()
@@ -30,7 +31,7 @@ fun TemplateListScreen(
         templates                  = templates,
         ingredientTemplates        = ingredientTemplates,
         onLogTemplate              = { template, multiplier ->
-            viewModel.logFromTemplate(template, multiplier)
+            viewModel.logFromTemplate(template, multiplier, loggedAt)
             onLogged { viewModel.undoLog() }
         },
         onSelectIngredientTemplate = onSelectIngredientTemplate,

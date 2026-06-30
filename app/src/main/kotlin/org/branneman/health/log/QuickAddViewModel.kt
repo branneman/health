@@ -35,12 +35,15 @@ class QuickAddViewModel private constructor(
     fun logQuickAdd(kcal: Int, label: String?, loggedAt: String) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val datePrefix = loggedAt.take(10)
+            val sortOrder = db.logEntryDao().maxSortOrderForDate(userId, "$datePrefix%") + 1
             val entity = LogEntryEntity(
                 userId        = userId,
                 loggedAt      = loggedAt,
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = label?.trim()?.ifEmpty { null },
+                sortOrder     = sortOrder,
             )
             db.logEntryDao().upsert(entity)
             _lastAdded.value = entity

@@ -23,6 +23,7 @@ fun AskAiScreen(
     onUseThis: (kcal: Int, label: String?, undoAction: () -> Unit) -> Unit,
     onEditAmount: (kcal: Int, label: String?) -> Unit,
     onNeedsAiConfig: () -> Unit,
+    loggedAt: String,
     viewModel: AskAiViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -49,7 +50,7 @@ fun AskAiScreen(
         canEstimate     = canEstimate,
         onEstimate      = viewModel::estimate,
         onUseThis       = { kcal, label, aiDescription ->
-            viewModel.logDirectly(kcal, label, aiDescription)
+            viewModel.logDirectly(kcal, label, aiDescription, loggedAt)
             onUseThis(kcal, label) { viewModel.undoDirectLog() }
         },
         onEditAmount    = { kcal, label -> onEditAmount(kcal, label) },

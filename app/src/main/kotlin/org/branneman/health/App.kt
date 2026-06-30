@@ -196,17 +196,22 @@ private fun MainNav(authViewModel: AuthViewModel) {
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             val logVm: LogViewModel = viewModel()
-        val buildVm: BuildFromScratchViewModel = viewModel()
+            val buildVm: BuildFromScratchViewModel = viewModel()
+
+            DisposableEffect(currentTab) {
+                val tabWhenStarted = currentTab
+                onDispose {
+                    if (tabWhenStarted == Tab.Log) {
+                        logVm.setSelectedDate(effectiveDate())
+                    }
+                }
+            }
 
             when (currentTab) {
                 Tab.Dashboard -> DashboardScreen()
                 Tab.Log -> {
                     when (logPage) {
                         LogPage.Main -> {
-                            DisposableEffect(Unit) {
-                                onDispose { logVm.setSelectedDate(effectiveDate()) }
-                            }
-
                             val pagerState = rememberPagerState(initialPage = 0, pageCount = { 365 })
                             var showDatePicker by remember { mutableStateOf(false) }
 
@@ -292,6 +297,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                 loadIngredientTemplateId = templateId
                                 logPage = LogPage.BuildFromScratch
                             },
+                            loggedAt = currentLoggedAt,
                         )
                         LogPage.QuickAdd -> QuickAddScreen(
                             onBack         = { logPage = LogPage.Main; quickAddPrefill = null },
@@ -318,6 +324,7 @@ private fun MainNav(authViewModel: AuthViewModel) {
                                 currentTab   = Tab.Settings
                                 settingsPage = SettingsPage.Ai
                             },
+                            loggedAt       = currentLoggedAt,
                         )
                         LogPage.BuildFromScratch -> BuildFromScratchScreen(
                             pendingFoodItem           = selectedFoodItemForLog,
@@ -380,12 +387,12 @@ private fun MainNav(authViewModel: AuthViewModel) {
                     }
                     if (showLogSheet) {
                         LogFlowSheet(
-                            onFromTemplate     = { showLogSheet = false; logPage = LogPage.TemplateList },
+                            onFromTemplate     = { showLogSheet = false; currentLoggedAt = logVm.loggedAtForSelectedDate(); logPage = LogPage.TemplateList },
                             onQuickAdd         = { showLogSheet = false; currentLoggedAt = logVm.loggedAtForSelectedDate(); logPage = LogPage.QuickAdd },
                             onAskAi            = { showLogSheet = false; currentLoggedAt = logVm.loggedAtForSelectedDate(); logPage = LogPage.AskAi },
                             onBuildFromScratch = { showLogSheet = false; buildVm.reset(); currentLoggedAt = logVm.loggedAtForSelectedDate(); logPage = LogPage.BuildFromScratch },
-                            onSingleItem       = { showLogSheet = false; singleItemAutoLaunchScan = false; logPage = LogPage.SingleItemSearch },
-                            onScanAndLog       = { showLogSheet = false; singleItemAutoLaunchScan = true;  logPage = LogPage.SingleItemSearch },
+                            onSingleItem       = { showLogSheet = false; currentLoggedAt = logVm.loggedAtForSelectedDate(); singleItemAutoLaunchScan = false; logPage = LogPage.SingleItemSearch },
+                            onScanAndLog       = { showLogSheet = false; currentLoggedAt = logVm.loggedAtForSelectedDate(); singleItemAutoLaunchScan = true;  logPage = LogPage.SingleItemSearch },
                             onDismiss          = { showLogSheet = false },
                         )
                     }

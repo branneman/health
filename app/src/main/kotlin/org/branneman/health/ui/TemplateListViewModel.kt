@@ -16,7 +16,6 @@ import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
-import java.time.OffsetDateTime
 import kotlin.math.roundToInt
 
 class TemplateListViewModel private constructor(
@@ -52,16 +51,19 @@ class TemplateListViewModel private constructor(
         .map { list -> list.filter { it.quickAddKcal == null }.sortedBy { it.name } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun logFromTemplate(template: MealTemplateEntity, multiplier: Float) {
+    fun logFromTemplate(template: MealTemplateEntity, multiplier: Float, loggedAt: String) {
         val baseKcal = template.quickAddKcal ?: return
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val datePrefix = loggedAt.take(10)
+            val sortOrder = db.logEntryDao().maxSortOrderForDate(userId, "$datePrefix%") + 1
             val entity = LogEntryEntity(
                 userId        = userId,
-                loggedAt      = OffsetDateTime.now().toString(),
+                loggedAt      = loggedAt,
                 mealType      = "unknown",
                 quickAddKcal  = (baseKcal * multiplier).roundToInt(),
                 quickAddLabel = template.name,
+                sortOrder     = sortOrder,
             )
             db.logEntryDao().upsert(entity)
             _lastLogged.value = entity

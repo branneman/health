@@ -23,6 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.time.OffsetDateTime
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -173,7 +174,7 @@ class AskAiViewModelTest {
             db          = db,
             tokenStore  = ts,
         )
-        vm.logDirectly(kcal = 500, label = "raw typed text", aiDescription = "ai name")
+        vm.logDirectly(kcal = 500, label = "raw typed text", aiDescription = "ai name", loggedAt = OffsetDateTime.now().toString())
         val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(1, entries.size)
         assertEquals("ai name", entries.first().quickAddLabel)
@@ -195,7 +196,7 @@ class AskAiViewModelTest {
             db          = db,
             tokenStore  = ts,
         )
-        vm.logDirectly(kcal = 300, label = "raw typed text", aiDescription = null)
+        vm.logDirectly(kcal = 300, label = "raw typed text", aiDescription = null, loggedAt = OffsetDateTime.now().toString())
         val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(1, entries.size)
         assertEquals("raw typed text", entries.first().quickAddLabel)

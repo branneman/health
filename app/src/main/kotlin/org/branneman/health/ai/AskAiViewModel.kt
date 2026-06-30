@@ -23,7 +23,6 @@ import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.network.AiEstimateApiResult
 import org.branneman.health.network.HealthApiClient
 import java.io.ByteArrayOutputStream
-import java.time.OffsetDateTime
 
 sealed interface AskAiState {
     data object Idle : AskAiState
@@ -133,15 +132,18 @@ class AskAiViewModel private constructor(
         imageBytes = null
     }
 
-    fun logDirectly(kcal: Int, label: String?, aiDescription: String?) {
+    fun logDirectly(kcal: Int, label: String?, aiDescription: String?, loggedAt: String) {
         viewModelScope.launch {
             val userId = tokenStore.tokenFlow.first()?.userId ?: return@launch
+            val datePrefix = loggedAt.take(10)
+            val sortOrder = db.logEntryDao().maxSortOrderForDate(userId, "$datePrefix%") + 1
             val entity = LogEntryEntity(
                 userId        = userId,
-                loggedAt      = OffsetDateTime.now().toString(),
+                loggedAt      = loggedAt,
                 mealType      = "unknown",
                 quickAddKcal  = kcal,
                 quickAddLabel = (aiDescription ?: label)?.trim()?.ifEmpty { null },
+                sortOrder     = sortOrder,
             )
             db.logEntryDao().upsert(entity)
             lastLogged = entity

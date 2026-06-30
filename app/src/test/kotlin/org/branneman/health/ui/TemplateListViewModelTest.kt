@@ -87,7 +87,7 @@ class TemplateListViewModelTest {
         tokenStore.save("token", farFuture, userId)
         val template = aMealTemplate(userId = userId, name = "Pasta", quickAddKcal = 500, syncStatus = SyncStatus.SYNCED)
         db.mealTemplateDao().upsert(template)
-        viewModel.logFromTemplate(template, 1.2f)
+        viewModel.logFromTemplate(template, 1.2f, OffsetDateTime.now().toString())
         val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(600, entries.single().quickAddKcal) // round(500 * 1.2) = 600
         assertEquals("Pasta", entries.single().quickAddLabel)
@@ -98,7 +98,7 @@ class TemplateListViewModelTest {
         tokenStore.save("token", farFuture, userId)
         val template = aMealTemplate(userId = userId, name = "Soup", quickAddKcal = 100, syncStatus = SyncStatus.SYNCED)
         db.mealTemplateDao().upsert(template)
-        viewModel.logFromTemplate(template, 0.8f)
+        viewModel.logFromTemplate(template, 0.8f, OffsetDateTime.now().toString())
         val entries = db.logEntryDao().observeAll().first { it.isNotEmpty() }
         assertEquals(80, entries.single().quickAddKcal) // round(100 * 0.8) = 80
     }
@@ -108,7 +108,7 @@ class TemplateListViewModelTest {
         tokenStore.save("token", farFuture, userId)
         val template = aMealTemplate(userId = userId, name = "Stir-fry", quickAddKcal = 620, syncStatus = SyncStatus.SYNCED)
         db.mealTemplateDao().upsert(template)
-        viewModel.logFromTemplate(template, 1.0f)
+        viewModel.logFromTemplate(template, 1.0f, OffsetDateTime.now().toString())
         db.logEntryDao().observeAll().first { it.isNotEmpty() }
         viewModel.undoLog()
         assertTrue(db.logEntryDao().observeAll().first { it.isEmpty() }.isEmpty())
