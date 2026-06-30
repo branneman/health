@@ -25,6 +25,7 @@ import org.branneman.health.network.HealthApiClient
 import org.branneman.health.onboarding.activityMultiplier
 import org.branneman.health.onboarding.computeBmr
 import java.time.LocalDate
+import org.branneman.health.util.effectiveDate
 
 data class DashboardUiState(
     val isLoading: Boolean = true,
@@ -134,7 +135,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun observeLogEntries() {
         val stored = tokenStore.tokenFlow.first() ?: return
-        val today = LocalDate.now().toString()
+        val today = effectiveDate().toString()
         app.db.logEntryDao().observeTotalKcalForDate(stored.userId, "$today%").collect { kcal ->
             _uiState.update { it.copy(caloriesIn = kcal) }
             refreshCaloriesLeft()
@@ -143,7 +144,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun load() {
         val stored = tokenStore.tokenFlow.first() ?: return
-        val today = LocalDate.now().toString()
+        val today = effectiveDate().toString()
 
         val localState = computeLocalState(stored.userId, today)
         _uiState.value = localState
@@ -213,7 +214,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val profile = app.db.userProfileDao().get() ?: return@launch
             val latestWeight = app.db.bodyWeightDao().observeAll().first().firstOrNull()?.kg
                 ?: profile.goalWeightKg
-            val today = LocalDate.now().toString()
+            val today = effectiveDate().toString()
             val estimatedKcal = computeSportEstimate(activityType, intensity, latestWeight)
             val entity = SportTonightEntity(
                 date = today, activityType = activityType,
@@ -227,7 +228,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun clearSportTonight() {
         viewModelScope.launch {
-            app.db.sportTonightDao().deleteForDate(LocalDate.now().toString())
+            app.db.sportTonightDao().deleteForDate(effectiveDate().toString())
             _uiState.update { it.copy(sportTonight = null) }
             refreshCaloriesLeft()
         }
@@ -236,7 +237,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun logWeight(kg: Double) {
         viewModelScope.launch {
             val stored = tokenStore.tokenFlow.first() ?: return@launch
-            val today = LocalDate.now().toString()
+            val today = effectiveDate().toString()
             app.db.bodyWeightDao().upsert(
                 BodyWeightEntity(
                     id         = today,

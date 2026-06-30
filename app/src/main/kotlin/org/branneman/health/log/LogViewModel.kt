@@ -3,13 +3,12 @@ package org.branneman.health.log
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.branneman.health.HealthApplication
@@ -21,11 +20,8 @@ import org.branneman.health.db.dao.LogEntryWithKcal
 import org.branneman.health.db.entities.LogEntryEntity
 import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
-import java.time.Clock
-import java.time.LocalDate
-import java.time.LocalDateTime
+import org.branneman.health.util.effectiveDateFlow
 import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
 
 class LogViewModel private constructor(
     application: Application,
@@ -51,10 +47,13 @@ class LogViewModel private constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val entries: StateFlow<List<LogEntryWithKcal>> =
-        combine(db.logEntryDao().observeAllWithKcal(), dateFlow()) { all, today ->
-            all.filter { it.entry.loggedAt.startsWith(today.toString()) }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        effectiveDateFlow(application)
+            .flatMapLatest { today ->
+                db.logEntryDao().observeAllWithKcal().map { all ->
+                    all.filter { it.entry.loggedAt.startsWith(today.toString()) }
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val shortcuts: StateFlow<List<ShortcutEntity>> = db.shortcutDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -134,17 +133,5 @@ class LogViewModel private constructor(
         viewModelScope.launch {
             db.logEntryDao().updateQuickAdd(entry.id, kcal, label?.trim()?.ifEmpty { null })
         }
-    }
-}
-
-internal fun dateFlow(clock: Clock = Clock.systemDefaultZone()): Flow<LocalDate> = flow {
-    while (true) {
-        val today = LocalDate.now(clock)
-        emit(today)
-        val millisUntilMidnight = ChronoUnit.MILLIS.between(
-            LocalDateTime.now(clock),
-            today.plusDays(1).atStartOfDay(),
-        )
-        kotlinx.coroutines.delay(millisUntilMidnight)
     }
 }
