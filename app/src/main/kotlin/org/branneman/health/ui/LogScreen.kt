@@ -270,7 +270,7 @@ fun LogEntries(
                                             }
                                         )
                                         .semantics { contentDescription = "Drag to reorder" }
-                                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
@@ -345,7 +345,7 @@ private fun LogEntryRow(
             .fillMaxWidth()
             .background(if (isDragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically,
     ) {
