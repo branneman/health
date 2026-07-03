@@ -90,4 +90,22 @@ class BodyWeightDaoTest {
         dao.upsert(aBodyWeightEntry(id = "2026-06-11", userId = uuid(), date = "2026-06-11", kg = 83.2))
         assertNull(dao.getForDate(uuid(), "2026-06-11"))
     }
+
+    @Test
+    fun `getAllForUser returns readings ordered by date ascending`() = runTest {
+        dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-03", kg = 81.0))
+        dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-01", kg = 82.0))
+        dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-02", kg = 81.5))
+        val result = dao.getAllForUser(userId)
+        assertEquals(listOf("2026-06-01", "2026-06-02", "2026-06-03"), result.map { it.date })
+    }
+
+    @Test
+    fun `getAllForUser excludes other users`() = runTest {
+        dao.upsert(aBodyWeightEntry(userId = userId, date = "2026-06-01", kg = 82.0))
+        dao.upsert(aBodyWeightEntry(userId = uuid(), date = "2026-06-02", kg = 70.0))
+        val result = dao.getAllForUser(userId)
+        assertEquals(1, result.size)
+        assertEquals(82.0, result[0].kg)
+    }
 }

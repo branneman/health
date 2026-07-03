@@ -10,6 +10,9 @@ interface BodyWeightDao {
     @Query("SELECT * FROM body_weight ORDER BY date DESC")
     fun observeAll(): Flow<List<BodyWeightEntity>>
 
+    @Query("SELECT * FROM body_weight WHERE userId = :userId ORDER BY date ASC")
+    suspend fun getAllForUser(userId: String): List<BodyWeightEntity>
+
     @Query("SELECT * FROM body_weight WHERE userId = :userId AND date = :date LIMIT 1")
     suspend fun getForDate(userId: String, date: String): BodyWeightEntity?
 
