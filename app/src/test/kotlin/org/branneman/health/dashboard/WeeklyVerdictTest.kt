@@ -128,4 +128,38 @@ class WeeklyVerdictTest {
     @Test fun `input order does not matter`() {
         assertIs<WeeklyVerdict.Green>(computeWeeklyVerdict(twoPlateaus(80.3, 80.0).shuffled(), 300, today))
     }
+
+    // --- Messages (spec §Messages) ---
+
+    @Test fun `green message shows delta and on track`() {
+        assertEquals("Down 0.3 kg this week — on track.", verdictMessage(WeeklyVerdict.Green(-0.3)))
+    }
+
+    @Test fun `flat green reads Flat not Down 0 kg`() {
+        assertEquals("Flat this week — on track.", verdictMessage(WeeklyVerdict.Green(0.0)))
+        assertEquals("Flat this week — on track.", verdictMessage(WeeklyVerdict.Green(-0.04)))
+    }
+
+    @Test fun `amber behind messages cover flat up and down`() {
+        assertEquals("Flat this week — slightly behind.", verdictMessage(WeeklyVerdict.AmberBehind(0.0)))
+        assertEquals("Up 0.2 kg this week — slightly behind.", verdictMessage(WeeklyVerdict.AmberBehind(0.2)))
+        assertEquals("Down 0.1 kg this week — slightly behind.", verdictMessage(WeeklyVerdict.AmberBehind(-0.1)))
+    }
+
+    @Test fun `amber fast message warns about intake`() {
+        assertEquals(
+            "Down 0.8 kg this week — dropping quickly, watch your intake.",
+            verdictMessage(WeeklyVerdict.AmberFast(-0.8)),
+        )
+    }
+
+    @Test fun `delta rounds to one decimal`() {
+        assertEquals("Down 0.9 kg this week — dropping quickly, watch your intake.",
+            verdictMessage(WeeklyVerdict.AmberFast(-0.86)))
+    }
+
+    @Test fun `gate state messages`() {
+        assertEquals("Building baseline — keep logging.", verdictMessage(WeeklyVerdict.GracePeriod))
+        assertEquals("Not enough weigh-ins for a reliable verdict this week.", verdictMessage(WeeklyVerdict.NotEnoughData))
+    }
 }

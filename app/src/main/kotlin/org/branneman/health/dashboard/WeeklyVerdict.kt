@@ -41,3 +41,18 @@ private fun smoothed(sortedByDate: List<BodyWeightEntity>, endpoint: LocalDate):
         .takeLast(7)
         .map { it.kg }
         .average()
+
+fun verdictMessage(verdict: WeeklyVerdict): String = when (verdict) {
+    is WeeklyVerdict.Green       -> "${deltaPhrase(verdict.deltaKg)} — on track."
+    is WeeklyVerdict.AmberBehind -> "${deltaPhrase(verdict.deltaKg)} — slightly behind."
+    is WeeklyVerdict.AmberFast   -> "${deltaPhrase(verdict.deltaKg)} — dropping quickly, watch your intake."
+    WeeklyVerdict.GracePeriod    -> "Building baseline — keep logging."
+    WeeklyVerdict.NotEnoughData  -> "Not enough weigh-ins for a reliable verdict this week."
+}
+
+// |delta| < 0.05 counts as flat (spec §Messages), so a flat trend never reads "Down 0.0 kg".
+private fun deltaPhrase(deltaKg: Double): String = when {
+    kotlin.math.abs(deltaKg) < 0.05 -> "Flat this week"
+    deltaKg < 0                     -> "Down %.1f kg this week".format(-deltaKg)
+    else                            -> "Up %.1f kg this week".format(deltaKg)
+}
