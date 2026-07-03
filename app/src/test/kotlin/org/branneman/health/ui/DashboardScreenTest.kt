@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import org.branneman.health.dashboard.DashboardUiState
+import org.branneman.health.dashboard.WeeklyVerdict
 import org.branneman.health.db.entities.SportTonightEntity
 import org.junit.Rule
 import org.junit.Test
@@ -206,5 +207,45 @@ class DashboardScreenTest {
     @Test fun `shows left balance label`() {
         render(state = DashboardUiState(isLoading = false, caloriesLeft = 2100, budgetLabel = "left (balance)"))
         compose.onNodeWithText("left (balance)", substring = true, ignoreCase = true).assertExists()
+    }
+
+    // --- Weekly verdict card ---
+
+    @Test fun `green verdict shows message on green card`() {
+        render(state = DashboardUiState(isLoading = false, weeklyVerdict = WeeklyVerdict.Green(-0.3)))
+        compose.onNodeWithText("Down 0.3 kg this week — on track.").assertExists()
+        compose.onNodeWithTag("verdict-green").assertExists()
+    }
+
+    @Test fun `amber behind verdict shows message on amber card`() {
+        render(state = DashboardUiState(isLoading = false, weeklyVerdict = WeeklyVerdict.AmberBehind(0.0)))
+        compose.onNodeWithText("Flat this week — slightly behind.").assertExists()
+        compose.onNodeWithTag("verdict-amber").assertExists()
+    }
+
+    @Test fun `amber fast verdict shows message on amber card`() {
+        render(state = DashboardUiState(isLoading = false, weeklyVerdict = WeeklyVerdict.AmberFast(-0.8)))
+        compose.onNodeWithText("Down 0.8 kg this week — dropping quickly, watch your intake.").assertExists()
+        compose.onNodeWithTag("verdict-amber").assertExists()
+    }
+
+    @Test fun `grace period shows neutral card`() {
+        render(state = DashboardUiState(isLoading = false, weeklyVerdict = WeeklyVerdict.GracePeriod))
+        compose.onNodeWithText("Building baseline — keep logging.").assertExists()
+        compose.onNodeWithTag("verdict-neutral").assertExists()
+    }
+
+    @Test fun `not enough data shows neutral card`() {
+        render(state = DashboardUiState(isLoading = false, weeklyVerdict = WeeklyVerdict.NotEnoughData))
+        compose.onNodeWithText("Not enough weigh-ins for a reliable verdict this week.").assertExists()
+        compose.onNodeWithTag("verdict-neutral").assertExists()
+    }
+
+    @Test fun `no verdict hides the weekly zone`() {
+        render(state = DashboardUiState(isLoading = false, weeklyVerdict = null))
+        compose.onNodeWithText("This week").assertDoesNotExist()
+        compose.onNodeWithTag("verdict-green").assertDoesNotExist()
+        compose.onNodeWithTag("verdict-amber").assertDoesNotExist()
+        compose.onNodeWithTag("verdict-neutral").assertDoesNotExist()
     }
 }

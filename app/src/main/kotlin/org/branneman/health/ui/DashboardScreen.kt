@@ -8,13 +8,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.dashboard.DashboardUiState
 import org.branneman.health.dashboard.DashboardViewModel
+import org.branneman.health.dashboard.WeeklyVerdict
 import org.branneman.health.dashboard.isValidWeightInput
+import org.branneman.health.dashboard.verdictMessage
 import org.branneman.health.db.entities.SportTonightEntity
 
 private val activities = listOf("climbing" to "Climbing", "rowing" to "Rowing", "other" to "Other")
@@ -59,6 +63,18 @@ fun DashboardContent(
         HorizontalDivider()
         Spacer(Modifier.height(12.dp))
         SportTonightSection(state, onSetSportTonight, onClearSportTonight)
+        state.weeklyVerdict?.let { verdict ->
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "This week",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            WeeklyVerdictCard(verdict)
+        }
     }
 }
 
@@ -253,5 +269,32 @@ private fun SportTonightPicker(
             TextButton(onClick = onDismiss) { Text("Cancel") }
             Button(onClick = { onSet(selectedActivity, selectedIntensity) }) { Text("Done") }
         }
+    }
+}
+
+@Composable
+private fun WeeklyVerdictCard(verdict: WeeklyVerdict) {
+    // Verdict states get a colored surface; gate states stay neutral (spec §UI).
+    val (container, content, tag) = when (verdict) {
+        is WeeklyVerdict.Green ->
+            Triple(Color(0xFFC8E6C9), Color(0xFF1B5E20), "verdict-green")
+        is WeeklyVerdict.AmberBehind, is WeeklyVerdict.AmberFast ->
+            Triple(Color(0xFFFFE0B2), Color(0xFF7A4F01), "verdict-amber")
+        WeeklyVerdict.GracePeriod, WeeklyVerdict.NotEnoughData ->
+            Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "verdict-neutral")
+    }
+    Surface(
+        color = container,
+        contentColor = content,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(tag),
+    ) {
+        Text(
+            text = verdictMessage(verdict),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
     }
 }

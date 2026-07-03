@@ -40,6 +40,7 @@ data class DashboardUiState(
     val expectedTodaySport: Int? = null,
     val expectedTodayNonSport: Int? = null,
     val actualBurnedSoFar: Int? = null,
+    val weeklyVerdict: WeeklyVerdict? = null,
 )
 
 fun computeSportEstimate(activityType: String, intensity: String, weightKg: Double): Int {
