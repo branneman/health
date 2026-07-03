@@ -186,6 +186,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val sport        = app.db.sportTonightDao().getForDate(today)?.takeIf { it.date == today }
         val params       = app.db.dynamicBudgetParamsDao().getForDate(today)
 
+        val verdict = computeWeeklyVerdict(
+            readings      = app.db.bodyWeightDao().getAllForUser(userId),
+            targetDeficit = profile.targetDeficit,
+            today         = LocalDate.parse(today),
+        )
+
         val (caloriesOut, source) = if (energy != null) {
             energy.totalKcal to "polar_today"
         } else {
@@ -206,6 +212,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             expectedTodaySport    = params?.expectedTodaySport,
             expectedTodayNonSport = params?.expectedTodayNonSport,
             actualBurnedSoFar     = energy?.totalKcal,
+            weeklyVerdict         = verdict,
         )
         // caloriesLeft and budgetLabel are set by refreshCaloriesLeft() called after this
     }
@@ -248,7 +255,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     syncStatus = SyncStatus.PENDING_CREATE,
                 )
             )
-            _uiState.update { it.copy(weightKgToday = kg) }
+            val profile = app.db.userProfileDao().get()
+            val verdict = profile?.let { p ->
+                computeWeeklyVerdict(
+                    readings      = app.db.bodyWeightDao().getAllForUser(stored.userId),
+                    targetDeficit = p.targetDeficit,
+                    today         = LocalDate.parse(today),
+                )
+            }
+            _uiState.update { it.copy(weightKgToday = kg, weeklyVerdict = verdict ?: it.weeklyVerdict) }
         }
     }
 }
