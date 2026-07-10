@@ -1,5 +1,6 @@
 package org.branneman.health.ui
 
+import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,8 +18,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.branneman.health.dashboard.TrendConfidence
 import org.branneman.health.dashboard.TrendRange
 import org.branneman.health.dashboard.WeightTrendData
@@ -26,6 +30,7 @@ import org.branneman.health.dashboard.WeightTrendPoint
 import org.branneman.health.dashboard.filterToRange
 import org.branneman.health.util.effectiveDate
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 private val rangeOrder = listOf(
     TrendRange.WEEK, TrendRange.MONTH, TrendRange.THREE_MONTHS,
@@ -91,6 +96,8 @@ private fun WeightTrendCanvas(
     val lineColor = MaterialTheme.colorScheme.primary
     val dotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     val goalColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f)
+    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
 
     Canvas(
         modifier = Modifier
@@ -100,26 +107,79 @@ private fun WeightTrendCanvas(
     ) {
         if (points.isEmpty()) return@Canvas
 
-        // Honest, un-truncated axis: pad slightly past the visible data's own range
-        // (math-model §3.3 / dashboard UX chart conventions — never exaggerate movement).
+        // Honest, un-truncated axis: round the data's own min/max outward to "nice"
+        // step values (standard d3-style tick rounding) so labels read as round kg
+        // numbers, never the data's arbitrary decimal endpoints (math-model §3.3 /
+        // dashboard UX chart conventions — never shrink the range to exaggerate movement).
         val allValues = points.flatMap { listOf(it.smoothedKg, it.rawKg) } + listOfNotNull(goalWeightKg)
         val rawMin = allValues.min()
         val rawMax = allValues.max()
-        val padding = ((rawMax - rawMin).takeIf { it > 0 } ?: 1.0) * 0.1
-        val minKg = rawMin - padding
-        val maxKg = rawMax + padding
+        val rawRange = (rawMax - rawMin).takeIf { it > 0 } ?: 1.0
+        val roughStep = rawRange / 3
+        val magnitude = Math.pow(10.0, Math.floor(Math.log10(roughStep)))
+        val normalized = roughStep / magnitude
+        val niceStep = magnitude * when {
+            normalized <= 1.0 -> 1.0
+            normalized <= 2.0 -> 2.0
+            normalized <= 5.0 -> 5.0
+            else              -> 10.0
+        }
+        val minKg = Math.floor(rawMin / niceStep) * niceStep
+        val maxKg = Math.ceil(rawMax / niceStep) * niceStep
         val kgRange = (maxKg - minKg).takeIf { it > 0 } ?: 1.0
+        val gridValues = generateSequence(minKg) { it + niceStep }.takeWhile { it <= maxKg + niceStep / 2 }.toList()
 
-        fun yFor(kg: Double): Float = (size.height * (1 - (kg - minKg) / kgRange)).toFloat()
+        // Reserve margins for axis labels so the plot itself doesn't touch the edges.
+        val yAxisLabelWidth = 40.dp.toPx()
+        val xAxisLabelHeight = 20.dp.toPx()
+        val plotLeft = yAxisLabelWidth
+        val plotRight = size.width
+        val plotBottom = size.height - xAxisLabelHeight
+
+        fun yFor(kg: Double): Float = (plotBottom * (1 - (kg - minKg) / kgRange)).toFloat()
         fun xFor(index: Int): Float =
-            if (points.size == 1) size.width / 2f
-            else size.width * (index.toFloat() / (points.size - 1))
+            if (points.size == 1) (plotLeft + plotRight) / 2f
+            else plotLeft + (plotRight - plotLeft) * (index.toFloat() / (points.size - 1))
+
+        val textPaint = Paint().apply {
+            color = labelColor
+            textSize = 11.sp.toPx()
+            isAntiAlias = true
+        }
+
+        // Y-axis: one gridline + rounded kg label per nice step.
+        gridValues.forEach { kg ->
+            val y = yFor(kg).coerceIn(textPaint.textSize, plotBottom)
+            drawLine(
+                color = gridColor,
+                start = Offset(plotLeft, y),
+                end = Offset(plotRight, y),
+                strokeWidth = 1.dp.toPx(),
+            )
+            textPaint.textAlign = Paint.Align.LEFT
+            drawContext.canvas.nativeCanvas.drawText(
+                "%.1f".format(kg), 0f, y + textPaint.textSize / 3, textPaint,
+            )
+        }
+
+        // X-axis: start / mid / end date labels of the visible window.
+        val formatter = DateTimeFormatter.ofPattern("MMM d")
+        val dateIndices = when {
+            points.size <= 2 -> listOf(0, points.size - 1)
+            else             -> listOf(0, points.size / 2, points.size - 1)
+        }.distinct()
+        textPaint.textAlign = Paint.Align.CENTER
+        dateIndices.forEach { i ->
+            drawContext.canvas.nativeCanvas.drawText(
+                points[i].date.format(formatter), xFor(i), size.height, textPaint,
+            )
+        }
 
         goalWeightKg?.let { goal ->
             drawLine(
                 color = goalColor,
-                start = Offset(0f, yFor(goal)),
-                end = Offset(size.width, yFor(goal)),
+                start = Offset(plotLeft, yFor(goal)),
+                end = Offset(plotRight, yFor(goal)),
                 strokeWidth = 2f,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f)),
             )
