@@ -41,6 +41,9 @@ data class DashboardUiState(
     val expectedTodayNonSport: Int? = null,
     val actualBurnedSoFar: Int? = null,
     val weeklyVerdict: WeeklyVerdict? = null,
+    val weightTrend: WeightTrendData? = null,
+    val selectedTrendRange: TrendRange = TrendRange.MONTH,
+    val goalWeightKg: Double? = null,
 )
 
 fun computeSportEstimate(activityType: String, intensity: String, weightKg: Double): Int {
@@ -186,11 +189,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val sport        = app.db.sportTonightDao().getForDate(today)?.takeIf { it.date == today }
         val params       = app.db.dynamicBudgetParamsDao().getForDate(today)
 
+        val bodyWeightReadings = app.db.bodyWeightDao().getAllForUser(userId)
         val verdict = computeWeeklyVerdict(
-            readings      = app.db.bodyWeightDao().getAllForUser(userId),
+            readings      = bodyWeightReadings,
             targetDeficit = profile.targetDeficit,
             today         = LocalDate.parse(today),
         )
+        val trend = computeWeightTrend(bodyWeightReadings, LocalDate.parse(today))
 
         val (caloriesOut, source) = if (energy != null) {
             energy.totalKcal to "polar_today"
@@ -213,6 +218,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             expectedTodayNonSport = params?.expectedTodayNonSport,
             actualBurnedSoFar     = energy?.totalKcal,
             weeklyVerdict         = verdict,
+            weightTrend           = trend,
+            goalWeightKg          = profile.goalWeightKg,
         )
         // caloriesLeft and budgetLabel are set by refreshCaloriesLeft() called after this
     }
@@ -256,14 +263,26 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             )
             val profile = app.db.userProfileDao().get()
+            val readings = app.db.bodyWeightDao().getAllForUser(stored.userId)
             val verdict = profile?.let { p ->
                 computeWeeklyVerdict(
-                    readings      = app.db.bodyWeightDao().getAllForUser(stored.userId),
+                    readings      = readings,
                     targetDeficit = p.targetDeficit,
                     today         = LocalDate.parse(today),
                 )
             }
-            _uiState.update { it.copy(weightKgToday = kg, weeklyVerdict = verdict ?: it.weeklyVerdict) }
+            val trend = computeWeightTrend(readings, LocalDate.parse(today))
+            _uiState.update {
+                it.copy(
+                    weightKgToday = kg,
+                    weeklyVerdict = verdict ?: it.weeklyVerdict,
+                    weightTrend   = trend,
+                )
+            }
         }
+    }
+
+    fun selectTrendRange(range: TrendRange) {
+        _uiState.update { it.copy(selectedTrendRange = range) }
     }
 }
