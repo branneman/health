@@ -34,14 +34,6 @@ fun computeWeeklyVerdict(
     }
 }
 
-// Mean of the last ≤7 readings on or before endpoint (math-model §3.1).
-private fun smoothed(sortedByDate: List<BodyWeightEntity>, endpoint: LocalDate): Double =
-    sortedByDate
-        .filter { LocalDate.parse(it.date) <= endpoint }
-        .takeLast(7)
-        .map { it.kg }
-        .average()
-
 fun verdictMessage(verdict: WeeklyVerdict): String = when (verdict) {
     is WeeklyVerdict.Green       -> "${deltaPhrase(verdict.deltaKg)} — on track."
     is WeeklyVerdict.AmberBehind -> "${deltaPhrase(verdict.deltaKg)} — slightly behind."
