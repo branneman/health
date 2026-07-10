@@ -187,12 +187,18 @@ private fun WeightTrendCanvas(
         }
 
         goalWeightKg?.let { goal ->
+            val goalY = yFor(goal)
             drawLine(
                 color = goalColor,
-                start = Offset(plotLeft, yFor(goal)),
-                end = Offset(plotRight, yFor(goal)),
+                start = Offset(plotLeft, goalY),
+                end = Offset(plotRight, goalY),
                 strokeWidth = 2f,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f)),
+            )
+            textPaint.textAlign = Paint.Align.RIGHT
+            textPaint.color = goalColor.toArgb()
+            drawContext.canvas.nativeCanvas.drawText(
+                "Goal", plotRight, (goalY - 4.dp.toPx()).coerceAtLeast(textPaint.textSize), textPaint,
             )
         }
 
