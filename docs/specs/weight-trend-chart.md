@@ -122,7 +122,7 @@ directly after `WeeklyVerdictCard`, under the same "This week" trend section
   - Faint raw-reading dots underneath, cropped to `selectedTrendRange`.
   - Flat dashed goal line at `goalWeightKg`, muted styling, small "Goal" label —
     spans the visible window, always shown regardless of confidence.
-  - Y-axis: 2-4 gridlines at "nice" rounded kg values (standard d3-style tick
+  - Y-axis: 2-5 gridlines at "nice" rounded kg values (standard d3-style tick
     rounding — the data's own min/max is rounded outward to the nearest clean step,
     never inward), each with a small kg label. Added after initial manual
     verification showed a flat trend line floating in empty space with no visual

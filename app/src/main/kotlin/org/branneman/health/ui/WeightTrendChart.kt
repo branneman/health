@@ -147,9 +147,12 @@ private fun WeightTrendCanvas(
             isAntiAlias = true
         }
 
-        // Y-axis: one gridline + rounded kg label per nice step.
+        // Y-axis: one gridline + rounded kg label per nice step. The gridline itself
+        // is always drawn at the true, unclamped yFor(kg) — only the label's text
+        // baseline is nudged so its glyphs don't clip off the top/bottom edge, so a
+        // data/goal point exactly at a tick value still lines up with its gridline.
         gridValues.forEach { kg ->
-            val y = yFor(kg).coerceIn(textPaint.textSize, plotBottom)
+            val y = yFor(kg)
             drawLine(
                 color = gridColor,
                 start = Offset(plotLeft, y),
@@ -157,21 +160,29 @@ private fun WeightTrendCanvas(
                 strokeWidth = 1.dp.toPx(),
             )
             textPaint.textAlign = Paint.Align.LEFT
+            val labelBaseline = (y + textPaint.textSize / 3).coerceIn(textPaint.textSize, plotBottom)
             drawContext.canvas.nativeCanvas.drawText(
-                "%.1f".format(kg), 0f, y + textPaint.textSize / 3, textPaint,
+                "%.1f".format(kg), 0f, labelBaseline, textPaint,
             )
         }
 
-        // X-axis: start / mid / end date labels of the visible window.
+        // X-axis: start / mid / end date labels of the visible window. The first/last
+        // labels anchor from their edge (LEFT/RIGHT) rather than CENTER so they stay
+        // within the canvas instead of overflowing past x=0 or x=size.width.
         val formatter = DateTimeFormatter.ofPattern("MMM d")
         val dateIndices = when {
             points.size <= 2 -> listOf(0, points.size - 1)
             else             -> listOf(0, points.size / 2, points.size - 1)
         }.distinct()
-        textPaint.textAlign = Paint.Align.CENTER
+        val dateLabelBaseline = plotBottom + xAxisLabelHeight * 0.75f
         dateIndices.forEach { i ->
+            textPaint.textAlign = when (i) {
+                0                -> Paint.Align.LEFT
+                points.size - 1  -> Paint.Align.RIGHT
+                else             -> Paint.Align.CENTER
+            }
             drawContext.canvas.nativeCanvas.drawText(
-                points[i].date.format(formatter), xFor(i), size.height, textPaint,
+                points[i].date.format(formatter), xFor(i), dateLabelBaseline, textPaint,
             )
         }
 
