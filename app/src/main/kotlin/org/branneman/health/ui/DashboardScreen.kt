@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.branneman.health.dashboard.DashboardUiState
 import org.branneman.health.dashboard.DashboardViewModel
+import org.branneman.health.dashboard.TrendRange
 import org.branneman.health.dashboard.WeeklyVerdict
 import org.branneman.health.dashboard.isValidWeightInput
 import org.branneman.health.dashboard.verdictMessage
@@ -32,6 +33,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
         onSetSportTonight = viewModel::setSportTonight,
         onClearSportTonight = viewModel::clearSportTonight,
         onLogWeight = viewModel::logWeight,
+        onSelectTrendRange = viewModel::selectTrendRange,
     )
 }
 
@@ -41,6 +43,7 @@ fun DashboardContent(
     onSetSportTonight: (String, String) -> Unit,
     onClearSportTonight: () -> Unit,
     onLogWeight: (Double) -> Unit,
+    onSelectTrendRange: (TrendRange) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -74,6 +77,15 @@ fun DashboardContent(
             )
             Spacer(Modifier.height(12.dp))
             WeeklyVerdictCard(verdict)
+        }
+        state.weightTrend?.let { trend ->
+            Spacer(Modifier.height(16.dp))
+            WeightTrendChart(
+                trend = trend,
+                selectedRange = state.selectedTrendRange,
+                goalWeightKg = state.goalWeightKg,
+                onSelectRange = onSelectTrendRange,
+            )
         }
     }
 }

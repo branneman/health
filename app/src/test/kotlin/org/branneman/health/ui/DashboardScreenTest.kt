@@ -4,13 +4,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import org.branneman.health.dashboard.DashboardUiState
+import org.branneman.health.dashboard.TrendConfidence
+import org.branneman.health.dashboard.TrendRange
 import org.branneman.health.dashboard.WeeklyVerdict
+import org.branneman.health.dashboard.WeightTrendData
+import org.branneman.health.dashboard.WeightTrendPoint
 import org.branneman.health.db.entities.SportTonightEntity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
@@ -24,6 +29,7 @@ class DashboardScreenTest {
         onSetSportTonight: (String, String) -> Unit = { _, _ -> },
         onClearSportTonight: () -> Unit = {},
         onLogWeight: (Double) -> Unit = {},
+        onSelectTrendRange: (TrendRange) -> Unit = {},
     ) {
         compose.setContent {
             MaterialTheme {
@@ -32,6 +38,7 @@ class DashboardScreenTest {
                     onSetSportTonight = onSetSportTonight,
                     onClearSportTonight = onClearSportTonight,
                     onLogWeight = onLogWeight,
+                    onSelectTrendRange = onSelectTrendRange,
                 )
             }
         }
@@ -247,5 +254,55 @@ class DashboardScreenTest {
         compose.onNodeWithTag("verdict-green").assertDoesNotExist()
         compose.onNodeWithTag("verdict-amber").assertDoesNotExist()
         compose.onNodeWithTag("verdict-neutral").assertDoesNotExist()
+    }
+
+    // --- Weight trend chart ---
+
+    private fun fullConfidenceTrend(availableRanges: Set<TrendRange> = setOf(TrendRange.WEEK, TrendRange.MONTH, TrendRange.ALL)) =
+        WeightTrendData(
+            points = listOf(WeightTrendPoint(date = LocalDate.parse("2026-07-01"), smoothedKg = 80.0, rawKg = 80.0)),
+            confidence = TrendConfidence.FULL,
+            availableRanges = availableRanges,
+        )
+
+    @Test fun `no readings shows trend empty message and no range buttons`() {
+        render(state = DashboardUiState(
+            isLoading = false,
+            weightTrend = WeightTrendData(emptyList(), TrendConfidence.NONE, setOf(TrendRange.WEEK, TrendRange.MONTH, TrendRange.ALL)),
+        ))
+        compose.onNodeWithTag("trend-empty-message").assertExists()
+        compose.onNodeWithTag("trend-range-1W").assertDoesNotExist()
+    }
+
+    @Test fun `only available ranges render as buttons`() {
+        render(state = DashboardUiState(isLoading = false, weightTrend = fullConfidenceTrend()))
+        compose.onNodeWithTag("trend-range-1W").assertExists()
+        compose.onNodeWithTag("trend-range-1M").assertExists()
+        compose.onNodeWithTag("trend-range-ALL").assertExists()
+        compose.onNodeWithTag("trend-range-3M").assertDoesNotExist()
+    }
+
+    @Test fun `three months button renders once available`() {
+        render(state = DashboardUiState(
+            isLoading = false,
+            weightTrend = fullConfidenceTrend(setOf(TrendRange.WEEK, TrendRange.MONTH, TrendRange.THREE_MONTHS, TrendRange.ALL)),
+        ))
+        compose.onNodeWithTag("trend-range-3M").assertExists()
+    }
+
+    @Test fun `tapping a range button calls onSelectTrendRange`() {
+        var selected: TrendRange? = null
+        render(
+            state = DashboardUiState(isLoading = false, weightTrend = fullConfidenceTrend()),
+            onSelectTrendRange = { selected = it },
+        )
+        compose.onNodeWithTag("trend-range-1W").performScrollTo().performClick()
+        assertEquals(TrendRange.WEEK, selected)
+    }
+
+    @Test fun `no trend data hides the chart entirely`() {
+        render(state = DashboardUiState(isLoading = false, weightTrend = null))
+        compose.onNodeWithTag("trend-empty-message").assertDoesNotExist()
+        compose.onNodeWithTag("trend-chart-canvas").assertDoesNotExist()
     }
 }
