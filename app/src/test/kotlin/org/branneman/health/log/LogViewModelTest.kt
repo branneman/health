@@ -16,6 +16,7 @@ import org.branneman.health.aShortcut
 import org.branneman.health.auth.TokenStore
 import org.branneman.health.db.HealthDatabase
 import org.branneman.health.db.SyncStatus
+import org.branneman.health.util.effectiveDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -23,6 +24,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import kotlin.test.assertEquals
 
@@ -119,5 +122,15 @@ class LogViewModelTest {
         assertEquals("Apple", entry.quickAddLabel)
         assertEquals("unknown", entry.mealType)
         assertEquals(SyncStatus.PENDING_CREATE, entry.syncStatus)
+    }
+
+    @Test
+    fun `loggedAtForSelectedDate at 02h30 stores the previous-day date to match its effective-day bucket`() {
+        val now = LocalDateTime.of(2026, 7, 11, 2, 30)
+        viewModel.setSelectedDate(effectiveDate(now))
+
+        val loggedAt = viewModel.loggedAtForSelectedDate(now)
+
+        assertEquals(LocalDate.of(2026, 7, 10), OffsetDateTime.parse(loggedAt).toLocalDate())
     }
 }

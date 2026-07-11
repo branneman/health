@@ -25,6 +25,7 @@ import org.branneman.health.db.entities.MealTemplateEntity
 import org.branneman.health.db.entities.ShortcutEntity
 import org.branneman.health.util.effectiveDate
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
@@ -54,10 +55,15 @@ class LogViewModel private constructor(
 
     fun setSelectedDate(date: LocalDate) { _selectedDate.value = date }
 
-    internal fun loggedAtForSelectedDate(): String {
+    internal fun loggedAtForSelectedDate(now: LocalDateTime = LocalDateTime.now()): String {
         val date = _selectedDate.value
-        return if (date == effectiveDate()) {
-            OffsetDateTime.now().toString()
+        return if (date == effectiveDate(now)) {
+            // Between 00:00-04:00, `date` (the effective day) is still yesterday's
+            // calendar date while `now` has already rolled to today's — stamp with
+            // `date` so the LIKE-prefix date queries in LogEntryDao find this entry.
+            val atClockTime = date.atTime(now.toLocalTime())
+            val offset = ZoneId.systemDefault().rules.getOffset(atClockTime)
+            OffsetDateTime.of(atClockTime, offset).toString()
         } else {
             val noon   = date.atTime(12, 0)
             val offset = ZoneId.systemDefault().rules.getOffset(noon)
