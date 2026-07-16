@@ -74,6 +74,20 @@ private val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+private val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS `sport_tonight`")
+        db.execSQL("DROP TABLE IF EXISTS `dynamic_budget_params`")
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `dynamic_budget_params` (
+                `date` TEXT NOT NULL,
+                `expectedToday` INTEGER,
+                PRIMARY KEY(`date`)
+            )
+        """)
+    }
+}
+
 class HealthApplication : Application() {
 
     lateinit var db: HealthDatabase
@@ -92,7 +106,7 @@ class HealthApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         db = Room.databaseBuilder(this, HealthDatabase::class.java, "health.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
             .build()
     }
 }

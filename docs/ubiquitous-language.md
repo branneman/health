@@ -206,12 +206,6 @@ A calendar day with at least one food log entry AND a Polar calories-out value. 
 the unit of analysis for the calorie-vs-weight insight. Days missing either leg are
 excluded from that calculation.
 
-### Sport tonight
-
-A toggle on the dashboard that adds an estimated exercise expenditure to today's
-calories out. Set by the user when planning a session that hasn't happened yet. Cleared
-each morning. Replaced silently by Polar's actual figure after the session syncs.
-
 ---
 
 ## Integration concepts

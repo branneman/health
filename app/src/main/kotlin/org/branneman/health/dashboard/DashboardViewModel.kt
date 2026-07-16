@@ -20,7 +20,7 @@ import org.branneman.health.auth.TokenStore
 import org.branneman.health.auth.authDataStore
 import org.branneman.health.db.SyncStatus
 import org.branneman.health.db.entities.BodyWeightEntity
-import org.branneman.health.db.entities.SportTonightEntity
+import org.branneman.health.db.entities.DynamicBudgetParamsEntity
 import org.branneman.health.network.HealthApiClient
 import org.branneman.health.onboarding.activityMultiplier
 import org.branneman.health.onboarding.computeBmr
@@ -35,38 +35,14 @@ data class DashboardUiState(
     val targetDeficit: Int = 0,
     val caloriesLeft: Int = 0,
     val budgetLabel: String = "left (estimated)",
-    val sportTonight: SportTonightEntity? = null,
     val weightKgToday: Double? = null,
-    val expectedTodaySport: Int? = null,
-    val expectedTodayNonSport: Int? = null,
+    val expectedToday: Int? = null,
     val actualBurnedSoFar: Int? = null,
     val weeklyVerdict: WeeklyVerdict? = null,
     val weightTrend: WeightTrendData? = null,
     val selectedTrendRange: TrendRange = TrendRange.MONTH,
     val goalWeightKg: Double? = null,
 )
-
-fun computeSportEstimate(activityType: String, intensity: String, weightKg: Double): Int {
-    data class Cfg(val met: Double, val mins: Int)
-    val cfg = when (activityType) {
-        "climbing" -> when (intensity) {
-            "light" -> Cfg(4.0, 75)
-            "hard"  -> Cfg(6.5, 90)
-            else    -> Cfg(5.0, 90)
-        }
-        "rowing" -> when (intensity) {
-            "light" -> Cfg(7.0, 45)
-            "hard"  -> Cfg(9.0, 60)
-            else    -> Cfg(7.5, 60)
-        }
-        else -> when (intensity) {
-            "light" -> Cfg(4.0, 60)
-            "hard"  -> Cfg(7.0, 75)
-            else    -> Cfg(5.5, 75)
-        }
-    }
-    return (cfg.met * weightKg * cfg.mins / 60.0).toInt()
-}
 
 fun isValidWeightInput(input: String): Boolean {
     val normalized = input.replace(',', '.')
@@ -110,13 +86,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun refreshCaloriesLeft() {
         val state = _uiState.value
-        val isSportTonight = state.sportTonight != null
-
-        val expectedToday = if (isSportTonight) {
-            state.expectedTodaySport ?: state.caloriesOut
-        } else {
-            state.expectedTodayNonSport ?: state.caloriesOut
-        }
+        val expectedToday = state.expectedToday ?: state.caloriesOut
 
         val caloriesLeft = computeCaloriesLeft(
             expectedToday      = expectedToday,
@@ -125,8 +95,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             caloriesIn         = state.caloriesIn,
         )
 
-        val usingFallback = (isSportTonight && state.expectedTodaySport == null) ||
-                            (!isSportTonight && state.expectedTodayNonSport == null)
+        val usingFallback = state.expectedToday == null
         val budgetLabel = when {
             caloriesLeft < 0         -> "kcal over"
             state.targetDeficit == 0 -> "left (balance)"
@@ -157,21 +126,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         runCatching { apiClient.getTodaySummary(stored.token, today) }
             .onSuccess { dto ->
                 app.db.dynamicBudgetParamsDao().upsert(
-                    org.branneman.health.db.entities.DynamicBudgetParamsEntity(
-                        date                  = today,
-                        expectedTodaySport    = dto.expectedTodaySport,
-                        expectedTodayNonSport = dto.expectedTodayNonSport,
+                    DynamicBudgetParamsEntity(
+                        date          = today,
+                        expectedToday = dto.expectedToday,
                     )
                 )
                 _uiState.update { state ->
                     state.copy(
-                        isLoading             = false,
-                        caloriesOut           = dto.caloriesOut,
-                        caloriesOutSource     = dto.caloriesOutSource,
-                        targetDeficit         = dto.targetDeficit,
-                        expectedTodaySport    = dto.expectedTodaySport,
-                        expectedTodayNonSport = dto.expectedTodayNonSport,
-                        actualBurnedSoFar     = dto.actualBurnedSoFar,
+                        isLoading         = false,
+                        caloriesOut       = dto.caloriesOut,
+                        caloriesOutSource = dto.caloriesOutSource,
+                        targetDeficit     = dto.targetDeficit,
+                        expectedToday     = dto.expectedToday,
+                        actualBurnedSoFar = dto.actualBurnedSoFar,
                     )
                 }
                 refreshCaloriesLeft()
@@ -186,7 +153,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val energy       = app.db.dailyEnergyDao().getForDate(userId, today)
         val caloriesIn   = app.db.logEntryDao().sumQuickAddKcalForDate(userId, "$today%") +
                            app.db.logEntryDao().sumItemKcalForDate(userId, "$today%")
-        val sport        = app.db.sportTonightDao().getForDate(today)?.takeIf { it.date == today }
         val params       = app.db.dynamicBudgetParamsDao().getForDate(today)
 
         val bodyWeightReadings = app.db.bodyWeightDao().getAllForUser(userId)
@@ -207,46 +173,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         return DashboardUiState(
-            isLoading             = false,
-            caloriesIn            = caloriesIn,
-            caloriesOut           = caloriesOut,
-            caloriesOutSource     = source,
-            targetDeficit         = profile.targetDeficit,
-            sportTonight          = sport,
-            weightKgToday         = weightToday,
-            expectedTodaySport    = params?.expectedTodaySport,
-            expectedTodayNonSport = params?.expectedTodayNonSport,
-            actualBurnedSoFar     = energy?.totalKcal,
-            weeklyVerdict         = verdict,
-            weightTrend           = trend,
-            goalWeightKg          = profile.goalWeightKg,
+            isLoading         = false,
+            caloriesIn        = caloriesIn,
+            caloriesOut       = caloriesOut,
+            caloriesOutSource = source,
+            targetDeficit     = profile.targetDeficit,
+            weightKgToday     = weightToday,
+            expectedToday     = params?.expectedToday,
+            actualBurnedSoFar = energy?.totalKcal,
+            weeklyVerdict     = verdict,
+            weightTrend       = trend,
+            goalWeightKg      = profile.goalWeightKg,
         )
         // caloriesLeft and budgetLabel are set by refreshCaloriesLeft() called after this
-    }
-
-    fun setSportTonight(activityType: String, intensity: String) {
-        viewModelScope.launch {
-            val profile = app.db.userProfileDao().get() ?: return@launch
-            val latestWeight = app.db.bodyWeightDao().observeAll().first().firstOrNull()?.kg
-                ?: profile.goalWeightKg
-            val today = effectiveDate().toString()
-            val estimatedKcal = computeSportEstimate(activityType, intensity, latestWeight)
-            val entity = SportTonightEntity(
-                date = today, activityType = activityType,
-                intensity = intensity, estimatedKcal = estimatedKcal,
-            )
-            app.db.sportTonightDao().upsert(entity)
-            _uiState.update { it.copy(sportTonight = entity) }
-            refreshCaloriesLeft()
-        }
-    }
-
-    fun clearSportTonight() {
-        viewModelScope.launch {
-            app.db.sportTonightDao().deleteForDate(effectiveDate().toString())
-            _uiState.update { it.copy(sportTonight = null) }
-            refreshCaloriesLeft()
-        }
     }
 
     fun logWeight(kg: Double) {

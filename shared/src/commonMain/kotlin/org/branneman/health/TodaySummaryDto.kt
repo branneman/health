@@ -10,7 +10,6 @@ data class TodaySummaryDto(
     val budgetRemaining: Int,
     val targetDeficit: Int,
     val caloriesOutSource: String,
-    val expectedTodaySport: Int? = null,
-    val expectedTodayNonSport: Int? = null,
+    val expectedToday: Int? = null,
     val actualBurnedSoFar: Int? = null,
 )

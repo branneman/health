@@ -96,15 +96,6 @@ class DynamicBudgetIntegrationTest {
         }
     }
 
-    private fun insertWorkout(date: LocalDate) = transaction {
-        Workout.insert {
-            it[id]     = UUID.randomUUID()
-            it[userId] = testUserId
-            it[Workout.date] = date
-            it[type]   = "climbing"
-        }
-    }
-
     @Test fun `no history - dynamic params are null`() = appTest {
         val token = login()
         val today = LocalDate.now().toString()
@@ -113,10 +104,11 @@ class DynamicBudgetIntegrationTest {
         }
         assertEquals(HttpStatusCode.OK, r.status)
         val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
-        assertEquals(JsonNull, body["expectedTodaySport"])
-        assertEquals(JsonNull, body["expectedTodayNonSport"])
+        assertEquals(JsonNull, body["expectedToday"])
         assertEquals(JsonNull, body["actualBurnedSoFar"])
         // removed fields must be absent from the JSON entirely
+        assertFalse(body.containsKey("expectedTodaySport"))
+        assertFalse(body.containsKey("expectedTodayNonSport"))
         assertFalse(body.containsKey("eatingFractionSport"))
         assertFalse(body.containsKey("eatingFractionNonSport"))
         assertFalse(body.containsKey("postWorkoutModeSport"))
@@ -125,21 +117,20 @@ class DynamicBudgetIntegrationTest {
         assertFalse(body.containsKey("bedtime"))
     }
 
-    @Test fun `sport history - expectedTodaySport is average of sport-day calories-out`() = appTest {
+    @Test fun `history - expectedToday is average of calories-out`() = appTest {
         val token = login()
         val today = LocalDate.now()
         for (i in 1..5) {
             val d = today.minusDays(i.toLong())
             insertEnergy(d, totalKcal = 2400)
-            insertWorkout(d)
         }
         val r = client.get("/summary/today?date=$today") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
         assertEquals(HttpStatusCode.OK, r.status)
         val body = Json.parseToJsonElement(r.bodyAsText()).jsonObject
-        assertNotNull(body["expectedTodaySport"])
-        assertEquals(2400, body["expectedTodaySport"]!!.jsonPrimitive.content.toInt())
+        assertNotNull(body["expectedToday"])
+        assertEquals(2400, body["expectedToday"]!!.jsonPrimitive.content.toInt())
     }
 
     @Test fun `actualBurnedSoFar reflects today Polar reading`() = appTest {

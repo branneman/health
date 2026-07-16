@@ -136,9 +136,9 @@ primary interactions: form validation, button enabled/disabled state, loading an
 Dependencies (ViewModels, repositories) are injected as fakes. These are behaviour tests, not
 screenshot tests — they assert on what the user sees and can interact with, not on pixels.
 
-**What currently meets the bar:** all nine DAO tests (`BodyWeightDaoTest`, `DailyEnergyDaoTest`,
+**What currently meets the bar:** all eight DAO tests (`BodyWeightDaoTest`, `DailyEnergyDaoTest`,
 `FoodItemDaoTest`, `LogEntryDaoTest`, `MealTemplateDaoTest`, `ShortcutDaoTest`, `UserProfileDaoTest`,
-`WorkoutDaoTest`, `SportTonightDaoTest`), `LoginSyncServiceTest`, `LogEntrySyncServiceTest`,
+`WorkoutDaoTest`), `LoginSyncServiceTest`, `LogEntrySyncServiceTest`,
 `LoginScreenTest`, `OnboardingScreenTest`, `DashboardScreenTest`, `LogScreenTest`,
 `TemplateListScreenTest`, `TemplatesScreenTest`, `QuickAddScreenTest`.
 

@@ -132,18 +132,6 @@ fun aWorkout(
 )
 
 
-fun aSportTonight(
-    date: String = "2026-06-10",
-    activityType: String = "climbing",
-    intensity: String = "normal",
-    estimatedKcal: Int = 600,
-) = SportTonightEntity(
-    date = date,
-    activityType = activityType,
-    intensity = intensity,
-    estimatedKcal = estimatedKcal,
-)
-
 fun aLogEntryItem(
     logEntryId: String = uuid(),
     foodItemId: String = uuid(),

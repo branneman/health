@@ -96,37 +96,22 @@ class BudgetComputerTest {
 
     // --- computeDynamic ---
 
-    private fun day(i: Int, out: Int, isSport: Boolean) =
-        HistoricalDay(date = today.minusDays(i.toLong()), caloriesOut = out, isSportDay = isSport)
+    private fun day(i: Int, out: Int) =
+        HistoricalDay(date = today.minusDays(i.toLong()), caloriesOut = out)
 
-    @Test fun `no history returns expectedTodaySport and expectedTodayNonSport are null`() {
+    @Test fun `no history returns expectedToday is null`() {
         val r = BudgetComputer.computeDynamic(emptyList(), actualBurnedToday = null)
-        assertNull(r.expectedTodaySport)
-        assertNull(r.expectedTodayNonSport)
+        assertNull(r.expectedToday)
     }
 
-    @Test fun `expectedTodaySport = avg of sport-day calories-out`() {
-        val history = (1..4).map { day(it, out = 2400, isSport = true) }
+    @Test fun `expectedToday = avg of history calories-out`() {
+        val history = listOf(day(1, 2400), day(2, 2000), day(3, 2200), day(4, 2200))
         val r = BudgetComputer.computeDynamic(history, actualBurnedToday = null)
-        assertEquals(2400, r.expectedTodaySport)
-    }
-
-    @Test fun `expectedTodayNonSport = avg of non-sport-day calories-out`() {
-        val history = (1..4).map { day(it, out = 2400, isSport = false) }
-        val r = BudgetComputer.computeDynamic(history, actualBurnedToday = null)
-        assertEquals(2400, r.expectedTodayNonSport)
+        assertEquals(2200, r.expectedToday)
     }
 
     @Test fun `actualBurnedSoFar is passed through from actualBurnedToday`() {
         val r = BudgetComputer.computeDynamic(emptyList(), actualBurnedToday = 1800)
         assertEquals(1800, r.actualBurnedSoFar)
-    }
-
-    @Test fun `non-sport expected is independent of sport history`() {
-        val sportDays = (1..10).map { day(it, out = 2400, isSport = true) }
-        val r = BudgetComputer.computeDynamic(sportDays, actualBurnedToday = null)
-        // 10 sport days → sport expected = 2400; no non-sport days → null
-        assertEquals(2400, r.expectedTodaySport)
-        assertNull(r.expectedTodayNonSport)
     }
 }

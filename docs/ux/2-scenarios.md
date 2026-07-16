@@ -16,7 +16,6 @@ The principles explain *why*; the scenarios explain *what happens*.
 | S02 | Morning weigh-in + budget glance | Daily morning  |
 | S03 | Log breakfast                    | Daily morning  |
 | S04 | Log lunch                        | Daily midday   |
-| S05 | Set sport tonight                | Morning/midday |
 | S06 | Log — from template              | Anytime        |
 | S07 | Log — quick-add by calories      | Anytime        |
 | S08 | Log — build from scratch         | Anytime, rare  |
@@ -87,8 +86,7 @@ expenditure replaces the estimate and the label disappears.
 1. Dashboard opens. Weight entry is prominent — a single field pre-filled with the last
    logged value (e.g. 84.0 kg).
 2. User adjusts the value if needed and confirms. One tap to log.
-3. Dashboard shows today's state: calories in so far (zero), budget remaining, and the
-   sport-tonight toggle (cleared to off each morning).
+3. Dashboard shows today's state: calories in so far (zero) and budget remaining.
 
 **Outcome:** Weight logged; day's budget visible.
 
@@ -129,42 +127,6 @@ quick-add by calories (or builds a custom entry). The "usual" button is never fo
 **Steps:** Identical to S03, using the `Usual lunch` button.
 
 **Outcome:** Lunch logged. Budget updates.
-
----
-
-## S05 — Set sport tonight
-
-**Trigger:** Morning when planning the day, or mid-afternoon when the climbing plan is confirmed
-with friends. Sometimes as late as 30 minutes before leaving.
-
-**Goal:** Bump today's calorie budget to account for a planned evening session, so food
-choices during the day reflect actual expenditure.
-
-**Steps:**
-
-1. On the dashboard, user taps the sport-tonight toggle (visible and accessible, not buried).
-2. A picker: activity type (`Climbing` / `Rowing` / `Other`) × intensity (`Light` /
-   `Normal` / `Hard`), with an estimated kcal burn for each combination.
-3. User picks — e.g. "Climbing, Normal — est. 600 kcal".
-4. Budget updates immediately and shows the adjustment: "X kcal remaining (includes
-   planned climb ~600 kcal)".
-5. The active toggle stays visible on the dashboard for the rest of the day.
-
-**Outcome:** Daytime budget reflects planned expenditure. User can eat appropriately
-before the session.
-
-**Late or last-minute:** User can set or change the toggle at any point during the day
-— including 30 minutes before leaving. Polar's actual post-session figure settles the
-real number at day's end.
-
-**Edge cases:**
-
-- Session cancelled: tap the toggle again to clear. Budget reverts.
-- Rowing (always last-minute): same flow, user picks "Rowing" when the decision is made.
-- Calorie variance: climbing burns 300–900 kcal depending on session intensity. The
-  Light/Normal/Hard picker lets the user express this rather than locking in one number.
-  Over time, Polar data accumulates and the app can suggest better personal defaults for
-  each intensity level.
 
 ---
 

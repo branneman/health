@@ -9,7 +9,6 @@ import org.branneman.health.dashboard.TrendRange
 import org.branneman.health.dashboard.WeeklyVerdict
 import org.branneman.health.dashboard.WeightTrendData
 import org.branneman.health.dashboard.WeightTrendPoint
-import org.branneman.health.db.entities.SportTonightEntity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,8 +25,6 @@ class DashboardScreenTest {
 
     private fun render(
         state: DashboardUiState = DashboardUiState(),
-        onSetSportTonight: (String, String) -> Unit = { _, _ -> },
-        onClearSportTonight: () -> Unit = {},
         onLogWeight: (Double) -> Unit = {},
         onSelectTrendRange: (TrendRange) -> Unit = {},
     ) {
@@ -35,8 +32,6 @@ class DashboardScreenTest {
             MaterialTheme {
                 DashboardContent(
                     state = state,
-                    onSetSportTonight = onSetSportTonight,
-                    onClearSportTonight = onClearSportTonight,
                     onLogWeight = onLogWeight,
                     onSelectTrendRange = onSelectTrendRange,
                 )
@@ -74,66 +69,6 @@ class DashboardScreenTest {
         render(state = DashboardUiState(isLoading = false, caloriesLeft = 1847))
         compose.onNodeWithText("in", substring = true, ignoreCase = true).assertExists()
         compose.onNodeWithText("out", substring = true, ignoreCase = true).assertExists()
-    }
-
-    @Test fun `sport tonight inactive shows set button`() {
-        render(state = DashboardUiState(isLoading = false, sportTonight = null, caloriesLeft = 1847))
-        compose.onNodeWithText("sport tonight", substring = true, ignoreCase = true).assertExists()
-    }
-
-    @Test fun `sport tonight active shows activity type`() {
-        render(state = DashboardUiState(
-            isLoading = false,
-            sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-            caloriesLeft = 2447,
-        ))
-        compose.onNodeWithText("Climbing", substring = true, ignoreCase = true).assertExists()
-    }
-
-    @Test fun `sport tonight active shows estimated kcal`() {
-        render(state = DashboardUiState(
-            isLoading = false,
-            sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-            caloriesLeft = 2447,
-        ))
-        compose.onNodeWithText("600", substring = true).assertExists()
-    }
-
-    @Test fun `sport tonight active shows intensity chips`() {
-        render(state = DashboardUiState(
-            isLoading = false,
-            sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-            caloriesLeft = 2447,
-        ))
-        compose.onNodeWithText("Normal").assertExists()
-    }
-
-    @Test fun `tapping intensity chip calls onSetSportTonight`() {
-        var called: Pair<String, String>? = null
-        render(
-            state = DashboardUiState(
-                isLoading = false,
-                sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "climbing", intensity = "normal", estimatedKcal = 600),
-                caloriesLeft = 2447,
-            ),
-            onSetSportTonight = { a, i -> called = a to i },
-        )
-        compose.onNodeWithText("Hard").performClick()
-        assert(called == "climbing" to "hard")
-    }
-
-    @Test fun `tapping clear calls onClearSportTonight`() {
-        var cleared = false
-        render(
-            state = DashboardUiState(
-                isLoading = false,
-                sportTonight = SportTonightEntity(date = "2026-06-11", activityType = "rowing", intensity = "normal", estimatedKcal = 600),
-                caloriesLeft = 2447,
-            ),
-            onClearSportTonight = { cleared = true },
-        )
-        compose.onNodeWithText("clear", substring = true, ignoreCase = true).performScrollTo().performClick()
-        assert(cleared)
     }
 
     // --- Weight chip ---

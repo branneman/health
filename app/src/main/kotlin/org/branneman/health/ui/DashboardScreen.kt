@@ -20,18 +20,12 @@ import org.branneman.health.dashboard.TrendRange
 import org.branneman.health.dashboard.WeeklyVerdict
 import org.branneman.health.dashboard.isValidWeightInput
 import org.branneman.health.dashboard.verdictMessage
-import org.branneman.health.db.entities.SportTonightEntity
-
-private val activities = listOf("climbing" to "Climbing", "rowing" to "Rowing", "other" to "Other")
-private val intensities = listOf("light" to "Light", "normal" to "Normal", "hard" to "Hard")
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     DashboardContent(
         state = state,
-        onSetSportTonight = viewModel::setSportTonight,
-        onClearSportTonight = viewModel::clearSportTonight,
         onLogWeight = viewModel::logWeight,
         onSelectTrendRange = viewModel::selectTrendRange,
     )
@@ -40,8 +34,6 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
 @Composable
 fun DashboardContent(
     state: DashboardUiState,
-    onSetSportTonight: (String, String) -> Unit,
-    onClearSportTonight: () -> Unit,
     onLogWeight: (Double) -> Unit,
     onSelectTrendRange: (TrendRange) -> Unit,
 ) {
@@ -62,10 +54,6 @@ fun DashboardContent(
         HorizontalDivider()
         Spacer(Modifier.height(12.dp))
         WeightChipRow(weightKg = state.weightKgToday, onLogWeight = onLogWeight)
-        Spacer(Modifier.height(12.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(12.dp))
-        SportTonightSection(state, onSetSportTonight, onClearSportTonight)
         state.weeklyVerdict?.let { verdict ->
             Spacer(Modifier.height(12.dp))
             HorizontalDivider()
@@ -192,96 +180,6 @@ private fun WeightEntryDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         },
     )
-}
-
-@Composable
-private fun SportTonightSection(
-    state: DashboardUiState,
-    onSetSportTonight: (String, String) -> Unit,
-    onClearSportTonight: () -> Unit,
-) {
-    val sport = state.sportTonight
-    if (sport == null) {
-        var expanded by remember { mutableStateOf(false) }
-        if (!expanded) {
-            TextButton(onClick = { expanded = true }) {
-                Text("Set sport tonight")
-            }
-        } else {
-            SportTonightPicker(
-                onSet = { a, i -> onSetSportTonight(a, i) },
-                onDismiss = { expanded = false },
-            )
-        }
-    } else {
-        SportTonightActive(sport = sport, onSetSportTonight = onSetSportTonight, onClear = onClearSportTonight)
-    }
-}
-
-@Composable
-private fun SportTonightActive(
-    sport: SportTonightEntity,
-    onSetSportTonight: (String, String) -> Unit,
-    onClear: () -> Unit,
-) {
-    Column {
-        val activityLabel = activities.firstOrNull { it.first == sport.activityType }?.second ?: sport.activityType
-        Text("$activityLabel tonight", style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            intensities.forEach { (value, label) ->
-                FilterChip(
-                    selected = sport.intensity == value,
-                    onClick  = { onSetSportTonight(sport.activityType, value) },
-                    label    = { Text(label) },
-                )
-            }
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "+${sport.estimatedKcal} kcal est.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        TextButton(onClick = onClear, contentPadding = PaddingValues(0.dp)) {
-            Text("clear", style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-@Composable
-private fun SportTonightPicker(
-    onSet: (String, String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var selectedActivity by remember { mutableStateOf("climbing") }
-    var selectedIntensity by remember { mutableStateOf("normal") }
-    Column {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            activities.forEach { (value, label) ->
-                FilterChip(
-                    selected = selectedActivity == value,
-                    onClick  = { selectedActivity = value },
-                    label    = { Text(label) },
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            intensities.forEach { (value, label) ->
-                FilterChip(
-                    selected = selectedIntensity == value,
-                    onClick  = { selectedIntensity = value },
-                    label    = { Text(label) },
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-            Button(onClick = { onSet(selectedActivity, selectedIntensity) }) { Text("Done") }
-        }
-    }
 }
 
 @Composable

@@ -240,7 +240,7 @@ Glance composition. Two supported sizes.
 
 ## F03 — Dashboard
 
-**Scenarios:** S02, S05, S13, S14  
+**Scenarios:** S02, S13, S14  
 **Feature spec:** `3-features/dashboard.md`
 
 Primary landing screen. Scrollable. Sections are always in this order.
@@ -254,11 +254,8 @@ Primary landing screen. Scrollable. Sections are always in this order.
 │ ─────────── Today ────────── │
 │  2,150 out  ·  1,380 in      │
 │  770 kcal remaining          │ ← neutral style; no color
-│  (includes planned climb     │
-│   ~600 kcal)                 │ ← shown only when sport-tonight is active
 │                              │
 │  [ 84.0 kg ✓ ] tap to edit  │ ← weight entry; pre-filled from last log
-│  [ ⚡ Sport tonight: off ]   │ ← toggle; tap opens picker (below)
 │                              │
 │ ──── This week ─────────────  │
 │ ●  Down 0.3 kg — on track.  │ ← verdict; color matches state
@@ -273,29 +270,6 @@ Primary landing screen. Scrollable. Sections are always in this order.
 │  Mon Tue Wed Thu Fri Sat Sun │ ← tap any day → past-day view (F07)
 └──────────────────────────────┘
 ```
-
-### Sport-tonight picker (bottom sheet)
-
-Opens when the sport-tonight toggle is tapped.
-
-```
-┌──────────────────────────────┐
-│ Sport tonight                │
-├──────────────────────────────┤
-│  Activity:  [ Climbing  ▼ ]  │ ← Climbing / Rowing / Other
-│                              │
-│  Intensity:                  │
-│  ○ Light  ●Normal  ○ Hard   │
-│                              │
-│  Estimate: ~600 kcal         │ ← updates live; shown before confirming
-├──────────────────────────────┤
-│  [ Cancel ]      [ Set ]     │
-└──────────────────────────────┘
-```
-
-- After Set: toggle label updates to "⚡ Climbing, Normal — ~600 kcal"
-- Tapping the active toggle re-opens the picker (to change or clear)
-- A "Clear" option appears inside the picker when already set
 
 ### Weight entry interaction
 

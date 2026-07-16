@@ -16,7 +16,6 @@ data class EnergyRow(val date: LocalDate, val totalKcal: Int)
 data class HistoricalDay(
     val date: LocalDate,
     val caloriesOut: Int,
-    val isSportDay: Boolean,
 )
 
 data class BudgetResult(
@@ -28,8 +27,7 @@ data class BudgetResult(
 )
 
 data class DynamicBudgetParams(
-    val expectedTodaySport: Int?,
-    val expectedTodayNonSport: Int?,
+    val expectedToday: Int?,
     val actualBurnedSoFar: Int?,
 )
 
@@ -69,16 +67,14 @@ object BudgetComputer {
         actualBurnedToday: Int?,
     ): DynamicBudgetParams {
         return DynamicBudgetParams(
-            expectedTodaySport    = computeExpected(history, isSport = true),
-            expectedTodayNonSport = computeExpected(history, isSport = false),
-            actualBurnedSoFar     = actualBurnedToday,
+            expectedToday     = computeExpected(history),
+            actualBurnedSoFar = actualBurnedToday,
         )
     }
 
-    internal fun computeExpected(history: List<HistoricalDay>, isSport: Boolean): Int? {
-        val days = history.filter { it.isSportDay == isSport }
-        if (days.isEmpty()) return null
-        return days.sumOf { it.caloriesOut } / days.size
+    internal fun computeExpected(history: List<HistoricalDay>): Int? {
+        if (history.isEmpty()) return null
+        return history.sumOf { it.caloriesOut } / history.size
     }
 
     private fun resolveCaloriesOut(

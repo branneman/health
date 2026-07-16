@@ -66,11 +66,6 @@ The landing surface when the app opens. Top to bottom:
 1. **Today, calm.** In-vs-out for today: calories in, calories out (Polar), and budget
    remaining. Neutral styling. Includes:
     - A quick affordance to log weight if not done today.
-    - A **sport-tonight toggle**: activity type (`Climbing` / `Rowing` / `Other`) ×
-      intensity (`Light` / `Normal` / `Hard`). Tapping it bumps the day's budget by the
-      estimated session expenditure and labels the budget: "X kcal remaining (includes
-      planned climb ~600 kcal)". Settable or changeable any time during the day; cleared
-      each morning. See S05.
 2. **The weekly verdict.** The colored verdict. Driven by smoothed weight trend +
    calorie balance over the week. One honest line per state:
     - Green: "Down 0.3 kg this week — on track."

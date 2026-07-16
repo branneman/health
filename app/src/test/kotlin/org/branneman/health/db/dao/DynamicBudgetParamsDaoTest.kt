@@ -31,75 +31,38 @@ class DynamicBudgetParamsDaoTest {
     @After fun tearDown() { db.close() }
 
     @Test fun `upsert and getForDate returns entity with all fields`() = runTest {
-        val entity = DynamicBudgetParamsEntity(
-            date = "2026-06-15",
-            expectedTodaySport = 2400,
-            expectedTodayNonSport = 2000,
-        )
+        val entity = DynamicBudgetParamsEntity(date = "2026-06-15", expectedToday = 2200)
         db.dynamicBudgetParamsDao().upsert(entity)
         val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
         assertNotNull(result)
-        assertEquals(2400, result.expectedTodaySport)
-        assertEquals(2000, result.expectedTodayNonSport)
+        assertEquals(2200, result.expectedToday)
     }
 
     @Test fun `getForDate returns null for missing date`() = runTest {
         db.dynamicBudgetParamsDao().upsert(
-            DynamicBudgetParamsEntity(
-                date = "2026-06-15",
-                expectedTodaySport = 2400,
-                expectedTodayNonSport = null,
-            )
+            DynamicBudgetParamsEntity(date = "2026-06-15", expectedToday = 2200)
         )
         assertNull(db.dynamicBudgetParamsDao().getForDate("2026-06-14"))
     }
 
     @Test fun `upsert replaces existing row for same date`() = runTest {
         db.dynamicBudgetParamsDao().upsert(
-            DynamicBudgetParamsEntity(
-                date = "2026-06-15",
-                expectedTodaySport = 2400,
-                expectedTodayNonSport = null,
-            )
+            DynamicBudgetParamsEntity(date = "2026-06-15", expectedToday = 2400)
         )
         db.dynamicBudgetParamsDao().upsert(
-            DynamicBudgetParamsEntity(
-                date = "2026-06-15",
-                expectedTodaySport = 2600,
-                expectedTodayNonSport = 2000,
-            )
+            DynamicBudgetParamsEntity(date = "2026-06-15", expectedToday = 2000)
         )
         val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
         assertNotNull(result)
-        assertEquals(2600, result.expectedTodaySport)
-        assertEquals(2000, result.expectedTodayNonSport)
+        assertEquals(2000, result.expectedToday)
     }
 
-    @Test fun `nullable fields stored as null when no history`() = runTest {
+    @Test fun `nullable field stored as null when no history`() = runTest {
         db.dynamicBudgetParamsDao().upsert(
-            DynamicBudgetParamsEntity(
-                date = "2026-06-15",
-                expectedTodaySport = null,
-                expectedTodayNonSport = null,
-            )
+            DynamicBudgetParamsEntity(date = "2026-06-15", expectedToday = null)
         )
         val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
         assertNotNull(result)
-        assertNull(result.expectedTodaySport)
-        assertNull(result.expectedTodayNonSport)
-    }
-
-    @Test fun `sport and non-sport fields are stored independently`() = runTest {
-        db.dynamicBudgetParamsDao().upsert(
-            DynamicBudgetParamsEntity(
-                date = "2026-06-15",
-                expectedTodaySport = 2400,
-                expectedTodayNonSport = 2000,
-            )
-        )
-        val result = db.dynamicBudgetParamsDao().getForDate("2026-06-15")
-        assertNotNull(result)
-        assertEquals(2400, result.expectedTodaySport)
-        assertEquals(2000, result.expectedTodayNonSport)
+        assertNull(result.expectedToday)
     }
 }

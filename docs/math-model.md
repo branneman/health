@@ -1,8 +1,8 @@
 # Math Model
 
 **Date:** 2026-06-03
-**Scope:** Algorithms behind the daily budget, weight trend, weekly verdict, sport
-estimates, and insight trigger conditions. Validates that the UX design in `docs/ux/`
+**Scope:** Algorithms behind the daily budget, weight trend, weekly verdict, and insight
+trigger conditions. Validates that the UX design in `docs/ux/`
 is computationally feasible and pins down where the math must be honest about
 uncertainty.
 
@@ -49,38 +49,6 @@ takes over.
 User selects level during onboarding. The app displays estimated daily expenditure
 with a visible "estimated" label until Polar is connected.
 
-### 1.4 MET defaults for sport-tonight estimates
-
-MET (Metabolic Equivalent of Task) measures exercise intensity relative to rest.
-
-```
-kcal = MET × body_weight_kg × duration_hrs
-```
-
-`body_weight_kg` uses the user's most recently logged body weight. Server computes
-this at the time the sport-tonight toggle is set.
-
-**Bouldering** (stop-and-go, rest-heavy — effective METs are lower than continuous
-climbing):
-
-| Intensity | MET | Default duration | ≈ kcal (80 kg) |
-|-----------|-----|------------------|----------------|
-| Light     | 4.0 | 75 min           | ~400           |
-| Normal    | 5.0 | 90 min           | ~600           |
-| Hard      | 6.5 | 90 min           | ~780           |
-
-**Indoor rowing** (continuous effort):
-
-| Intensity | MET | Default duration | ≈ kcal (80 kg) |
-|-----------|-----|------------------|----------------|
-| Light     | 7.0 | 45 min           | ~420           |
-| Normal    | 7.5 | 60 min           | ~600           |
-| Hard      | 9.0 | 60 min           | ~720           |
-
-All duration and kcal values are user-configurable defaults per activity/intensity
-combination. Polar's post-session actual always overwrites the estimate — these
-numbers only affect the daytime budget preview.
-
 ---
 
 ## 2. Daily calorie budget
@@ -101,18 +69,13 @@ The simpler model is clearer: `budget = calories_out_today − D` and `calories_
 |---|---|---|
 | `D` | 300 kcal | Target daily deficit (0 in maintenance mode) |
 
-#### Polar history (last 30 calendar days, from `daily_energy` + `workout` tables)
-
-A day is classified as a **sport day** if a `workout` row exists for that date. Otherwise it is a **non-sport day**.
+#### Polar history (last 30 calendar days, from `daily_energy`)
 
 ```
-expected_today("sport")     = avg(daily_energy.total_kcal on sport days, last 30 calendar days)
-expected_today("non-sport") = avg(daily_energy.total_kcal on non-sport days, last 30 calendar days)
+expected_today = avg(daily_energy.total_kcal, last 30 calendar days)
 ```
 
 When no Polar history is available: `expected_today` falls back to BMR × activity multiplier (§1.2/§1.3).
-
-**Today's bucket:** the sport-tonight toggle on the dashboard determines which average to use — not Polar, not day-of-week heuristics. Historical classification uses the `workout` table.
 
 #### Real-time inputs
 
@@ -123,16 +86,14 @@ When no Polar history is available: `expected_today` falls back to BMR × activi
 
 ### 2.3 Core formula
 
-Let `bucket` = `"sport"` if sport-tonight toggled, else `"non-sport"`.
-
 ```
-calories_out_today = actual_burned_today        if actual_burned_today ≥ 0.9 × expected_today(bucket)
-                   = expected_today(bucket)      otherwise
+calories_out_today = actual_burned_today        if actual_burned_today ≥ 0.9 × expected_today
+                   = expected_today              otherwise
 
 calories_left = calories_out_today − D − calories_in_today
 ```
 
-**While Polar has only a partial daily reading** (actual is null or < 90% of expected): `expected_today(bucket)` is the stable proxy. It avoids budget jumps mid-day when Polar sends a partial cumulative total.
+**While Polar has only a partial daily reading** (actual is null or < 90% of expected): `expected_today` is the stable proxy. It avoids budget jumps mid-day when Polar sends a partial cumulative total.
 
 **Once Polar confirms the day is essentially done** (actual ≥ 90% of expected): `actual_burned_today` is used directly — the measured reading supersedes the historical average.
 
@@ -143,18 +104,18 @@ calories_left = calories_out_today − D − calories_in_today
 When the hourly cron pulls Polar data and upserts into `daily_energy`:
 
 1. `actual_burned_today` is updated from the new `total_kcal` for today.
-2. If `actual_burned_today ≥ 0.9 × expected_today(bucket)`, the formula switches to using `actual_burned_today` directly.
-3. `expected_today(bucket)` is **not** recalibrated mid-day — it remains the 30-day historical average.
+2. If `actual_burned_today ≥ 0.9 × expected_today`, the formula switches to using `actual_burned_today` directly.
+3. `expected_today` is **not** recalibrated mid-day — it remains the 30-day historical average.
 
 ### 2.5 Display and architecture
 
 #### No per-minute tick
 
-The formula no longer changes with clock time — only with food log events, Polar syncs, and sport toggle changes. There is no client-side per-minute tick.
+The formula no longer changes with clock time — only with food log events and Polar syncs. There is no client-side per-minute tick.
 
-- **Server computes** `expected_today` per bucket and exposes it via `/summary/today`.
+- **Server computes** `expected_today` and exposes it via `/summary/today`.
 - **Client stores** these params in Room alongside `actual_burned_today` and `calories_in_today`.
-- **Client recalculates** `calories_left` on: food log event, Polar sync, sport toggle change. The widget reads the same Room data offline.
+- **Client recalculates** `calories_left` on: food log event, Polar sync. The widget reads the same Room data offline.
 
 #### Display states
 
@@ -375,11 +336,6 @@ with your goal." It does not mean "you lost exactly X grams of fat this week." T
 inputs (BMR estimate, hand-logged food, Polar expenditure) all carry uncertainty; the
 output should be read as a direction, not a precise figure.
 
-**Sport estimates are defaults, not measurements.** MET-based estimates for bouldering
-are especially rough because session style varies more than duration. Polar's
-post-session actual is the reliable number; the estimate exists only to make the
-daytime budget useful before the session.
-
 ---
 
 ## 7. API spec gap
@@ -399,8 +355,7 @@ it is exposed to the client.
   400–600 kcal too high in absolute terms, inflating `expected_today` and thus the
   budget. Revisit after ≥ 30 days of concurrent Polar + food + weight data. Leading
   approach: weight-trend feedback to infer actual TDEE (if weight is flat while eating
-  X kcal/day, TDEE ≈ X). Polar's relative sport/non-sport variation is still valid
-  even with an absolute offset; only the anchor shifts.
+  X kcal/day, TDEE ≈ X).
 - **Budget recalibration:** if the calorie-vs-weight disagreement insight fires
   persistently over 4+ weeks (same direction), should the app suggest adjusting the
   target deficit D? Recommend: purely informational in v1. Flag as a v2 feature.

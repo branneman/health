@@ -831,30 +831,13 @@ fun Application.module(
                     val historyStart = today.minusDays(29)
                     val historyEnd   = today.minusDays(1)
 
-                    val historyEnergy = DailyEnergy.selectAll()
+                    val history = DailyEnergy.selectAll()
                         .where {
                             (DailyEnergy.userId eq userId) and
                             (DailyEnergy.date greaterEq historyStart) and
                             (DailyEnergy.date lessEq historyEnd)
                         }
-                        .associate { it[DailyEnergy.date] to it[DailyEnergy.totalKcal] }
-
-                    val sportDates = Workout.selectAll()
-                        .where {
-                            (Workout.userId eq userId) and
-                            (Workout.date greaterEq historyStart) and
-                            (Workout.date lessEq historyEnd)
-                        }
-                        .map { it[Workout.date] }
-                        .toSet()
-
-                    val history = historyEnergy.map { (date, out) ->
-                        HistoricalDay(
-                            date        = date,
-                            caloriesOut = out,
-                            isSportDay  = date in sportDates,
-                        )
-                    }
+                        .map { HistoricalDay(date = it[DailyEnergy.date], caloriesOut = it[DailyEnergy.totalKcal]) }
 
                     val quickAddKcal = LogEntry.selectAll()
                         .where {
@@ -892,15 +875,14 @@ fun Application.module(
                     )
 
                     TodaySummaryDto(
-                        date                  = today.toString(),
-                        caloriesIn            = budget.caloriesIn,
-                        caloriesOut           = budget.caloriesOut,
-                        budgetRemaining       = budget.budgetRemaining,
-                        targetDeficit         = budget.targetDeficit,
-                        caloriesOutSource     = budget.caloriesOutSource,
-                        expectedTodaySport    = dynamic.expectedTodaySport,
-                        expectedTodayNonSport = dynamic.expectedTodayNonSport,
-                        actualBurnedSoFar     = dynamic.actualBurnedSoFar,
+                        date              = today.toString(),
+                        caloriesIn        = budget.caloriesIn,
+                        caloriesOut       = budget.caloriesOut,
+                        budgetRemaining   = budget.budgetRemaining,
+                        targetDeficit     = budget.targetDeficit,
+                        caloriesOutSource = budget.caloriesOutSource,
+                        expectedToday     = dynamic.expectedToday,
+                        actualBurnedSoFar = dynamic.actualBurnedSoFar,
                     )
                 }
 

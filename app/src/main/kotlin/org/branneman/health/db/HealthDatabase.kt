@@ -19,10 +19,9 @@ import org.branneman.health.db.entities.*
         FoodItemEntity::class,
         ShortcutEntity::class,
         UserProfileEntity::class,
-        SportTonightEntity::class,
         DynamicBudgetParamsEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class HealthDatabase : RoomDatabase() {
@@ -34,7 +33,6 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun foodItemDao(): FoodItemDao
     abstract fun shortcutDao(): ShortcutDao
     abstract fun userProfileDao(): UserProfileDao
-    abstract fun sportTonightDao(): SportTonightDao
     abstract fun dynamicBudgetParamsDao(): DynamicBudgetParamsDao
 
     companion object {
