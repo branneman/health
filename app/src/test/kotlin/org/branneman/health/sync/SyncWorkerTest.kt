@@ -19,6 +19,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 /**
  * Verifies that SyncWorker's doWork() wires up DailyEnergySyncService, WorkoutSyncService,
@@ -92,6 +94,25 @@ class SyncWorkerTest {
         val energyRow = db.dailyEnergyDao().getForDate(userId, "2026-06-12")
         assertEquals(2100, energyRow?.totalKcal)
         assertEquals(1, db.workoutDao().getAll(userId).size)
+    }
+
+    /**
+     * A failing server-side Polar sync used to be invisible to the app: triggerPolarSync
+     * ignored the response status, so a 500 looked identical to success. The call must now
+     * throw — SyncWorker deliberately catches and logs it, but it can no longer pass silently.
+     */
+    @Test
+    fun `triggerPolarSync throws when the server returns 500`() = runTest {
+        val engine = MockEngine { respond("", HttpStatusCode.InternalServerError) }
+        val api = HealthApiClient("http://test", HttpClient(engine) { install(ContentNegotiation) { json() } })
+        val error = assertFailsWith<IllegalStateException> { api.triggerPolarSync(token) }
+        assertTrue(error.message!!.contains("/polar/sync"))
+    }
+
+    @Test
+    fun `triggerPolarSync succeeds on 204`() = runTest {
+        val api = fakeApiClient()
+        api.triggerPolarSync(token)  // should not throw
     }
 
     @Test

@@ -267,9 +267,10 @@ class HealthApiClient(
         }.body()
 
     suspend fun triggerPolarSync(token: String) {
-        client.post("$baseUrl/polar/sync") {
+        val response = client.post("$baseUrl/polar/sync") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
+        check(response.status.isSuccess()) { "POST /polar/sync failed: ${response.status}" }
     }
 
     suspend fun getAiConfig(token: String): AiConfigStatusDto =

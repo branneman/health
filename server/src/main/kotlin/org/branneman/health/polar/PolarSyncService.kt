@@ -13,6 +13,11 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import javax.sql.DataSource
 
+private val log = org.slf4j.LoggerFactory.getLogger("org.branneman.health.polar.PolarSyncService")
+
+/** Inclusive lookback for the daily-activity pull. Polar's documented default; max is 365. */
+internal const val ACTIVITY_WINDOW_DAYS = 28
+
 private data class PolarAuthRow(
     val healthUserId: UUID,
     val polarUserId: String,
@@ -43,9 +48,14 @@ class PolarSyncService(
                 val token = cipher.decrypt(row.encryptedToken)
                 syncUser(row.healthUserId, token)
             } catch (_: PolarRateLimitException) {
-                // skip this cycle for this user
-            } catch (_: Exception) {
-                // log would go here; skip user, do not rethrow
+                log.warn("Polar sync rate-limited for user {}; skipping this cycle", row.healthUserId)
+            } catch (e: Exception) {
+                // Skip this user, do not rethrow — one broken account must not stop the others.
+                // But it must never be silent: a swallowed exception here hid a five-week outage
+                // once already. Logging the user id and stack trace is safe (the access token
+                // travels in a request header, which Ktor's client exceptions do not echo);
+                // never widen this to log the request or the decrypted token.
+                log.error("Polar sync failed for user {}", row.healthUserId, e)
             }
         }
     }
@@ -65,7 +75,10 @@ class PolarSyncService(
     private suspend fun syncUser(healthUserId: UUID, accessToken: String) {
         val today = LocalDate.now()
 
-        val activities = polarClient.getActivities(accessToken, today.minusDays(2), today)
+        // Pull the full 28-day window on every cycle, not just the last few days. It costs the
+        // same single API call, the upsert below is idempotent, and it means any gap left by an
+        // outage backfills itself on the next run instead of needing a manual recovery.
+        val activities = polarClient.getActivities(accessToken, today.minusDays(ACTIVITY_WINDOW_DAYS - 1L), today)
         transaction {
             activities.forEach { a ->
                 DailyEnergy.upsert {

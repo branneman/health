@@ -158,4 +158,24 @@ class PolarSyncServiceTest {
         }
         assertEquals(0L, count)
     }
+
+    /**
+     * The window must stay wide enough to backfill itself. It was once 3 days, which meant a
+     * five-week outage left a permanent hole in the history even after the underlying bug was
+     * fixed — the rolling window had already moved past the gap.
+     */
+    @Test
+    fun `activity pull requests a full 28-day window ending today`() = runBlocking {
+        insertPolarAuth(userId, "tok-window")
+        val fake = FakePolarApiClient()
+        PolarSyncService(fake, ds, cipher).syncAll()
+
+        val today = LocalDate.now()
+        assertEquals(today, fake.lastActivitiesTo)
+        assertEquals(today.minusDays(27), fake.lastActivitiesFrom)
+        assertEquals(
+            28L,
+            java.time.temporal.ChronoUnit.DAYS.between(fake.lastActivitiesFrom, fake.lastActivitiesTo) + 1,
+        )
+    }
 }

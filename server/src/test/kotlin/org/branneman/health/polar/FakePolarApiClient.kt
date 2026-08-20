@@ -13,6 +13,12 @@ class FakePolarApiClient(
     val registeredUsers = mutableListOf<UUID>()
     val exchangedCodes  = mutableListOf<String>()
 
+    /** The date range the service last asked for — lets tests pin the sync window. */
+    var lastActivitiesFrom: LocalDate? = null
+        private set
+    var lastActivitiesTo: LocalDate? = null
+        private set
+
     override fun buildAuthorizationUrl(state: String) =
         "https://flow.polar.com/oauth2/authorization?client_id=test-client-id&state=$state"
 
@@ -26,6 +32,8 @@ class FakePolarApiClient(
     }
 
     override suspend fun getActivities(accessToken: String, from: LocalDate, to: LocalDate): List<PolarActivity> {
+        lastActivitiesFrom = from
+        lastActivitiesTo   = to
         if (accessToken == throwRateLimitForToken) throw PolarRateLimitException()
         return activities
     }

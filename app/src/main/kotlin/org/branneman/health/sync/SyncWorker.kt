@@ -1,6 +1,7 @@
 package org.branneman.health.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.work.*
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
@@ -37,7 +38,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         LogEntrySyncService(apiClient, db).sync(stored.token)
         MealTemplateSyncService(apiClient, db).pushPending(stored.token)
         ShortcutSyncService(apiClient, db).pushPending(stored.token)
+        // Polar sync is server-side and best-effort: if it fails the rest of the sync is
+        // still valid, so we swallow rather than fail the worker. It must not be silent
+        // though — an unlogged failure here went unnoticed for five weeks.
         runCatching { apiClient.triggerPolarSync(stored.token) }
+            .onFailure { Log.w(WORK_NAME, "Polar sync failed; continuing with the rest of the sync", it) }
         DailyEnergySyncService(apiClient, db).sync(stored.token, stored.userId)
         WorkoutSyncService(apiClient, db).sync(stored.token, stored.userId)
 

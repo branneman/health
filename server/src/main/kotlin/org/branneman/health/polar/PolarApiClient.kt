@@ -36,22 +36,14 @@ internal data class PolarTokenJson(
     @SerialName("x_user_id")    val xUserId: Long,
 )
 
-@Serializable
-internal data class PolarActivitiesJson(
-    @SerialName("activities") val activities: List<PolarActivityJson> = emptyList(),
-)
-
+// Both collection endpoints return a bare JSON array, not an object envelope.
+// Verified against the live AccessLink API on 2026-08-20.
 @Serializable
 internal data class PolarActivityJson(
     @SerialName("start_time")       val startTime: String,
     @SerialName("calories")         val calories: Int,
     @SerialName("active_calories")  val activeCalories: Int,
     @SerialName("steps")            val steps: Int? = null,
-)
-
-@Serializable
-internal data class PolarExercisesJson(
-    @SerialName("exercises") val exercises: List<PolarExerciseJson> = emptyList(),
 )
 
 @Serializable
@@ -120,8 +112,8 @@ class HttpPolarApiClient(
         if (response.status == HttpStatusCode.TooManyRequests) throw PolarRateLimitException()
         if (response.status == HttpStatusCode.NoContent) return emptyList()
         check(response.status.isSuccess()) { "getActivities failed: ${response.status.value}" }
-        val body = lenientJson.decodeFromString<PolarActivitiesJson>(response.bodyAsText())
-        return body.activities.map {
+        val body = lenientJson.decodeFromString<List<PolarActivityJson>>(response.bodyAsText())
+        return body.map {
             PolarActivity(
                 date       = LocalDate.parse(it.startTime.take(10)),
                 totalKcal  = it.calories,
@@ -138,8 +130,8 @@ class HttpPolarApiClient(
         if (response.status == HttpStatusCode.TooManyRequests) throw PolarRateLimitException()
         if (response.status == HttpStatusCode.NoContent) return emptyList()
         check(response.status.isSuccess()) { "getExercises failed: ${response.status.value}" }
-        val body = lenientJson.decodeFromString<PolarExercisesJson>(response.bodyAsText())
-        return body.exercises.map {
+        val body = lenientJson.decodeFromString<List<PolarExerciseJson>>(response.bodyAsText())
+        return body.map {
             PolarExercise(
                 polarId      = it.id,
                 date         = LocalDate.parse(it.startTime.take(10)),
