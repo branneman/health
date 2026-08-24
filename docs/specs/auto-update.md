@@ -142,9 +142,10 @@ https://github.com/{owner}/{repo}/releases/download/{version}/app-release.apk
 
 ## CI/CD pipeline
 
-The GitHub Actions workflow has two jobs with an explicit dependency. The dependency
-makes the race condition — "server demands new version but APK not yet available" —
-structurally impossible.
+Publishing the APK is this repo's job. The race condition to avoid — "server demands the
+new version but the APK isn't published yet" — means the new server version must not go
+live until the APK is available at its predictable URL. Sequencing that against the
+server deploy is a deployment concern and out of scope for this repo.
 
 ```yaml
 jobs:
@@ -169,22 +170,6 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.name }}
           files: app/build/outputs/apk/release/app-release.apk
-
-  deploy-server:
-    needs: publish-apk            # server goes live only after APK is published
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-java@v4
-        with: { java-version: '17', distribution: 'temurin' }
-      - name: Build server JAR
-        run: ./gradlew :server:buildFatJar
-      - name: Deploy to VPS
-        run: |
-          scp server/build/libs/server-all.jar hetzner:/opt/health/server.jar
-          ssh hetzner "systemctl restart health-server"
 ```
 
 APK signing (release keystore) is handled in the `publish-apk` job via GitHub Actions
