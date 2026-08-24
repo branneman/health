@@ -4,6 +4,11 @@
 **Scope:** Full audit before making the repo public on GitHub. Covers server code, Android
 app, infrastructure-as-code, deployment pipeline, git history, and documentation.
 
+> **Note:** This audit predates the infrastructure extraction. The deployment files it
+> references below — `cloud-config.yml`, `Caddyfile`, `docker-compose.override.yml`,
+> `ansible/playbook.yml`, `ansible/templates/*`, and `ansible/vars/vault.yml` — have since
+> moved out of this repo. Findings are preserved as a historical record, not current state.
+
 ---
 
 ## Threat model
