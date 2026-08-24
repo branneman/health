@@ -87,8 +87,7 @@ still required on confirmed leak; encryption buys time and limits blast radius.
 `POLAR_TOKEN_ENCRYPTION_KEY` and the other Polar secrets are **server-side only**:
 
 - Local development: `.env` in repo root (gitignored), loaded by Docker Compose
-- Production: `ansible/vars/vault.yml` (gitignored) → templated into server `.env`
-  via `ansible/templates/env.j2`
+- Production: supplied by the deployment environment
 - **Never** in `local.properties` (that file is Android-build-only — `server.baseUrl`
   only). Gradle does not read `.env`. No Polar secret can reach the APK.
 
