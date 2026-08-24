@@ -1,0 +1,46 @@
+# Provisions health's user accounts.
+#
+# This is domain logic, not deployment: it knows about health's `users` table and nothing
+# about any server, box, or vault. Connectivity and credentials are supplied by whoever
+# runs it.
+#
+#   Local:      ansible-playbook ansible/provision-users.yml -e @my-users.yml
+#   Production: see the infra repo's readme.
+- hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    # Overridden by the operator. The default targets local development.
+    psql_cmd: 'psql -U health -d health'
+    users: []
+
+  tasks:
+    - name: Assert users were supplied
+      assert:
+        that: users | length > 0
+        fail_msg: "No users supplied. See the infra repo's readme for the production invocation."
+
+    - name: Hash passwords with bcrypt
+      command: >
+        python3 -c "import bcrypt;
+        h=bcrypt.hashpw('{{ item.password }}'.encode(), bcrypt.gensalt(12)).decode();
+        print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
+      loop: "{{ users }}"
+      loop_control: { label: "{{ item.email }}" }
+      register: hashes
+      changed_when: false
+      no_log: true
+
+    - name: Upsert users
+      # Accounts with a fixed id (the test accounts) conflict on id; ordinary accounts
+      # conflict on username. This preserves the previous playbook's semantics exactly.
+      shell: >
+        {{ psql_cmd }} -c
+        "INSERT INTO users ({% if item.item.id is defined %}id, {% endif %}username, password_hash)
+         VALUES ({% if item.item.id is defined %}'{{ item.item.id }}', {% endif %}'{{ item.item.email }}', '{{ item.stdout }}')
+         ON CONFLICT ({% if item.item.id is defined %}id{% else %}username{% endif %})
+         DO UPDATE SET password_hash = EXCLUDED.password_hash;"
+      loop: "{{ hashes.results }}"
+      loop_control: { label: "{{ item.item.email }}" }
+      no_log: true
