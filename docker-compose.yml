@@ -1,21 +1,8 @@
+# Local development only.
+#
+# Production deployment — Caddy, Watchtower, the box, backups — lives in the private
+# `infra` repo. Nothing in this repo needs to know about it.
 services:
-  ktor:
-    image: ghcr.io/branneman/health-server:latest
-    restart: unless-stopped
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:8080:8080"
-    networks: [backend]
-    healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/server-health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
   postgres:
     image: postgres:17-alpine
     container_name: health_postgres
@@ -27,42 +14,25 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/01-init-test-db.sql
-    networks: [backend]
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    env_file: .env
-    ports: [ "80:80", "443:443", "443:443/udp" ]
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-    networks: [backend]
-    depends_on:
-      ktor:
-        condition: service_healthy
-
-  watchtower:
-    image: containrrr/watchtower
+  postgres-mcp:
+    image: crystaldba/postgres-mcp
     restart: unless-stopped
     environment:
-      DOCKER_API_VERSION: "1.47"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks: [watchtower]
-    command: --interval 60 --cleanup --rolling-restart
+      DATABASE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    command: [ "--access-mode=unrestricted", "--transport=sse", "--sse-port=8001" ]
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata: { }
-  caddy_data: { }
-
-networks:
-  backend:
-    driver: bridge
-  watchtower:
-    driver: bridge
