@@ -2,6 +2,13 @@
 #
 # Production deployment — Caddy, Watchtower, the box, backups — lives in the private
 # `infra` repo. Nothing in this repo needs to know about it.
+
+# Pinned so the project name comes from this file rather than from whatever the checkout
+# directory happens to be called. Without it, a worktree or a clone in a differently-named
+# directory silently gets its own empty database while `container_name` below still points
+# at the one you already have.
+name: health
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -35,4 +42,7 @@ services:
         condition: service_healthy
 
 volumes:
-  pgdata: { }
+  # Pinned for the same reason as `name` above: this is the volume holding your local
+  # development database, and it must resolve to the same one from any directory.
+  pgdata:
+    name: health_pgdata
