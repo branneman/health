@@ -6,13 +6,17 @@
 # `psql_cmd` to point at wherever the database actually lives.
 #
 #   ansible-playbook ansible/provision-users.yml -e @my-users.yml
+#
+# `psql_cmd` must be a command that runs psql with stdin connected — the SQL arrives that
+# way. Anything that reaches a psql reading stdin works, local or remote.
 - hosts: localhost
   connection: local
   gather_facts: no
 
   vars:
-    # Overridden by the operator. The default targets local development.
-    psql_cmd: 'psql -U health -d health'
+    # The local development database, which runs in a container — there is no Postgres
+    # unix socket on the host for a bare `psql` to connect to.
+    psql_cmd: 'docker exec -i health_postgres psql -U health -d health'
     users: []
 
   tasks:
@@ -22,10 +26,19 @@
         fail_msg: "No users supplied. Pass a `users` list via -e/--extra-vars or an extra-vars file."
 
     - name: Hash passwords with bcrypt
-      command: >
-        python3 -c "import bcrypt;
-        h=bcrypt.hashpw('{{ item.password }}'.encode(), bcrypt.gensalt(12)).decode();
-        print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
+      # The password goes in over stdin. Interpolating it into this `-c` program would put
+      # it inside a Python string literal inside a shell-quoted word, where a password
+      # containing a quote or a backslash is a syntax error at best and executable code at
+      # worst — and `no_log` would hide the reason entirely.
+      # stdin_add_newline must stay false: a trailing newline would be hashed as part of
+      # the password, and every resulting hash would reject the real password.
+      command:
+        cmd: >
+          python3 -c "import sys, bcrypt;
+          h=bcrypt.hashpw(sys.stdin.buffer.read(), bcrypt.gensalt(12)).decode();
+          print(h[:2]+'a'+h[3:] if h[2]=='b' else h)"
+        stdin: "{{ item.password }}"
+        stdin_add_newline: false
       loop: "{{ users }}"
       loop_control: { label: "{{ item.email }}" }
       register: hashes
@@ -36,17 +49,26 @@
       # Accounts with a fixed id (the test accounts) conflict on id; ordinary accounts
       # conflict on username. This preserves the previous playbook's semantics exactly.
       #
-      # The SQL goes in over STDIN, never as a shell argument. A bcrypt hash is full of
+      # The SQL goes in over stdin, never as a shell argument. A bcrypt hash is full of
       # `$` — `$2a$12$...` — and any shell in the path expands those away: `$2` and
       # `$YbRW` are unset parameters, `$12` is `$1` then a literal 2. Passing the hash on
       # a command line silently stores a truncated, invalid hash, and every affected
       # account can no longer log in. stdin has no such problem, and it survives the
-      # extra shell that an ssh-based `psql_cmd` would otherwise add at the far end.
+      # extra shell that a remote `psql_cmd` would otherwise add at the far end.
+      #
+      # Single quotes in the supplied values are doubled, which is how a SQL string
+      # literal escapes them. Without it, `o'brien@example.com` — a legal address — ends
+      # the literal early and the rest of the value is executed as SQL.
+      #
+      # ON_ERROR_STOP is set here rather than passed as `-v` on the command line: appended
+      # arguments are lost by any `psql_cmd` that closes its own quoting, and losing it
+      # means a failed statement reports success.
       shell:
-        cmd: "{{ psql_cmd }} -v ON_ERROR_STOP=1"
+        cmd: "{{ psql_cmd }}"
         stdin: |
+          \set ON_ERROR_STOP on
           INSERT INTO users ({% if item.item.id is defined %}id, {% endif %}username, password_hash)
-          VALUES ({% if item.item.id is defined %}'{{ item.item.id }}', {% endif %}'{{ item.item.email }}', '{{ item.stdout }}')
+          VALUES ({% if item.item.id is defined %}'{{ item.item.id | replace("'", "''") }}', {% endif %}'{{ item.item.email | replace("'", "''") }}', '{{ item.stdout | replace("'", "''") }}')
           ON CONFLICT ({% if item.item.id is defined %}id{% else %}username{% endif %})
           DO UPDATE SET password_hash = EXCLUDED.password_hash;
       loop: "{{ hashes.results }}"
