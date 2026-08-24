@@ -1,12 +1,12 @@
 -- Local development seed data. Never run in production.
 --
 -- Load after starting the server (Flyway must have created the schema first):
---   psql $DATABASE_URL < local-db-seed/seed_data.sql
+--   docker exec -i health_postgres psql -U health -d health < local-db-seed/seed_data.sql
 --
 -- Reset DB and reload:
 --   docker compose down -v && docker compose up -d postgres postgres-mcp
 --   ./gradlew :server:run   (applies Flyway migrations)
---   psql $DATABASE_URL < local-db-seed/seed_data.sql
+--   docker exec -i health_postgres psql -U health -d health < local-db-seed/seed_data.sql
 
 -- ~90 days of body weight with a realistic slow downward trend (~5 kg over 3 months)
 -- Seeds data for the first user in the database (local dev only).
