@@ -125,14 +125,8 @@ Requires `E2E_PASSWORD` in `.env` and `server.baseUrl` in `local.properties`.
 - Add [Superpowers](https://github.com/obra/superpowers#readme) to Claude:  
   `claude plugin install superpowers@claude-plugins-official`
 - Install Ansible
-- Install bcrypt (used by the Ansible playbook to BCrypt-hash passwords locally):  
+- Install bcrypt (used by user provisioning to BCrypt-hash passwords locally):  
   `pip3 install --break-system-packages bcrypt`
-- Store the Ansible vault password in macOS Keychain:  
-  `security add-generic-password -a ansible-vault -s health -w 'your-vault-password'`
-- Create a retrieval script so Ansible reads it from Keychain automatically:  
-  `printf '#!/bin/bash\nsecurity find-generic-password -a ansible-vault -s health -w\n' > ~/.ansible-vault-pass.sh && chmod 700 ~/.ansible-vault-pass.sh`
-- Point Ansible at the script (add to `~/.bashrc`):  
-  `export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-pass.sh`
 
 ## Local database
 
@@ -153,21 +147,33 @@ psql $DATABASE_URL < local-db-seed/seed_data.sql
 
 Reset and reload from scratch:
 
+> **Warning:** `docker compose down -v` destroys your real local database. The compose file
+> pins `name: health` and volume `health_pgdata`, so this runs against your actual local data
+> from ANY directory — there's no "wrong checkout" that protects you.
+
 ```
 docker compose down -v && docker compose up -d postgres postgres-mcp
 ./gradlew :server:run
 psql $DATABASE_URL < local-db-seed/seed_data.sql
 ```
 
-## Other useful stuff for deployment observability:
+## CI status
 
 ```bash
 # github actions status - is my pipeline finished yet?
 watch -n 2 --color "GH_FORCE_TTY=true gh run list --limit 5"
-
-# watchtower logs - did my new image deploy yet?
-watch -n 2 "ssh deploy@api.health.bran.name docker logs health-watchtower-1 --tail 20"
 ```
+
+## Deployment
+
+Production deployment is out of scope for this repo. What this repo owes the deployment:
+
+- images on GHCR tagged `:latest` and `:<commit-sha>` (`.github/workflows/ci.yml`)
+- the server listening on port `8080`
+- `GET /version` returning the built commit SHA
+- `GET /server-health` for the container healthcheck
+- Flyway migrations run at container start
+- all configuration from environment variables
 
 ## Deploying to device via ADB over Wi-Fi
 
