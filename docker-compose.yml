@@ -1,7 +1,4 @@
-# Local development only.
-#
-# Production deployment — Caddy, Watchtower, the box, backups — lives in the private
-# `infra` repo. Nothing in this repo needs to know about it.
+# Local development only. Production deployment is out of scope for this repo.
 
 # Pinned so the project name comes from this file rather than from whatever the checkout
 # directory happens to be called. Without it, a worktree or a clone in a differently-named
