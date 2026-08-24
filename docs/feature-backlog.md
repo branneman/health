@@ -46,6 +46,7 @@ the user something immediately usable, however thin. No waterfall gate.
 |   | 26 | **Insights** — late-snack frequency, drink clusters, missing-log coverage, calorie-vs-weight drift note                                                                         | Behavioural patterns visible without moralising                      |                                           |
 |   | 27 | **Vacation mode** — pause tracking, exclude period from verdicts and pattern calculations                                                                                       | Holidays don't skew the trend                                        |                                           |
 |   | 28 | **Maintenance mode** — stability verdict after goal reached, budget switches to balance                                                                                         | Success state has a proper mode                                      |                                           |
+|   | 29 | **Status endpoint** — authenticated `/status` reporting DB, migrations, Polar sync freshness, OFD import, AI config and backup heartbeat; adds `polar_sync_state` + `ops_heartbeat` tables so a silent sync outage becomes visible | "Is it actually working?" answerable in one request instead of by DB forensics | [status-endpoint](specs/status-endpoint.md) |
 
 ---
 
