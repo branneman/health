@@ -101,7 +101,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - name: Wait for Watchtower to deploy
+      - name: Wait for the new version to go live
         env:
           SERVER_URL: ${{ secrets.API_TEST_SERVER_URL }}
         run: |
@@ -113,7 +113,7 @@ jobs:
             echo "Attempt $i/20: deployed='$DEPLOYED', waiting 30s..."
             sleep 30
           done
-          [ "$DEPLOYED" = "$EXPECTED" ] || { echo "Timed out waiting for Watchtower"; exit 1; }
+          [ "$DEPLOYED" = "$EXPECTED" ] || { echo "Timed out waiting for the new version to go live"; exit 1; }
 
       - name: Run API tests
         env:
@@ -151,7 +151,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - name: Wait for Watchtower to deploy
+      - name: Wait for the new version to go live
         env:
           SERVER_URL: ${{ secrets.API_TEST_SERVER_URL }}
         run: |
@@ -163,7 +163,7 @@ jobs:
             echo "Attempt $i/20: deployed='$DEPLOYED', waiting 30s..."
             sleep 30
           done
-          [ "$DEPLOYED" = "$EXPECTED" ] || { echo "Timed out waiting for Watchtower"; exit 1; }
+          [ "$DEPLOYED" = "$EXPECTED" ] || { echo "Timed out waiting for the new version to go live"; exit 1; }
 
       - name: Seed E2E account
         env:
