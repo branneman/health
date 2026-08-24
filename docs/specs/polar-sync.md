@@ -20,7 +20,7 @@ The token must be encrypted at the application layer before it reaches Postgres.
 
 - **Algorithm:** AES-256-GCM (authenticated encryption — also detects ciphertext tampering)
 - **Key:** `POLAR_TOKEN_ENCRYPTION_KEY` env var — 32 random bytes, base64-encoded,
-  stored in the Ansible vault, never committed to git
+  supplied by the deployment environment, never committed to git
 - **Storage format:** `base64(IV || ciphertext || auth_tag)` stored as `TEXT` in
   `polar_auth.access_token`
 - **Implementation:** a small `TokenCipher` utility class with `encrypt(plaintext, key)`

@@ -142,7 +142,7 @@ docker compose up -d postgres postgres-mcp
 Load seed data (optional, after server has started):
 
 ```
-psql $DATABASE_URL < local-db-seed/seed_data.sql
+docker exec -i health_postgres psql -U health -d health < local-db-seed/seed_data.sql
 ```
 
 Reset and reload from scratch:
@@ -154,7 +154,7 @@ Reset and reload from scratch:
 ```
 docker compose down -v && docker compose up -d postgres postgres-mcp
 ./gradlew :server:run
-psql $DATABASE_URL < local-db-seed/seed_data.sql
+docker exec -i health_postgres psql -U health -d health < local-db-seed/seed_data.sql
 ```
 
 ## CI status

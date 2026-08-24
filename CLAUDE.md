@@ -123,7 +123,7 @@ deploys, restarted servers, muddled context) that obscures the real signal.
 2. A unit or integration test (`./gradlew :server:test` / `./gradlew :app:test`)
 3. A local server + API test (`./gradlew :server:apiTest` against localhost)
 4. Push to CI and wait for the pipeline
-5. Deploy to production and test manually in the app
+5. Merge to `main` and test manually in the app once the new version is live
 
 **Default to the fastest loop available, and say which one you are using and why before
 proceeding.**
@@ -136,8 +136,9 @@ Concrete rules:
 - **Fixing a server bug?** Before pushing to CI, ask: can this be verified with
   `./gradlew :server:test` or `./gradlew :server:apiTest` against a local server? Use
   one of those first.
-- **Debugging a production issue?** Before SSHing to read logs, ask: can the same
-  scenario be reproduced locally or pinned with a unit test?
+- **Debugging a production issue?** Before asking anyone for production logs, ask: can
+  the same scenario be reproduced locally or pinned with a unit test? Reading them is
+  not something to do from this repo — see the deployment rule above.
 - **About to push to CI to "see if it works"?** Stop. That is level 4. A faster loop
   almost certainly exists — find it and use it first.
 - **A fix required a full deploy-wait-test cycle?** That is a signal: test coverage is
@@ -228,7 +229,7 @@ Key points:
     - The `shared` DTOs are the bridge between them — not a shared schema.
 - **`local-db-seed/` is local dev only.** Contains SQL seed data to populate the DB
   for development. Never run in production. Load manually after Flyway has created the
-  schema: `psql $DATABASE_URL < local-db-seed/seed_data.sql`. Do not use
+  schema: `docker exec -i health_postgres psql -U health -d health < local-db-seed/seed_data.sql`. Do not use
   `docker-entrypoint-initdb.d` for application schema — that is Flyway's job.
 - **Everything Android lives in `app`.** Room entities, DAOs, sync workers, the Glance
   widget, and the Compose UI are all in `app`. If the widget grows complex enough to

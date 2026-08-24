@@ -5,7 +5,7 @@
 -- the server's POST /internal/e2e/reset endpoint handles seeding (no direct DB access
 -- needed). To run this file directly against a database instead:
 --   HASH=$(python3 -c "import bcrypt, os; print(bcrypt.hashpw(os.environ['E2E_PASSWORD'].encode(), bcrypt.gensalt()).decode())")
---   psql $DATABASE_URL -v e2e_password_hash="'$HASH'" < local-db-seed/test-e2e-account-seed.sql
+--   docker exec -i health_postgres psql -U health -d health -v e2e_password_hash="'$HASH'" < local-db-seed/test-e2e-account-seed.sql
 
 BEGIN;
 

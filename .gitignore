@@ -21,8 +21,7 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
-# This repo is public. Provisioning no longer uses a vault file, but if a developer
-# following old habits recreates ansible/vars/vault.yml, it must never be committable.
+# This repo is public. Kept so this path can never become committable.
 ansible/vars/vault.yml
 docs/ux/0-context-private.md
 .claude
