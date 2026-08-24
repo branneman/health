@@ -1,11 +1,11 @@
 # Provisions health's user accounts.
 #
 # This is domain logic, not deployment: it knows about health's `users` table and nothing
-# about any server, box, or vault. Connectivity and credentials are supplied by whoever
-# runs it.
+# about any server, box, or vault. The operator supplies `users` (a list of
+# {email, password[, id]}) via -e/--extra-vars or an extra-vars file, and may override
+# `psql_cmd` to point at wherever the database actually lives.
 #
-#   Local:      ansible-playbook ansible/provision-users.yml -e @my-users.yml
-#   Production: see the infra repo's readme.
+#   ansible-playbook ansible/provision-users.yml -e @my-users.yml
 - hosts: localhost
   connection: local
   gather_facts: no
@@ -19,7 +19,7 @@
     - name: Assert users were supplied
       assert:
         that: users | length > 0
-        fail_msg: "No users supplied. See the infra repo's readme for the production invocation."
+        fail_msg: "No users supplied. Pass a `users` list via -e/--extra-vars or an extra-vars file."
 
     - name: Hash passwords with bcrypt
       command: >
