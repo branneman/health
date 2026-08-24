@@ -14,8 +14,12 @@
   gather_facts: no
 
   vars:
-    # The local development database, which runs in a container — there is no Postgres
-    # unix socket on the host for a bare `psql` to connect to.
+    # LOCAL DEVELOPMENT ONLY. This reaches the container on your own machine, and it will
+    # succeed there — so an operator who means to provision somewhere else and forgets to
+    # override it gets a green run against the wrong database. Always pass psql_cmd
+    # explicitly when the target is not your laptop.
+    # (A bare `psql` is not the default because a containerised database offers no unix
+    # socket on the host for it to connect to.)
     psql_cmd: 'docker exec -i health_postgres psql -U health -d health'
     users: []
 
@@ -58,7 +62,13 @@
       #
       # Single quotes in the supplied values are doubled, which is how a SQL string
       # literal escapes them. Without it, `o'brien@example.com` — a legal address — ends
-      # the literal early and the rest of the value is executed as SQL.
+      # the literal early and the rest of the value is executed as SQL. This assumes
+      # standard_conforming_strings is on, which has been the Postgres default since 9.1;
+      # with it off, a backslash would escape the doubled quote and reopen the hole.
+      #
+      # A failure here is deliberately opaque: no_log keeps the password hashes out of
+      # the log, and takes the psql error with them. Re-run the printed statement by hand
+      # against the same target to see why.
       #
       # ON_ERROR_STOP is set here rather than passed as `-v` on the command line: appended
       # arguments are lost by any `psql_cmd` that closes its own quoting, and losing it

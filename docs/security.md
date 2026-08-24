@@ -291,8 +291,9 @@ relevance.
 
 - `.env`, `ansible/vars/vault.yml`, `local.properties` are gitignored — keep them that
   way. Never add exceptions.
-- New secrets (Polar API credentials, future OAuth tokens, SMTP passwords) go into the
-  Ansible vault (`ansible/vars/vault.yml`), then are templated into `.env` on the server.
+- New secrets (Polar API credentials, future OAuth tokens, SMTP passwords) are supplied
+  to the server as environment variables by the deployment environment. They are never
+  committed to this repo in any form.
 - Never hardcode credentials in Kotlin source, build scripts, or test fixtures.
 - Before opening a PR, run `git diff origin/main` and grep for anything that looks like
   a key: `grep -i "secret\|password\|token\|key" changed_files`.
@@ -329,8 +330,8 @@ When e2e tests run in production against a test account, the test user's data is
 isolated from real users by the same `user_id` mechanism — there must be no
 "test mode" code path that bypasses scoping. The test dataset must be predictable and
 reset-able without touching any other user's rows. The test account's credentials live
-in the Ansible vault under a clearly named key (e.g. `user_e2etest_password`) and are
-separate from any real user's credentials.
+supplied by the deployment environment under a clearly named key, and are separate from
+any real user's credentials.
 
 ---
 
@@ -462,8 +463,8 @@ endpoint. A deployment that forgets this variable loses the feature silently.
 ```
 openssl rand -base64 32
 ```
-Store the result in the Ansible vault under `ai_key_encryption_key` and template it into
-`.env` via `ansible/templates/env.j2` alongside `POLAR_TOKEN_ENCRYPTION_KEY`.
+Supply the result to the server as `AI_KEY_ENCRYPTION_KEY`, alongside
+`POLAR_TOKEN_ENCRYPTION_KEY`.
 
 **Rotation:** rotating `AI_KEY_ENCRYPTION_KEY` requires re-encrypting all rows in
 `ai_config`. There is no automatic rotation path — if the key must be rotated, decrypt
