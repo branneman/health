@@ -159,7 +159,7 @@ comes from real Nginx.
 
 The suite lives in `server/src/apiTest/`. It reads connection details from env vars
 (`API_TEST_SERVER_URL`, `API_TEST_EMAIL`, `API_TEST_PASSWORD`). It runs automatically on every push
-to `main`, after the Docker image is built and Watchtower has deployed it to the VPS. The CI job
+to `main`, after the Docker image is built and deployed. The CI job
 polls `GET /version` until the deployed SHA matches the pushed commit, then runs the suite.
 
 Tests exercise the full authentication cycle (login, token use, refresh, logout), data endpoints,
@@ -198,8 +198,8 @@ The seed SQL uses a psql variable (`:'e2e_password_hash'`) so no bcrypt hash is 
 - `logOneTapMealButtonAndVerify` — login → tap seeded Breakfast one-tap button → verify entry → delete it
 - `logBodyWeightAndVerify` — login → log body weight via dashboard chip → verify chip updates
 
-**CI:** `e2e-tests` job in `ci.yml` runs on every push to `main` after Watchtower has deployed the
-new image. It seeds the E2E account, boots an API-34 AOSP Pixel 6a emulator via
+**CI:** `e2e-tests` job in `ci.yml` runs on every push to `main` after the new image is
+deployed. It seeds the E2E account, boots an API-34 AOSP Pixel 6a emulator via
 `reactivecircus/android-emulator-runner`, and executes `connectedAndroidTest`.
 
 ---
