@@ -66,6 +66,11 @@ implication for every implementation session:
   same-day entry rather than creating a duplicate, enforcing the one-entry-per-day
   invariant at the database level. Postgres `body_weight` has a `UNIQUE(user_id, date)`
   constraint instead of relying on a UUID PK for the same reason.
+- **This repo does not deploy itself.** Production deployment is out of scope for this
+  repo. Never add a compose service, Caddyfile, network name, volume name, or hostname
+  for the production box to this repo, and never have an agent SSH to or otherwise
+  operate on production from here — that coupling is exactly what the infra extraction
+  removed.
 
 ## ViewModel state lifecycle — screens must reset on navigation
 
